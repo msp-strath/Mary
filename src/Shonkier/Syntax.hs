@@ -21,7 +21,7 @@ type Val = Val' String
 
 -- Evaluation contexts
 
--- The argument of type () indicates the
+-- The argument of type (Env' a) indicates the
 -- cursor position
 data Frame' a
   = CellL (Env' a) (Term' a)
