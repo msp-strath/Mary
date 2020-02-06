@@ -11,3 +11,6 @@ data Bwd a
 Nil       <>> as = as
 (az :< a) <>> as = az <>> (a : as)
 
+(<><) :: Bwd a -> [a] -> Bwd a
+az <>< []       = az
+az <>< (a : as) = (az :< a) <>< as

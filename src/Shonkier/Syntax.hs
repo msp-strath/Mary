@@ -1,25 +1,52 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS -Wincomplete-patterns #-}
 
 module Shonkier.Syntax where
 
+import Control.Applicative
+import Control.Monad
 import Data.Bwd
+import Prelude hiding (init)
 
 data Term' a
   = Atom a
   | Var String
   | Cell (Term' a) (Term' a)
   | App (Term' a) [Term' a]
+  | Fun [Clause' a]
+  deriving (Show)
 
 type Term = Term' String
+
+type Clause' a = ([Pattern' a], Term' a)
+type Clause = Clause' String
+
+data Pattern' a
+  = PAtom a
+  | PBind String
+  | PCell (Pattern' a) (Pattern' a)
+  deriving (Show)
+type Pattern = Pattern' String
 
 data Val' a
   = VAtom a
   | VCell (Val' a) (Val' a)
+  | VFun [Frame' a] (Env' a) [Clause' a]
+  -- ^ Env is the one the function was created in
+  --   Frames ??
+  deriving (Show)
 
 type Val = Val' String
 
 -- Evaluation contexts
+
+data Funy' a
+  = FAtom a
+  | FFun [Frame' a] (Env' a) [Clause' a]
+  deriving (Show)
+type Funy = Funy' String
 
 -- The argument of type (Env' a) indicates the
 -- cursor position
@@ -27,7 +54,8 @@ data Frame' a
   = CellL (Env' a) (Term' a)
   | CellR (Val' a) (Env' a)
   | AppL (Env' a) [Term' a]
-  | AppR a (Bwd (Val' a)) (Env' a) [Term' a]
+  | AppR (Funy' a) (Bwd (Val' a)) (Env' a) [Term' a]
+  deriving (Show)
 
 type Frame = Frame' String
 
@@ -39,6 +67,9 @@ type Context = Context' String
 type Env' a = String -> Maybe (Val' a)
 type Env = Env' String
 
+instance Show (Env' a) where
+  show _ = "..."
+
 type Request' a = (a, [Val' a])
 type Request = Request' String
 
@@ -47,6 +78,7 @@ data Computation' a
   | Request (Request' a) [Frame' a]
   -- ^ Invoking an effect & none of the
   -- frames present know how to interpret it
+  deriving (Show)
 
 type Computation = Computation' String
 
@@ -59,6 +91,8 @@ eval ctx (rho, t) = case t of
   Atom a   -> use ctx (VAtom a)
   Cell a b -> eval (ctx :< CellL rho b) (rho, a)
   App f as -> eval (ctx :< AppL rho as) (rho, f)
+  Fun cs   -> use ctx (VFun [] rho cs)
+
 
 use :: Context -> Val -> Computation
 use Nil         v = Value v
@@ -66,16 +100,19 @@ use (ctx :< fr) v = case fr of
   -- move right or upwards
   CellL rho b -> eval (ctx :< CellR v rho) (rho, b)
   CellR u rho -> use ctx (VCell u v)
-  -- we better be using a function
+  -- we better be making a request or using a function
   AppL rho as -> case v of
-    VAtom f -> app ctx f Nil rho as
-    _       -> handle ctx ("NoFun",[v]) []
+    VAtom f         -> app ctx (FAtom f)        Nil rho as
+    VFun frs sig cs -> app ctx (FFun frs sig cs) Nil rho as
+    _               -> handle ctx ("NoFun",[v]) []
   AppR f vz rho as -> app ctx f (vz :< v) rho as
 
-app :: Context -> String -> Bwd Val -> Env -> [Term]
+app :: Context -> Funy -> Bwd Val -> Env -> [Term]
     -> Computation
 app ctx f vz rho as = case as of
-  []       -> handle ctx (f, vz <>> []) []
+  []       -> case f of
+    FAtom a         -> handle ctx (a, vz <>> []) []
+    FFun frs sig cs -> call (ctx <>< frs) sig cs (vz <>> [])
   (a : as) -> eval (ctx :< AppR f vz rho as) (rho, a)
 
 handle :: Context -> Request -> [Frame]
@@ -83,3 +120,37 @@ handle :: Context -> Request -> [Frame]
 handle ctx r frs = case ctx of
   Nil         -> Request r frs
   (ctx :< fr) -> handle ctx r (fr : frs)
+
+call :: Context -> Env -> [Clause] -> [Val]
+     -> Computation
+call ctx rho []               vs =
+  handle ctx ("IncompletePattern", vs) []
+call ctx rho ((ps, rhs) : cs) vs = case matches ps vs of
+  Nothing  -> call ctx rho cs vs
+  Just sig -> eval ctx (merge rho sig, rhs)
+
+init :: Env
+init = pure Nothing
+
+singleton :: String -> Val' a -> Env' a
+singleton x v y = v <$ guard (x == y)
+
+merge :: Env -> Env -> Env
+merge rho sig x = sig x <|> rho x
+
+match :: Pattern -> Val -> Maybe Env
+match (PAtom a)   (VAtom b)   = init <$ guard (a == b)
+match (PBind x)   v           = pure (singleton x v)
+match (PCell p q) (VCell v w) = merge <$> match p v <*> match q w
+match _ _ = Nothing
+
+mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
+mayZipWith f []       []       = pure []
+mayZipWith f (a : as) (b : bs) =
+  (:) <$> f a b <*> mayZipWith f as bs
+mayZipWith _ _ _ = Nothing
+
+
+matches :: [Pattern] -> [Val] -> Maybe Env
+matches ps vs = foldl merge init <$> mayZipWith match ps vs
+
