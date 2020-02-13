@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE TupleSections        #-}
 {-# OPTIONS -Wincomplete-patterns #-}
 
 module Shonkier.Semantics where
@@ -9,29 +10,42 @@ import Data.Map (Map, singleton, (!?))
 import Data.Bwd
 import Shonkier.Syntax
 
-data Val' a
+data Value' a
   = VAtom a
-  | VCell (Val' a) (Val' a)
-  | VFun [Frame' a] (Env' a) [Clause' a]
+  | VCell (Value' a) (Value' a)
+  | VFun [Frame' a] (Env' a) [[a]] [Clause' a]
   -- ^ Env is the one the function was created in
   --   Frames ??
+  | VThunk (Computation' a)
   deriving (Show)
 
-type Val = Val' String
+type Value = Value' String
 
 -- environments
 
-type Env' a = Map String (Val' a)
+type Env' a = Map String (Value' a)
 type Env = Env' String
 
 merge :: Env' a -> Env' a -> Env' a
 merge = flip (<>)
 
-match :: Pattern -> Val -> Maybe Env
-match (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
-match (PBind x)   v           = pure (singleton x v)
-match (PCell p q) (VCell v w) = merge <$> match p v <*> match q w
-match _ _ = Nothing
+vmatch :: Eq a => PValue' a -> Value' a -> Maybe (Env' a)
+vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
+vmatch (PBind x)   v           = pure (singleton x v)
+vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
+vmatch _ _ = Nothing
+
+cmatch :: Eq a => PComputation' a -> Computation' a -> Maybe (Env' a)
+cmatch (PValue p)           (Value v)             = vmatch p v
+cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
+  guard (a == b)
+  rho <- matches vmatch ps vs
+  return $ merge rho $ singleton k $
+    VFun frs mempty [] [( [PValue (PBind "_return")]
+                        , Var "_return"
+                        )]
+cmatch (PThunk k) c = pure $ singleton k $ VThunk c
+cmatch _ _ = Nothing
 
 mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
 mayZipWith f []       []       = pure []
@@ -39,10 +53,8 @@ mayZipWith f (a : as) (b : bs) =
   (:) <$> f a b <*> mayZipWith f as bs
 mayZipWith _ _ _ = Nothing
 
-
-matches :: [Pattern] -> [Val] -> Maybe Env
-matches ps vs = foldl merge mempty <$> mayZipWith match ps vs
-
+matches :: (a -> b -> Maybe (Env' c)) -> [a] -> [b] -> Maybe (Env' c)
+matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 -- Evaluation contexts
 
@@ -56,9 +68,16 @@ type Funy = Funy' String
 -- cursor position
 data Frame' a
   = CellL (Env' a) (Term' a)
-  | CellR (Val' a) (Env' a)
+  | CellR (Value' a) (Env' a)
   | AppL (Env' a) [Term' a]
-  | AppR (Funy' a) (Bwd (Val' a)) (Env' a) [Term' a]
+  | AppR (Funy' a)
+         (Bwd (Computation' a))
+         -- ^ already evaluated arguments (some requests we are
+         --   willing to handle may still need to be dealt with)
+         ([a], Env' a)
+         -- ^ focus: [a] = requests we are willing to handle
+         [([a],Term' a)]
+         -- ^ each arg comes with requests we are willing to handle
   deriving (Show)
 
 type Frame = Frame' String
@@ -68,11 +87,11 @@ type Context = Context' String
 
 -- Evaluation functions
 
-type Request' a = (a, [Val' a])
+type Request' a = (a, [Value' a])
 type Request = Request' String
 
 data Computation' a
-  = Value (Val' a)
+  = Value (Value' a)
   | Request (Request' a) [Frame' a]
   -- ^ Invoking an effect & none of the
   -- frames present know how to interpret it
@@ -82,17 +101,17 @@ type Computation = Computation' String
 
 eval :: Context -> (Env, Term) -> Computation
 eval ctx (rho, t) = case t of
-  Var x    -> case rho !? x of
+  Var x     -> case rho !? x of
     Just v  -> use ctx v
     Nothing -> handle ctx ("OutOfScope", []) []
   -- move left; start evaluating left to right
-  Atom a   -> use ctx (VAtom a)
-  Cell a b -> eval (ctx :< CellL rho b) (rho, a)
-  App f as -> eval (ctx :< AppL rho as) (rho, f)
-  Fun cs   -> use ctx (VFun [] rho cs)
+  Atom a    -> use ctx (VAtom a)
+  Cell a b  -> eval (ctx :< CellL rho b) (rho, a)
+  App f as  -> eval (ctx :< AppL rho as) (rho, f)
+  Fun es cs -> use ctx (VFun [] rho es cs)
 
 
-use :: Context -> Val -> Computation
+use :: Context -> Value -> Computation
 use Nil         v = Value v
 use (ctx :< fr) v = case fr of
   -- move right or upwards
@@ -100,30 +119,58 @@ use (ctx :< fr) v = case fr of
   CellR u rho -> use ctx (VCell u v)
   -- we better be making a request or using a function
   AppL rho as -> case v of
-    VAtom f         -> app ctx (FAtom f)        Nil rho as
-    VFun frs sig cs -> app ctx (FFun frs sig cs) Nil rho as
-    _               -> handle ctx ("NoFun",[v]) []
-  AppR f vz rho as -> app ctx f (vz :< v) rho as
+    VAtom f            ->
+      -- Here we are enforcing the invariant:
+      -- Atomic functions i.e. requests only ever offer
+      -- to handle the empty list of requests.
+      let cs = map ([],) as
+      in app ctx (FAtom f) Nil rho cs
+    VFun frs sig hs cls ->
+      let cs = zip (hs ++ repeat []) as
+      in app ctx (FFun frs sig cls) Nil rho cs
+    VThunk c -> case as of
+      [] -> case c of
+        Value v       -> use ctx v
+        Request r frs -> handle ctx r frs
+      _  -> handle ctx ("ThunksAreNullary", [v]) []
+    _ -> handle ctx ("NoFun",[v]) []
+  AppR f vz (_, rho) as -> app ctx f (vz :< Value v) rho as
 
-app :: Context -> Funy -> Bwd Val -> Env -> [Term]
+app :: Context -> Funy
+    -> Bwd Computation -> Env -> [([String],Term)]
     -> Computation
-app ctx f vz rho as = case as of
-  []       -> case f of
-    FAtom a         -> handle ctx (a, vz <>> []) []
-    FFun frs sig cs -> call (ctx <>< frs) sig cs (vz <>> [])
-  (a : as) -> eval (ctx :< AppR f vz rho as) (rho, a)
+app ctx f cz rho as = case as of
+  []             -> case f of
+    FAtom a         ->
+      -- Here we are relying on the invariant:
+      -- Atomic functions i.e. requests only ever offer
+      -- to handle the empty list of requests.
+      let vs = map unsafeComToValue (cz <>> []) in
+      handle ctx (a, vs) []
+    FFun frs sig cs -> call (ctx <>< frs) sig cs (cz <>> [])
+  ((hs, a) : as) -> eval (ctx :< AppR f cz (hs, rho) as) (rho, a)
+
+unsafeComToValue :: Computation -> Value
+unsafeComToValue = \case
+  Value v     -> v
+  r@Request{} -> error $ unlines
+    [ "ARGH! Feeding a request to a request"
+    , show r
+    ]
 
 handle :: Context -> Request -> [Frame]
        -> Computation
-handle ctx r frs = case ctx of
+handle ctx r@(a, vs) frs = case ctx of
   Nil         -> Request r frs
-  (ctx :< fr) -> handle ctx r (fr : frs)
+  (ctx :< fr) -> case fr of
+    AppR f cz (hs, rho) as | a `elem` hs ->
+      app ctx f (cz :< Request r frs) rho as
+    _ -> handle ctx r (fr : frs)
 
-call :: Context -> Env -> [Clause] -> [Val]
+call :: Context -> Env -> [Clause] -> [Computation]
      -> Computation
-call ctx rho []               vs =
-  handle ctx ("IncompletePattern", vs) []
-call ctx rho ((ps, rhs) : cs) vs = case matches ps vs of
-  Nothing  -> call ctx rho cs vs
+call ctx rho []                cs =
+  handle ctx ("IncompletePattern", []) []
+call ctx rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
+  Nothing  -> call ctx rho cls cs
   Just sig -> eval ctx (merge rho sig, rhs)
-

@@ -26,7 +26,7 @@ weeTerm =
     <*> (id <$ char '|' <* skipSpace <*> term <|> pure (Atom ""))
     <* skipSpace <* char ']'
   <|>
-  Fun <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
+  Fun [] <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
 
 moreTerm :: Term -> Parser Term
 moreTerm t = ((App t <$ punc '(' <*> sep (punc ',') term <* punc ')') >>= moreTerm)
@@ -34,16 +34,21 @@ moreTerm t = ((App t <$ punc '(' <*> sep (punc ',') term <* punc ')') >>= moreTe
 
 
 clause :: Parser Clause
-clause = (,) <$> sep (punc ',') pattern <* skipSpace <* char '-' <* char '>' <* skipSpace
+clause = (,) <$> sep (punc ',') pcomputation <* skipSpace <* char '-' <* char '>' <* skipSpace
              <*> term
   <|> (,) [] <$> term
 
-pattern :: Parser Pattern
-pattern =
+pcomputation :: Parser PComputation
+pcomputation =
+  PValue <$> pvalue
+--  <|> ...
+
+pvalue :: Parser PValue
+pvalue =
   PAtom <$ char '\'' <*> some (satisfy isAlphaNum)
   <|>
   PBind <$> some (satisfy isAlphaNum)
   <|>
-  flip (foldr PCell) <$ char '[' <*> many (skipSpace *> pattern) <* skipSpace
-          <*> (id <$ char '|' <* skipSpace <*> pattern <|> pure (PAtom ""))
+  flip (foldr PCell) <$ char '[' <*> many (skipSpace *> pvalue) <* skipSpace
+          <*> (id <$ char '|' <* skipSpace <*> pvalue <|> pure (PAtom ""))
            <* skipSpace <* char ']'
