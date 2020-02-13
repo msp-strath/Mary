@@ -1,7 +1,10 @@
 module Shonkier.Examples where
 
+import Data.Map (singleton)
+
 import Data.Bwd
 import Shonkier.Syntax
+import Shonkier.Semantics
 
 env :: Env
 env = singleton "append" $ VFun [] env
