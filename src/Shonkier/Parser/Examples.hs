@@ -2,11 +2,19 @@
 
 module Shonkier.Parser.Examples where
 
+import Data.Bwd
 import Shonkier.Parser
 import Shonkier.Syntax
+import Shonkier.Semantics
 
 import Data.Attoparsec.Text
 import Data.Text
+import Data.Foldable
+
+getMeAProgram :: Text -> Program
+getMeAProgram txt = case parseOnly program txt of
+  Left err -> error err
+  Right t  -> t
 
 getMeATerm :: Text -> Term
 getMeATerm txt = case parseOnly (term <* endOfInput) txt of
@@ -18,3 +26,57 @@ mapT = getMeATerm
    "{ f, []     -> []                   \
   \ | f, [x|xs] -> [f(x)|map(f, xs)]   \
   \ }"
+
+runReaderT :: Term
+runReaderT = getMeATerm
+   "{ r, v              -> v                    \
+  \ | r, <'ask() -> k>  -> runReaderT(r, k(r))  \
+  \ }"
+
+appendP :: Program
+appendP = getMeAProgram
+  "append([],     ys) -> ys                \
+  \append([x|xs], ys) -> [x|append(xs, ys)]"
+
+mapP :: Program
+mapP = getMeAProgram
+  "map(f,[]) -> []                  \
+  \map(f,[x|xs]) -> [f(x)|map(f,xs)]"
+
+runReaderP :: Program
+runReaderP = getMeAProgram
+  "runReader(,'ask):                              \
+  \runReader(r,v) -> v                            \
+  \runReader(r,<'ask() -> k>) -> runReader(r,k(r))"
+
+pipeP :: Program
+pipeP = getMeAProgram
+  "pipe('send,'recv):                                            \
+  \pipe(<'send(x) -> ks>,<'recv() -> kr>) -> pipe(ks([]),kr(x))  \
+  \pipe(<s>,v) -> v                                              \
+  \pipe(v,<r>) -> 'abort()                                       "
+
+
+test0 :: Computation
+test0 = eval Nil . (,) (mkEnv . fold $ [runReaderP, appendP]) $ getMeATerm
+  "runReader(['1 '2],append('ask(),'ask()))"
+
+runStateP :: Program
+runStateP = getMeAProgram
+  "runState(, 'get 'put):                                         \
+  \runState(s, v) -> v                                            \
+  \runState(s, <'get() -> k>)  -> runState(s, k(s))               \
+  \runState(x, <'put(s) -> k>) -> runState(s, k([]))              "
+
+semiP :: Program
+semiP = getMeAProgram
+  "semi(x,y) -> y  \
+  \imes(x,y) -> x  "
+
+bipperP :: Program
+bipperP = getMeAProgram
+  "bipper() -> semi('send('get()),semi('put(['bip|'get()]),bipper()))"
+
+test1 :: Computation
+test1 = eval Nil . (,) (mkEnv . fold $ [runStateP, pipeP, semiP, bipperP, mapP]) $ getMeATerm
+  "runState([],pipe(bipper(),map({x -> 'recv()},[[] [] [] []])))"
