@@ -25,7 +25,7 @@ homepage:            https://github.com/msp-strath/Mary
 -- license:
 
 -- The file containing the license text.
-license-file:        LICENSE
+-- license-file:        LICENSE
 
 -- The package author(s).
 author:              Conor McBride
@@ -43,7 +43,8 @@ build-type:          Simple
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
-extra-source-files:  ChangeLog.md, README.md
+extra-source-files:  README.md
+--                   , ChangeLog.md
 
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
