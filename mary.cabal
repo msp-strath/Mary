@@ -59,23 +59,31 @@ executable mary
                      , Shonkier.Examples
                      , Shonkier.Parser
                      , Shonkier.Parser.Examples
+                     , Shonkier.Pretty
+                     , Shonkier.Pretty.Examples
                      , Shonkier.Semantics
                      , Shonkier.Syntax
 
   -- LANGUAGE extensions used by modules in this package.
-  other-extensions:    DeriveTraversable
-                     , LambdaCase
-                     , TupleSections
-                     , OverloadedStrings
+--  other-extensions:
 
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.12 && <4.13
                      , containers >=0.6 && <0.7
                      , attoparsec >=0.13 && <0.14
                      , text >=1.2 && <1.3
+                     , prettyprinter >=1.6 && <1.7
 
   -- Directories containing source files.
   hs-source-dirs:      src
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
+
+    -- LANGUAGE extensions used by modules in this package.
+  default-extensions:  DeriveTraversable
+                     , LambdaCase
+                     , TupleSections
+                     , OverloadedStrings
+
+  ghc-options:         -Wincomplete-patterns

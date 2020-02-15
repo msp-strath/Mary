@@ -1,7 +1,3 @@
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE TupleSections        #-}
-{-# OPTIONS -Wincomplete-patterns #-}
-
 module Shonkier.Semantics where
 
 import Control.Monad
