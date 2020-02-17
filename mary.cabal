@@ -87,3 +87,6 @@ executable mary
                      , OverloadedStrings
 
   ghc-options:         -Wincomplete-patterns
+                       -Woverlapping-patterns
+                       -Wmissing-signatures
+                       -Wtabs
