@@ -9,6 +9,7 @@ import Shonkier.Syntax
 data Value' a
   = VAtom a
   | VLit Literal
+  | VPrim Primitive [[a]]
   | VCell (Value' a) (Value' a)
   | VFun [Frame' a] (Env' a) [[a]] [Clause' a]
   -- ^ Env is the one the function was created in
@@ -61,6 +62,7 @@ matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 data Funy' a
   = FAtom a
+  | FPrim Primitive
   | FFun [Frame' a] (Env' a) [Clause' a]
   deriving (Show)
 type Funy = Funy' String
@@ -127,6 +129,9 @@ use (ctx :< fr) v = case fr of
       -- to handle the empty list of requests.
       let cs = map ([],) as
       in app ctx (FAtom f) Nil rho cs
+    VPrim f hs          ->
+      let cs = zip (hs ++ repeat []) as
+      in app ctx (FPrim f) Nil rho cs
     VFun frs sig hs cls ->
       let cs = zip (hs ++ repeat []) as
       in app ctx (FFun frs sig cls) Nil rho cs
@@ -149,6 +154,7 @@ app ctx f cz rho as = case as of
       -- to handle the empty list of requests.
       let vs = map unsafeComToValue (cz <>> []) in
       handle ctx (a, vs) []
+    FPrim p         -> prim ctx p (cz <>> [])
     FFun frs sig cs -> call (ctx <>< frs) sig cs (cz <>> [])
   ((hs, a) : as) -> eval (ctx :< AppR f cz (hs, rho) as) (rho, a)
 
@@ -176,3 +182,12 @@ call ctx rho []                cs =
 call ctx rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call ctx rho cls cs
   Just sig -> eval ctx (merge rho sig, rhs)
+
+prim :: Context -> Primitive -> [Computation] -> Computation
+prim ctx "primStringAppend"
+         [Value (VLit l@String{}), Value (VLit l'@String{})]
+         = use ctx (VLit $ primStringAppend l l')
+prim ctx f _ = handle ctx ("NoPrim",[VPrim f []]) []
+
+primStringAppend :: Literal -> Literal -> Literal
+primStringAppend (String k str) (String k' str') = String k (str ++ str')

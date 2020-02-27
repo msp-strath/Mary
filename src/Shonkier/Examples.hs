@@ -109,3 +109,18 @@ bipping = App (Var "runState")
 
 stateTest :: Computation
 stateTest = eval Nil (mapEnv <> stateEnv <> appendEnv, bipping)
+
+primEnv :: Env
+primEnv = singleton "primStringAppend" $ VPrim "primStringAppend" []
+
+strAppend :: [Literal] -> Computation
+strAppend ls = eval Nil (primEnv, App (Var "primStringAppend") (Lit <$> ls))
+
+helloworld :: Computation
+helloworld = strAppend $ String "foo" <$> ["hello ", "world"]
+
+helloworld' :: Computation
+helloworld' = strAppend $ String "" <$> ["hello ", "world"]
+
+foogoo :: Computation
+foogoo = strAppend [String "foo" "fo", String "goo" "\"foo"]

@@ -1,7 +1,8 @@
 module Shonkier.Syntax where
 
-type Variable = String
-type Keyword  = String
+type Keyword   = String
+type Primitive = String
+type Variable  = String
 
 data Literal
   = String Keyword String

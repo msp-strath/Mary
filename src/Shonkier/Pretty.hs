@@ -5,6 +5,9 @@ module Shonkier.Pretty where
 import Shonkier.Syntax
 import Shonkier.Semantics
 
+import Data.Char
+import Data.Foldable
+import Data.List
 import Data.Text.Prettyprint.Doc
 
 ppAtom :: String -> Doc ann
@@ -24,11 +27,23 @@ ppFun hs cls = encloseSep lbrace rbrace semi $ pretty <$> cls
 ppClause :: Clause -> Doc ann
 ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
 
+ppStringLit :: String -> String -> Doc ann
+ppStringLit k str = enclose (key <> dquote) (dquote <> key) (pretty str) where
+
+  key   = pretty $ case maximum ((-2):occ) of
+    (-2) -> k
+    n    -> k ++ show (n + 1)
+  occ   = [ d | '"' : tl <- tails str
+              , suff     <- toList $ stripPrefix k tl
+              , let d = mread (takeWhile isDigit suff)
+              ]
+  mread = \case
+    [] -> (-1)
+    ds -> read ds
+
 instance Pretty Literal where
   pretty = \case
-    String k str ->
-      let key = pretty k in
-      enclose (dquote <> key) (key <> dquote) (pretty str)
+    String k str -> ppStringLit k str
 
 instance Pretty Term where
   pretty = \case
@@ -56,6 +71,7 @@ instance Pretty Value where
   pretty = \case
     VAtom a            -> ppAtom a
     VLit l             -> pretty l
+    VPrim f _          -> pretty f
     VCell a b          -> ppCell a b
     VFun fr rho hs cls -> ppFun hs cls
     VThunk c           -> angles $ pretty c
