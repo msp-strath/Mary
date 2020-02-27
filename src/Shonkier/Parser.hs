@@ -77,7 +77,7 @@ weeTerm :: Parser Term
 weeTerm =
   Atom <$>  atom
   <|>
-  Literal <$> literal
+  Lit <$> literal
   <|>
   Var <$> identifier
   <|>

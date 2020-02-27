@@ -33,7 +33,7 @@ instance Pretty Literal where
 instance Pretty Term where
   pretty = \case
     Atom a     -> ppAtom a
-    Literal l  -> pretty l
+    Lit l      -> pretty l
     Var v      -> pretty v
     Cell a b   -> ppCell a b
     App f ts   -> ppApp (pretty f) ts
@@ -41,10 +41,10 @@ instance Pretty Term where
 
 instance Pretty PValue where
   pretty = \case
-    PAtom a    -> ppAtom a
-    PLiteral l -> pretty l
-    PBind v    -> pretty v
-    PCell a b  -> ppCell a b
+    PAtom a   -> ppAtom a
+    PLit l    -> pretty l
+    PBind v   -> pretty v
+    PCell a b -> ppCell a b
 
 instance Pretty PComputation where
   pretty = \case
@@ -55,7 +55,7 @@ instance Pretty PComputation where
 instance Pretty Value where
   pretty = \case
     VAtom a            -> ppAtom a
-    VLiteral l         -> pretty l
+    VLit l             -> pretty l
     VCell a b          -> ppCell a b
     VFun fr rho hs cls -> ppFun hs cls
     VThunk c           -> angles $ pretty c

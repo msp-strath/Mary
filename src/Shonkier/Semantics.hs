@@ -8,7 +8,7 @@ import Shonkier.Syntax
 
 data Value' a
   = VAtom a
-  | VLiteral Literal
+  | VLit Literal
   | VCell (Value' a) (Value' a)
   | VFun [Frame' a] (Env' a) [[a]] [Clause' a]
   -- ^ Env is the one the function was created in
@@ -26,8 +26,12 @@ type Env = Env' String
 merge :: Env' a -> Env' a -> Env' a
 merge = flip (<>)
 
+lmatch :: Literal -> Literal -> Maybe ()
+lmatch (String _ str) (String _ str') = guard (str == str')
+
 vmatch :: Eq a => PValue' a -> Value' a -> Maybe (Env' a)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
+vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
 vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
 vmatch _ _ = Nothing
@@ -103,7 +107,7 @@ eval ctx (rho, t) = case t of
     Nothing -> handle ctx ("OutOfScope", []) []
   -- move left; start evaluating left to right
   Atom a    -> use ctx (VAtom a)
-  Literal l -> use ctx (VLiteral l)
+  Lit l     -> use ctx (VLit l)
   Cell a b  -> eval (ctx :< CellL rho b) (rho, a)
   App f as  -> eval (ctx :< AppL rho as) (rho, f)
   Fun es cs -> use ctx (VFun [] rho es cs)

@@ -9,7 +9,7 @@ data Literal
 
 data Term' a
   = Atom a
-  | Literal Literal
+  | Lit Literal
   | Var Variable
   | Cell (Term' a) (Term' a)
   | App (Term' a) [Term' a]
@@ -23,7 +23,7 @@ type Clause = Clause' String
 
 data PValue' a
   = PAtom a
-  | PLiteral Literal
+  | PLit Literal
   | PBind Variable
   | PCell (PValue' a) (PValue' a)
   deriving (Show)
