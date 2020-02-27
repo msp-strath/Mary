@@ -3,6 +3,7 @@ module Shonkier.Parser where
 import Control.Applicative
 import Data.Attoparsec.Text
 import Data.Char
+import qualified Data.Text as T
 import Data.List (sortBy, groupBy, nub)
 import Data.Function
 import Data.Either
@@ -65,9 +66,18 @@ atom = id <$ char '\'' <*> some (satisfy isAlphaNum)
 identifier :: Parser String
 identifier = some (satisfy isAlphaNum)
 
+literal :: Parser Literal
+literal = do
+  k <- option "" identifier
+  let end = T.pack ('"':k)
+  String k <$  char '"'
+           <*> manyTill anyChar (string end)
+
 weeTerm :: Parser Term
 weeTerm =
   Atom <$>  atom
+  <|>
+  Literal <$> literal
   <|>
   Var <$> identifier
   <|>

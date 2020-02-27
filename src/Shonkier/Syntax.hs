@@ -1,9 +1,15 @@
 module Shonkier.Syntax where
 
 type Variable = String
+type Keyword  = String
+
+data Literal
+  = String Keyword String
+  deriving (Show)
 
 data Term' a
   = Atom a
+  | Literal Literal
   | Var Variable
   | Cell (Term' a) (Term' a)
   | App (Term' a) [Term' a]
@@ -17,6 +23,7 @@ type Clause = Clause' String
 
 data PValue' a
   = PAtom a
+  | PLiteral Literal
   | PBind Variable
   | PCell (PValue' a) (PValue' a)
   deriving (Show)

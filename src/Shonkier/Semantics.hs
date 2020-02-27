@@ -8,6 +8,7 @@ import Shonkier.Syntax
 
 data Value' a
   = VAtom a
+  | VLiteral Literal
   | VCell (Value' a) (Value' a)
   | VFun [Frame' a] (Env' a) [[a]] [Clause' a]
   -- ^ Env is the one the function was created in
@@ -102,6 +103,7 @@ eval ctx (rho, t) = case t of
     Nothing -> handle ctx ("OutOfScope", []) []
   -- move left; start evaluating left to right
   Atom a    -> use ctx (VAtom a)
+  Literal l -> use ctx (VLiteral l)
   Cell a b  -> eval (ctx :< CellL rho b) (rho, a)
   App f as  -> eval (ctx :< AppL rho as) (rho, f)
   Fun es cs -> use ctx (VFun [] rho es cs)

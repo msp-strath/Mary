@@ -24,9 +24,16 @@ ppFun hs cls = encloseSep lbrace rbrace semi $ pretty <$> cls
 ppClause :: Clause -> Doc ann
 ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
 
+instance Pretty Literal where
+  pretty = \case
+    String k str ->
+      let key = pretty k in
+      enclose (dquote <> key) (key <> dquote) (pretty str)
+
 instance Pretty Term where
   pretty = \case
     Atom a     -> ppAtom a
+    Literal l  -> pretty l
     Var v      -> pretty v
     Cell a b   -> ppCell a b
     App f ts   -> ppApp (pretty f) ts
@@ -34,9 +41,10 @@ instance Pretty Term where
 
 instance Pretty PValue where
   pretty = \case
-    PAtom a   -> ppAtom a
-    PBind v   -> pretty v
-    PCell a b -> ppCell a b
+    PAtom a    -> ppAtom a
+    PLiteral l -> pretty l
+    PBind v    -> pretty v
+    PCell a b  -> ppCell a b
 
 instance Pretty PComputation where
   pretty = \case
@@ -47,6 +55,7 @@ instance Pretty PComputation where
 instance Pretty Value where
   pretty = \case
     VAtom a            -> ppAtom a
+    VLiteral l         -> pretty l
     VCell a b          -> ppCell a b
     VFun fr rho hs cls -> ppFun hs cls
     VThunk c           -> angles $ pretty c

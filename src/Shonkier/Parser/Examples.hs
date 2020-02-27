@@ -80,3 +80,11 @@ bipperP = getMeAProgram
 test1 :: Computation
 test1 = eval Nil . (,) (mkEnv . fold $ [runStateP, pipeP, semiP, bipperP, mapP]) $ getMeATerm
   "runState([],pipe(bipper(),map({x -> 'recv()},[[] [] [] []])))"
+
+string :: Term
+string = getMeATerm "f(foo\"oulala\"foo, g(\"oula\", goo\"ou\"la\"la\"goo))"
+
+string2 :: Term
+string2 = getMeATerm "\" \
+  \hallo   \n\
+  \ wolrd\n\""
