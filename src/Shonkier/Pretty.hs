@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiWayIf        #-}
 
 module Shonkier.Pretty where
 
@@ -8,6 +9,7 @@ import Shonkier.Semantics
 import Data.Char
 import Data.Foldable
 import Data.List
+import Data.Ratio
 import Data.Text.Prettyprint.Doc
 
 ppAtom :: String -> Doc ann
@@ -41,9 +43,19 @@ ppStringLit k str = enclose (key <> dquote) (dquote <> key) (pretty str) where
     [] -> (-1)
     ds -> read ds
 
+instance Pretty Rational where
+  pretty p =
+    let n = numerator p; d = denominator p in
+    if | d == 1    -> pretty n
+       | d == 2    -> pretty (n `div` 2) <> ".5"
+       | d == 4    -> pretty (n `div` 4)
+                      <> if n `mod` 4 == 1 then ".25" else ".75"
+       | otherwise -> pretty n <+> "/" <+> pretty d
+
 instance Pretty Literal where
   pretty = \case
     String k str -> ppStringLit k str
+    Num r        -> pretty r
 
 instance Pretty Term where
   pretty = \case

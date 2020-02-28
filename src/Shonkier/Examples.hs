@@ -111,10 +111,16 @@ stateTest :: Computation
 stateTest = eval Nil (mapEnv <> stateEnv <> appendEnv, bipping)
 
 primEnv :: Env
-primEnv = singleton "primStringAppend" $ VPrim "primStringAppend" []
+primEnv = foldMap (\ str -> singleton str $ VPrim str [])
+        [ "primStringAppend"
+        , "primNumAdd"
+        ]
+
+mkPrim :: String -> [Literal] -> Computation
+mkPrim p ls = eval Nil (primEnv, App (Var p) (Lit <$> ls))
 
 strAppend :: [Literal] -> Computation
-strAppend ls = eval Nil (primEnv, App (Var "primStringAppend") (Lit <$> ls))
+strAppend = mkPrim "primStringAppend"
 
 helloworld :: Computation
 helloworld = strAppend $ String "foo" <$> ["hello ", "world"]
@@ -124,3 +130,9 @@ helloworld' = strAppend $ String "" <$> ["hello ", "world"]
 
 foogoo :: Computation
 foogoo = strAppend [String "foo" "fo", String "goo" "\"foo"]
+
+numAdd :: [Literal] -> Computation
+numAdd = mkPrim "primNumAdd"
+
+three :: Computation
+three = numAdd (Num <$> [1, 2])

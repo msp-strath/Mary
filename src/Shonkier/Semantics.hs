@@ -29,6 +29,8 @@ merge = flip (<>)
 
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch (String _ str) (String _ str') = guard (str == str')
+lmatch (Num q)        (Num q')        = guard (q == q')
+lmatch _ _ = Nothing
 
 vmatch :: Eq a => PValue' a -> Value' a -> Maybe (Env' a)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
@@ -114,7 +116,6 @@ eval ctx (rho, t) = case t of
   App f as  -> eval (ctx :< AppL rho as) (rho, f)
   Fun es cs -> use ctx (VFun [] rho es cs)
 
-
 use :: Context -> Value -> Computation
 use Nil         v = Value v
 use (ctx :< fr) v = case fr of
@@ -187,7 +188,15 @@ prim :: Context -> Primitive -> [Computation] -> Computation
 prim ctx "primStringAppend"
          [Value (VLit l@String{}), Value (VLit l'@String{})]
          = use ctx (VLit $ primStringAppend l l')
+prim ctx "primNumAdd"
+         [Value (VLit n@Num{}), Value (VLit n'@Num{})]
+         = use ctx (VLit $ primNumAdd n n')
 prim ctx f _ = handle ctx ("NoPrim",[VPrim f []]) []
+
+primNumAdd :: Literal -> Literal -> Literal
+primNumAdd (Num n) (Num n') = Num (n + n')
+primNumAdd _ _ = error "primNumAdd: the IMPOSSIBLE happened"
 
 primStringAppend :: Literal -> Literal -> Literal
 primStringAppend (String k str) (String k' str') = String k (str ++ str')
+primStringAppend _ _ = error "primStringAppend: the IMPOSSIBLE happened"

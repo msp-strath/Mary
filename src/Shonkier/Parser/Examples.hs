@@ -88,3 +88,6 @@ string2 :: Term
 string2 = getMeATerm "\" \
   \hallo   \n\
   \ wolrd\n\""
+
+num :: Term
+num = getMeATerm "foo(3.4,6.75,8.25,2/3,1/4,18.000,6/4,3.400,3)"

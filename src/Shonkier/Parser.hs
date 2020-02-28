@@ -3,6 +3,7 @@ module Shonkier.Parser where
 import Control.Applicative
 import Data.Attoparsec.Text
 import Data.Char
+import Data.Ratio
 import qualified Data.Text as T
 import Data.List (sortBy, groupBy, nub)
 import Data.Function
@@ -70,11 +71,31 @@ arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
 
 literal :: Parser Literal
-literal = do
+literal = stringlit <|> numlit
+
+stringlit :: Parser Literal
+stringlit = do
   k <- option "" identifier
   let end = T.pack ('"':k)
   String k <$  char '"'
            <*> manyTill anyChar (string end)
+
+data NumExtension
+  = Dot   String
+  | Slash String
+  | None
+
+numlit :: Parser Literal
+numlit = do
+  n   <- read <$> some (satisfy isDigit)
+  ext <- choice [ Dot  <$ char '.' <*> some (satisfy isDigit)
+                , Slash <$ char '/' <*> some (satisfy isDigit)
+                , pure None
+                ]
+  pure $ Num $ case ext of
+    Dot   rs -> (n % 1) + (read rs % read ('1' : ('0' <$ rs)))
+    Slash rs -> n % read rs
+    None     -> n % 1
 
 weeTerm :: Parser Term
 weeTerm =
