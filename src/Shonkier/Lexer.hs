@@ -56,12 +56,12 @@ lexing start = maybe [] (uncurry dispatch) (uncons txt)  where
         | isAlpha c -> identifier txt
         | otherwise -> stringlit txt
 
-  -- Invariant: first character is '-'
+  -- Precondition: first character is '-'
   arrow :: Lexer
   arrow t = maybe (stringlit t) ((Arrow :) . lexing)
           $ stripPrefix "->" t
 
-  -- Invariant: first character is alpha
+  -- Precondition: first character is alpha
   identifier :: Lexer
   identifier t =
     let (id, rest) = T.span isAlphaNum t in
@@ -91,7 +91,7 @@ lexing start = maybe [] (uncurry dispatch) (uncons txt)  where
     then error "Unfinished string literal"
     else Lit (Text pref str) : lexing (T.drop n rest)
 
-  -- Invariant: first character is a digit
+  -- Precondition: first character is a digit
   numlit :: Lexer
   numlit t =
     let (ds, rest) = T.span isDigit t in
