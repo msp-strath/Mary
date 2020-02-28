@@ -10,6 +10,8 @@ import Data.Text.IO as TIO
 import System.Environment
 import Control.Monad.Writer
 import Data.Attoparsec.Text
+import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc.Render.Text
 
 import Data.Bwd
 import Shonkier.Examples
@@ -24,8 +26,21 @@ main :: IO ()
 main = do
   xs <- getArgs
   case xs of
-    ["-pandoc"] -> toJSONFilter process
+    ["-pandoc"]             -> toJSONFilter process
+    ["-shonkier", filename] -> interpretShonkier filename
     _ -> TIO.putStr "# mary says\nI don't know what you're on about.\n\n"
+
+interpretShonkier :: String -> IO ()
+interpretShonkier filename = do
+  file <- TIO.readFile filename
+  let Right ps = parseOnly program file
+  let env = primEnv <> mkEnv ps
+  case [ m | ("main", Right m) <- ps ] of
+    [([],body)] ->
+      case eval Nil (env, body) of
+        Value v -> putDoc $ pretty v <> line
+        Request (r,_) fr -> error $ "unhandled request " ++ r
+    _ -> error "not exactly one main function"
 
 process :: Pandoc -> IO Pandoc
 process doc0 = return doc2 where
