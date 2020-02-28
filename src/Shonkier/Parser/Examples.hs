@@ -30,7 +30,7 @@ mapT = getMeATerm
 runReaderT :: Term
 runReaderT = getMeATerm
    "{ r, v              -> v                    \
-  \ | r, <'ask() -> k>  -> runReaderT(r, k(r))  \
+  \ | r, {'ask() -> k}  -> runReaderT(r, k(r))  \
   \ }"
 
 appendP :: Program
@@ -47,14 +47,14 @@ runReaderP :: Program
 runReaderP = getMeAProgram
   "runReader(,'ask):                              \
   \runReader(r,v) -> v                            \
-  \runReader(r,<'ask() -> k>) -> runReader(r,k(r))"
+  \runReader(r,{'ask() -> k}) -> runReader(r,k(r))"
 
 pipeP :: Program
 pipeP = getMeAProgram
   "pipe('send,'recv):                                            \
-  \pipe(<'send(x) -> ks>,<'recv() -> kr>) -> pipe(ks([]),kr(x))  \
-  \pipe(<s>,v) -> v                                              \
-  \pipe(v,<r>) -> 'abort()                                       "
+  \pipe({'send(x) -> ks},{'recv() -> kr}) -> pipe(ks([]),kr(x))  \
+  \pipe({s},v) -> v                                              \
+  \pipe(v,{r}) -> 'abort()                                       "
 
 
 test0 :: Computation
@@ -65,8 +65,8 @@ runStateP :: Program
 runStateP = getMeAProgram
   "runState(, 'get 'put):                                         \
   \runState(s, v) -> v                                            \
-  \runState(s, <'get() -> k>)  -> runState(s, k(s))               \
-  \runState(x, <'put(s) -> k>) -> runState(s, k([]))              "
+  \runState(s, {'get() -> k})  -> runState(s, k(s))               \
+  \runState(x, {'put(s) -> k}) -> runState(s, k([]))              "
 
 semiP :: Program
 semiP = getMeAProgram

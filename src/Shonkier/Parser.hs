@@ -48,7 +48,7 @@ decl = id <$ punc '('
 defn :: Parser Clause
 defn = (,) <$ punc '('
           <*> sep (punc ',') pcomputation
-           <* punc ')'  <* char '-' <* char '>' <* skipSpace
+           <* punc ')'  <* arrow <* skipSpace
           <*> term
 
 punc :: Char -> Parser ()
@@ -65,6 +65,9 @@ atom = id <$ char '\'' <*> some (satisfy isAlphaNum)
 
 identifier :: Parser String
 identifier = some (satisfy isAlphaNum)
+
+arrow :: Parser ()
+arrow = () <$ char '-' <* char '>'
 
 literal :: Parser Literal
 literal = do
@@ -94,18 +97,18 @@ moreTerm t = ((App t <$ punc '(' <*> sep (punc ',') term <* punc ')') >>= moreTe
 
 
 clause :: Parser Clause
-clause = (,) <$> sep (punc ',') pcomputation <* skipSpace <* char '-' <* char '>' <* skipSpace
+clause = (,) <$> sep (punc ',') pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
   <|> (,) [] <$> term
 
 pcomputation :: Parser PComputation
 pcomputation
   =   PValue <$> pvalue
-  <|> id <$ char '<' <* skipSpace <*>
+  <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
        <|> PRequest <$> ((,) <$> atom <* punc '(' <*> sep (punc ',') pvalue <* punc ')')
-           <* char '-' <* char '>' <* skipSpace <*> identifier
-      ) <* skipSpace <* char '>'
+           <* arrow <* skipSpace <*> identifier
+      ) <* skipSpace <* char '}'
 
 pvalue :: Parser PValue
 pvalue =
