@@ -5,36 +5,8 @@ import Data.Attoparsec.Text
 import Data.Char
 import Data.Ratio
 import qualified Data.Text as T
-import Data.List (sortBy, groupBy, nub)
-import Data.Function
-import Data.Either
-import Data.Map (singleton)
-import Data.Foldable
-import Control.Arrow
 
 import Shonkier.Syntax
-import Shonkier.Semantics  -- fixme!
-
-type Program = [(String, Either [[String]] Clause)]
-
-mkEnv :: Program -> Env  -- moveme!
-mkEnv ls0 = env
-  where
-  ls1 = sortBy (compare `on` (id *** isRight)) ls0
-  lss = groupBy ((==) `on` fst) ls1
-  env = fold
-          [ singleton f $
-             VFun [] env
-               (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
-               [cl | (_, Right cl) <- grp]
-          | grp@((f, _) : _) <- lss
-          ]
-
-padCat :: Eq a => [[a]] -> [[a]] -> [[a]]
-padCat [] hs = hs
-padCat hs [] = hs
-padCat (a : as) (b : bs) = (a ++ b) : padCat as bs
-
 
 program :: Parser Program
 program = id <$ skipSpace

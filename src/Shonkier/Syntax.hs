@@ -23,6 +23,8 @@ data Term' a
 
 type Term = Term' String
 
+type Program = [(String, Either [[String]] Clause)]
+
 type Clause' a = ([PComputation' a], Term' a)
 type Clause = Clause' String
 

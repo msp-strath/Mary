@@ -1,7 +1,12 @@
 module Shonkier.Semantics where
 
 import Control.Monad
+import Control.Arrow ((***))
+import Data.Foldable
+import Data.Function
+import Data.Either
 import Data.Map (Map, singleton, (!?))
+import Data.List (sortBy, groupBy, nub)
 
 import Data.Bwd
 import Shonkier.Syntax
@@ -26,6 +31,24 @@ type Env = Env' String
 
 merge :: Env' a -> Env' a -> Env' a
 merge = flip (<>)
+
+mkEnv :: Program -> Env
+mkEnv ls0 = env
+  where
+  ls1 = sortBy (compare `on` (id *** isRight)) ls0
+  lss = groupBy ((==) `on` fst) ls1
+  env = fold
+          [ singleton f $
+             VFun [] env
+               (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
+               [cl | (_, Right cl) <- grp]
+          | grp@((f, _) : _) <- lss
+          ]
+
+padCat :: Eq a => [[a]] -> [[a]] -> [[a]]
+padCat [] hs = hs
+padCat hs [] = hs
+padCat (a : as) (b : bs) = (a ++ b) : padCat as bs
 
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch (String _ str) (String _ str') = guard (str == str')
