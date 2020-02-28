@@ -9,17 +9,13 @@ data Literal
   deriving Show
 
 data Punctuation
-  = LParen
-  | RParen
-  | LBracket
-  | RBracket
-  | LBrace
-  | RBrace
-  | LAngle
-  | RAngle
+  = LParen   | RParen
+  | LBracket | RBracket
+  | LBrace   | RBrace
+  | LAngle   | RAngle
   | Comma
   | Pipe
-  deriving Show
+  deriving (Eq, Show)
 
 data Token' a
   = Id String
