@@ -1,0 +1,9 @@
+# Embedding Programs as Fenced Code Blocks
+
+```mary-def
+test() -> ['Para "Hello"]
+```
+
+```mary
+test()
+```

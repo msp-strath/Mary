@@ -52,7 +52,7 @@ cabal-version:       >=1.10
 
 executable mary
   -- .hs or .lhs file containing the Main module.
-  main-is:             Main.hs
+  main-is:             mary.hs
 
   -- Modules included in this executable, other than Main.
   other-modules:       Data.Bwd
@@ -73,6 +73,8 @@ executable mary
                      , attoparsec >=0.13 && <0.14
                      , text >=1.2 && <1.3
                      , prettyprinter >=1.6 && <1.7
+                     , pandoc-types >=1.19 && <1.21
+                     , mtl >=2 && <3
 
   -- Directories containing source files.
   hs-source-dirs:      src
