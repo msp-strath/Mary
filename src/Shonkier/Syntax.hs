@@ -1,13 +1,14 @@
 module Shonkier.Syntax where
 
 import Data.Ratio
+import Data.Text
 
 type Keyword   = String
 type Primitive = String
 type Variable  = String
 
 data Literal
-  = String Keyword String
+  = String Keyword Text
   | Num Rational
   deriving (Show)
 

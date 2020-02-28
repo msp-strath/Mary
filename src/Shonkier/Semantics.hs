@@ -198,5 +198,5 @@ primNumAdd (Num n) (Num n') = Num (n + n')
 primNumAdd _ _ = error "primNumAdd: the IMPOSSIBLE happened"
 
 primStringAppend :: Literal -> Literal -> Literal
-primStringAppend (String k str) (String k' str') = String k (str ++ str')
+primStringAppend (String k str) (String k' str') = String k (str <> str')
 primStringAppend _ _ = error "primStringAppend: the IMPOSSIBLE happened"

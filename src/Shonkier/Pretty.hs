@@ -10,6 +10,7 @@ import Data.Char
 import Data.Foldable
 import Data.List
 import Data.Ratio
+import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc
 
 ppAtom :: String -> Doc ann
@@ -29,15 +30,17 @@ ppFun hs cls = encloseSep lbrace rbrace semi $ pretty <$> cls
 ppClause :: Clause -> Doc ann
 ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
 
-ppStringLit :: String -> String -> Doc ann
+ppStringLit :: String -> T.Text -> Doc ann
 ppStringLit k str = enclose (key <> dquote) (dquote <> key) (pretty str) where
 
+  tk = T.pack ('"' : k)
+  
   key   = pretty $ case maximum ((-2):occ) of
     (-2) -> k
     n    -> k ++ show (n + 1)
-  occ   = [ d | '"' : tl <- tails str
-              , suff     <- toList $ stripPrefix k tl
-              , let d = mread (takeWhile isDigit suff)
+  occ   = [ d | tl <- T.tails str
+              , suff <- toList $ T.stripPrefix tk tl
+              , let d = mread . T.unpack $ T.takeWhile isDigit suff
               ]
   mread = \case
     [] -> (-1)

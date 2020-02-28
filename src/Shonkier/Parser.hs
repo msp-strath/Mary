@@ -13,11 +13,11 @@ import Data.Foldable
 import Control.Arrow
 
 import Shonkier.Syntax
-import Shonkier.Semantics
+import Shonkier.Semantics  -- fixme!
 
 type Program = [(String, Either [[String]] Clause)]
 
-mkEnv :: Program -> Env
+mkEnv :: Program -> Env  -- moveme!
 mkEnv ls0 = env
   where
   ls1 = sortBy (compare `on` (id *** isRight)) ls0
@@ -76,9 +76,15 @@ literal = stringlit <|> numlit
 stringlit :: Parser Literal
 stringlit = do
   k <- option "" identifier
-  let end = T.pack ('"':k)
+  let end = '"':k
+  let delim []       _ = Nothing
+      delim (d : ds) c
+        | c == d    = Just ds
+        | otherwise = Just end
   String k <$  char '"'
-           <*> manyTill anyChar (string end)
+           <*> (T.dropEnd (length end) <$> scan end delim)
+
+  
 
 data NumExtension
   = Dot   String

@@ -60,5 +60,5 @@ instance FromValue t => FromValue [t] where
   fromValue _ = []
 
 instance FromValue Inline where
-  fromValue (VLit (String _ t)) = Str (T.pack t)
+  fromValue (VLit (String _ t)) = Str t
   fromValue _ = Space
