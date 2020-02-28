@@ -4,8 +4,9 @@ import Data.Char
 import Data.Text as T
 
 data Literal
-  = Text !Int Text
+  = Text Text Text
   | Num !Integer
+  deriving Show
 
 data Punctuation
   = LParen
@@ -18,6 +19,7 @@ data Punctuation
   | RAngle
   | Comma
   | Pipe
+  deriving Show
 
 data Token' a
   = Id String
@@ -25,12 +27,15 @@ data Token' a
   | Lit Literal
   | Punc Punctuation
   | Arrow
+  deriving Show
 
 type Token = Token' String
 type Lexer = Text -> [Token]
 
 lexing :: Lexer
-lexing txt = maybe [] (uncurry dispatch) $ uncons (stripStart txt) where
+lexing start = maybe [] (uncurry dispatch) (uncons txt)  where
+
+  txt = stripStart start
 
   dispatch :: Char -> Lexer
   dispatch c t = case c of
@@ -44,40 +49,53 @@ lexing txt = maybe [] (uncurry dispatch) $ uncons (stripStart txt) where
     '>' -> Punc RAngle   : lexing t
     ',' -> Punc Comma    : lexing t
     '|' -> Punc Pipe     : lexing t
-    '"' -> stringlit t
+    '"' -> stringlitBy "" t
     '`' -> atom t
     '-' -> arrow txt
-    _   | isAlpha c -> identifier txt
-        | isDigit c -> numlit txt
-        | otherwise -> undefined
+    _   | isDigit c -> numlit txt
+        | isAlpha c -> identifier txt
+        | otherwise -> stringlit txt
 
+  -- Invariant: first character is '-'
   arrow :: Lexer
-  arrow t = maybe (identifier t) ((Arrow :) . lexing)
+  arrow t = maybe (stringlit t) ((Arrow :) . lexing)
           $ stripPrefix "->" t
 
+  -- Invariant: first character is alpha
   identifier :: Lexer
   identifier t =
     let (id, rest) = T.span isAlphaNum t in
-    Id (T.unpack id) : lexing rest
+    -- This may actually be the start of a stringlit!
+    case uncons rest of
+      Just ('"', t) -> stringlitBy id t
+      _             -> Id (T.unpack id) : lexing rest
 
   atom :: Lexer
   atom t = case uncons t of
     Just (c, t) | isAlpha c ->
       let (cs, rest) = T.span isAlphaNum t in
       Atom (c : T.unpack cs) : lexing rest
-    _ -> undefined
+    _ -> error "Atom expected"
 
   stringlit :: Lexer
   stringlit t =
-    let (pref, t')  = T.span ('"' ==) t
-        key         = cons '"' pref
-        (str, rest) = breakOn key t'
+    let (pref, rest) = T.span ('"' /=) t in
+    stringlitBy pref (T.tail rest)
+
+  stringlitBy :: Text -> Lexer
+  stringlitBy pref t =
+    let key         = cons '"' pref
+        (str, rest) = breakOn key t
         n           = T.length key
     in if T.null rest
-    then undefined
-    else Lit (Text n str) : lexing (T.drop n rest)
+    then error "Unfinished string literal"
+    else Lit (Text pref str) : lexing (T.drop n rest)
 
+  -- Invariant: first character is a digit
   numlit :: Lexer
   numlit t =
     let (ds, rest) = T.span isDigit t in
-    Lit (Num $ read $ T.unpack ds) : lexing rest
+    -- This may actually be the start of a stringlit!
+    case uncons rest of
+      Just ('"', t) -> stringlitBy ds t
+      _ -> Lit (Num $ read $ T.unpack ds) : lexing rest

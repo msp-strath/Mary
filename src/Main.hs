@@ -3,6 +3,7 @@ module Main where
 import Data.Bwd
 import Shonkier.Examples
 import Shonkier.Lexer
+import Shonkier.Lexer.Examples
 import Shonkier.Parser
 import Shonkier.Parser.Examples
 import Shonkier.Pretty

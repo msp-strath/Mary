@@ -58,6 +58,7 @@ executable mary
   other-modules:       Data.Bwd
                      , Shonkier.Examples
                      , Shonkier.Lexer
+                     , Shonkier.Lexer.Examples
                      , Shonkier.Parser
                      , Shonkier.Parser.Examples
                      , Shonkier.Pretty
