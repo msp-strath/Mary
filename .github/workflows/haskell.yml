@@ -47,11 +47,11 @@ jobs:
     - name: Install dependencies
       run: |
         cabal update
+        cabal configure --enable-tests
         cabal install --only-dependencies
 
     - name: Build
       run: |
-        cabal configure --enable-tests
         cabal build
 
     - name: Run tests
