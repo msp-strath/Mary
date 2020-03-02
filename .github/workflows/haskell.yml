@@ -44,9 +44,11 @@ jobs:
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
+    - name: Update package list
+      run: cabal update
+
     - name: Install dependencies
       run: |
-        cabal update
         cabal configure --enable-tests
         cabal install --only-dependencies
 
