@@ -22,6 +22,7 @@ tested-with:        GHC == 8.0.2
                     GHC == 8.2.2
                     GHC == 8.4.4
                     GHC == 8.6.5
+                    GHC == 8.8.1
 
 -- URL for the project homepage or repository.
 homepage:            https://github.com/msp-strath/Mary
@@ -74,7 +75,7 @@ executable mary
 
   -- Other library packages from which modules are imported.
   build-depends:       attoparsec >=0.13 && <0.14
-                     , base >=4.9.1.0 && <4.13
+                     , base >=4.9.1.0 && <4.14
                      , containers >=0.6 && <0.7
                      , mtl >=2 && <3
                      , pandoc-types >=1.19 && <1.21
