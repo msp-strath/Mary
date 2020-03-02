@@ -28,8 +28,8 @@ jobs:
         path: ~/.cabal/
         key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}
 
-    - name: Remove existing binary
-      run: rm -rf ~/.cabal/bin/
+    - name: Remove existing mary binary
+      run: rm -f ~/.cabal/bin/mary
 
     - uses: actions/setup-haskell@v1
       with:
@@ -40,10 +40,12 @@ jobs:
       run: |
         cabal update
         cabal install --only-dependencies
+
     - name: Build
       run: |
         cabal configure --enable-tests
         cabal build
+
 # no tests yet
 #    - name: Run tests
 #      run: cabal test
