@@ -18,6 +18,11 @@ synopsis:            Content delivery system for CIS
 -- A longer description of the package.
 -- description:
 
+tested-with:        GHC == 8.0.2
+                    GHC == 8.2.2
+                    GHC == 8.4.4
+                    GHC == 8.6.5
+
 -- URL for the project homepage or repository.
 homepage:            https://github.com/msp-strath/Mary
 
