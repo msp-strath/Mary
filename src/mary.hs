@@ -10,6 +10,7 @@ import Data.Text.IO as TIO
 import System.Environment
 import Control.Monad.Writer
 import Data.Attoparsec.Text
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Text
 
