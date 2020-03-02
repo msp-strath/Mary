@@ -48,13 +48,10 @@ jobs:
       run: cabal update
 
     - name: Install dependencies
-      run: |
-        cabal configure --enable-tests
-        cabal install --only-dependencies
+      run: cabal build --enable-tests --only-dependencies
 
     - name: Build
-      run: |
-        cabal build
+      run: cabal build --enable-tests
 
     - name: Run tests
       run: cabal test
