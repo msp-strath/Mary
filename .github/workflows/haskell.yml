@@ -47,7 +47,7 @@ jobs:
     - name: Build
       run: |
         cabal update
-        cabal install --enable-tests
+        cabal build --enable-tests
 
     - name: Run tests
       run: cabal test
