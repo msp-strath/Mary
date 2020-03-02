@@ -1,7 +1,7 @@
 module Main where
 
 import Shonkier.Tests
-import Test.Tasty.Silver.Interactive
+import Test.Tasty
 
 main :: IO ()
 main = defaultMain =<< shonkierTests
