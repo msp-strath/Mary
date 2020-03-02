@@ -8,7 +8,7 @@ import Text.Pandoc.JSON
 import qualified Data.Text as T
 import Data.Text.IO as TIO
 import System.Environment
-import Control.Monad.Writer
+import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Attoparsec.Text
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text.Prettyprint.Doc
