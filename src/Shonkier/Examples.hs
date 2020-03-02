@@ -1,6 +1,7 @@
 module Shonkier.Examples where
 
 import Data.Map (singleton)
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 
 import Data.Bwd
 import Shonkier.Syntax

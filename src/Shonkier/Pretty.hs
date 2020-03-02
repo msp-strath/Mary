@@ -9,6 +9,7 @@ import Shonkier.Semantics
 import Data.Char
 import Data.Foldable
 import Data.Ratio
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc
 

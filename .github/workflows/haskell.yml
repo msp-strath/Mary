@@ -6,21 +6,54 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ghc: ['8.8.1', '8.6.5', '8.4.4', '8.2.2', '8.0.2']
+        include:
+          - ghc: '8.8.1'
+            cabal: '3.0'
+          - ghc: '8.6.5'
+            cabal: '3.0'
+          - ghc: '8.4.4'
+            cabal: '2.2'
+          - ghc: '8.2.2'
+            cabal: '2.0'
+          - ghc: '8.0.2'
+            cabal: '2.0'
 
     steps:
     - uses: actions/checkout@v2
+
     - uses: actions/setup-haskell@v1
       with:
-        ghc-version: '8.6.5'
-        cabal-version: '3.0'
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
+    - uses: actions/cache@v1
+      name: Cache ~/.cabal/
+      with:
+        path: ~/.cabal/
+        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-cabal
+
+    - uses: actions/cache@v1
+      name: Cache ~/.ghc/
+      with:
+        path: ~/.ghc/
+        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc
+
+    - name: Remove existing mary binary
+      run: rm -f ~/.cabal/bin/mary
+
     - name: Install dependencies
       run: |
         cabal update
         cabal install --only-dependencies
+
     - name: Build
       run: |
         cabal configure --enable-tests
         cabal build
+
 # no tests yet
 #    - name: Run tests
 #      run: cabal test

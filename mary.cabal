@@ -18,6 +18,12 @@ synopsis:            Content delivery system for CIS
 -- A longer description of the package.
 -- description:
 
+tested-with:        GHC == 8.0.2
+                    GHC == 8.2.2
+                    GHC == 8.4.4
+                    GHC == 8.6.5
+                    GHC == 8.8.1
+
 -- URL for the project homepage or repository.
 homepage:            https://github.com/msp-strath/Mary
 
@@ -68,13 +74,13 @@ executable mary
 --  other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.12 && <4.13
+  build-depends:       attoparsec >=0.13 && <0.14
+                     , base >=4.9.1.0 && <4.14
                      , containers >=0.6 && <0.7
-                     , attoparsec >=0.13 && <0.14
-                     , text >=1.2 && <1.3
-                     , prettyprinter >=1.6 && <1.7
-                     , pandoc-types >=1.19 && <1.21
                      , mtl >=2 && <3
+                     , pandoc-types >=1.19 && <1.21
+                     , prettyprinter >=1.6 && <1.7
+                     , text >=1.2 && <1.3
 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -85,12 +91,12 @@ executable mary
     -- LANGUAGE extensions used by modules in this package.
   default-extensions:  DeriveTraversable
                      , LambdaCase
+                     , OverloadedStrings
                      , PatternSynonyms
                      , TupleSections
-                     , OverloadedStrings
 
   ghc-options:         -Wincomplete-patterns
-                       -Woverlapping-patterns
                        -Wmissing-signatures
+                       -Woverlapping-patterns
                        -Wtabs
                        -fwarn-unused-imports
