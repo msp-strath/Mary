@@ -16,9 +16,9 @@ import Data.Text.Prettyprint.Doc.Render.Text
 import Data.Bwd
 import Shonkier.Examples
 import Shonkier.Parser
-import Shonkier.Parser.Examples
-import Shonkier.Pretty
-import Shonkier.Pretty.Examples
+import Shonkier.Parser.Examples ()
+import Shonkier.Pretty ()
+import Shonkier.Pretty.Examples ()
 import Shonkier.Semantics
 import Shonkier.Syntax
 

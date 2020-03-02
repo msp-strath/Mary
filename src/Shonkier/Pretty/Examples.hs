@@ -1,14 +1,11 @@
 module Shonkier.Pretty.Examples where
 
-import Shonkier.Syntax
-import Shonkier.Semantics
 import Shonkier.Examples
-import Shonkier.Pretty
+import Shonkier.Pretty ()
 
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Text
 
-import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 

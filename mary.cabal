@@ -85,6 +85,7 @@ executable mary
     -- LANGUAGE extensions used by modules in this package.
   default-extensions:  DeriveTraversable
                      , LambdaCase
+                     , PatternSynonyms
                      , TupleSections
                      , OverloadedStrings
 
@@ -92,3 +93,4 @@ executable mary
                        -Woverlapping-patterns
                        -Wmissing-signatures
                        -Wtabs
+                       -fwarn-unused-imports

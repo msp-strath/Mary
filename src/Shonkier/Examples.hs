@@ -112,24 +112,30 @@ stateTest = eval Nil (mapEnv <> stateEnv <> appendEnv, bipping)
 
 primEnv :: Env
 primEnv = foldMap (\ str -> singleton str $ VPrim str [])
-        [ "primStringAppend"
+        [ "primStringConcat"
         , "primNumAdd"
         ]
 
 mkPrim :: String -> [Literal] -> Computation
 mkPrim p ls = eval Nil (primEnv, App (Var p) (Lit <$> ls))
 
-strAppend :: [Literal] -> Computation
-strAppend = mkPrim "primStringAppend"
+strConcat :: [Literal] -> Computation
+strConcat = mkPrim "primStringConcat"
 
 helloworld :: Computation
-helloworld = strAppend $ String "foo" <$> ["hello ", "world"]
+helloworld = strConcat $ String "foo" <$> ["hello ", "world", "!"]
 
 helloworld' :: Computation
-helloworld' = strAppend $ String "" <$> ["hello ", "world"]
+helloworld' = strConcat $ String "" <$> ["hello ", "world", "!"]
 
 foogoo :: Computation
-foogoo = strAppend [String "foo" "fo", String "goo" "\"foo"]
+foogoo = strConcat [String "foo" "fo", String "goo" "\"foo", String "" " oof!"]
+
+listConcat :: Computation
+listConcat = eval Nil (primEnv, App (Var "primStringConcat") [str]) where
+  str = Cell (Cell (TString "" "hello")
+                   (Cell (TString "" " ") (TString "" "world")))
+             (Cell (TString "" "!") (TString "" "\n"))
 
 numAdd :: [Literal] -> Computation
 numAdd = mkPrim "primNumAdd"

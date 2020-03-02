@@ -8,7 +8,6 @@ import Shonkier.Semantics
 
 import Data.Char
 import Data.Foldable
-import Data.List
 import Data.Ratio
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc
@@ -34,7 +33,7 @@ ppStringLit :: String -> T.Text -> Doc ann
 ppStringLit k str = enclose (key <> dquote) (dquote <> key) (pretty str) where
 
   tk = T.pack ('"' : k)
-  
+
   key   = pretty $ case maximum ((-2):occ) of
     (-2) -> k
     n    -> k ++ show (n + 1)

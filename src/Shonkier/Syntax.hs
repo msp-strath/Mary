@@ -1,6 +1,5 @@
 module Shonkier.Syntax where
 
-import Data.Ratio
 import Data.Text
 
 type Keyword   = String
@@ -22,6 +21,9 @@ data Term' a
   deriving (Show)
 
 type Term = Term' String
+
+pattern TString k str = Lit (String k str)
+pattern TNum n        = Lit (Num n)
 
 type Program = [(String, Either [[String]] Clause)]
 

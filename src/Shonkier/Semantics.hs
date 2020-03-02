@@ -1,15 +1,21 @@
 module Shonkier.Semantics where
 
-import Control.Monad
+import Control.Applicative
 import Control.Arrow ((***))
+import Control.Monad
+
 import Data.Foldable
 import Data.Function
 import Data.Either
 import Data.Map (Map, singleton, (!?))
 import Data.List (sortBy, groupBy, nub)
+import Data.Maybe (fromMaybe)
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import Data.Bwd
 import Shonkier.Syntax
+
 
 data Value' a
   = VAtom a
@@ -23,6 +29,12 @@ data Value' a
   deriving (Show)
 
 type Value = Value' String
+
+pattern VNum n        = VLit (Num n)
+pattern CNum n        = Value (VNum n)
+pattern VString k str = VLit (String k str)
+pattern CString k str = Value (VString k str)
+pattern CCell a b     = Value (VCell a b)
 
 -- environments
 
@@ -207,19 +219,37 @@ call ctx rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call ctx rho cls cs
   Just sig -> eval ctx (merge rho sig, rhs)
 
+
+---------------------------------------------------------------------------
+-- PRIMITIVES
+---------------------------------------------------------------------------
+
 prim :: Context -> Primitive -> [Computation] -> Computation
-prim ctx "primStringAppend"
-         [Value (VLit l@String{}), Value (VLit l'@String{})]
-         = use ctx (VLit $ primStringAppend l l')
-prim ctx "primNumAdd"
-         [Value (VLit n@Num{}), Value (VLit n'@Num{})]
-         = use ctx (VLit $ primNumAdd n n')
+prim ctx "primStringConcat" vs = primStringConcat ctx vs
+prim ctx "primNumAdd"       vs = primNumAdd ctx vs
 prim ctx f _ = handle ctx ("NoPrim",[VPrim f []]) []
 
-primNumAdd :: Literal -> Literal -> Literal
-primNumAdd (Num n) (Num n') = Num (n + n')
-primNumAdd _ _ = error "primNumAdd: the IMPOSSIBLE happened"
+---------------------------------------------------------------------------
+-- NUM
 
-primStringAppend :: Literal -> Literal -> Literal
-primStringAppend (String k str) (String k' str') = String k (str <> str')
-primStringAppend _ _ = error "primStringAppend: the IMPOSSIBLE happened"
+primNumAdd :: Context -> [Computation] -> Computation
+primNumAdd ctx = \case
+  [CNum m, CNum n]   -> use ctx (VNum (m + n))
+  [Value m, Value n] -> handle ctx ("Invalid_NumAdd_ArgType", [m, n]) []
+  [_,_]              -> handle ctx ("Invalid_NumAdd_ArgRequest",[]) []
+  _                  -> handle ctx ("Invalid_NumAdd_Arity", []) []
+
+---------------------------------------------------------------------------
+-- STRING
+
+primStringConcat :: Context -> [Computation] -> Computation
+primStringConcat ctx cs = go cs Nothing [] where
+
+  go :: [Computation] -> Maybe Keyword -> [Text] -> Computation
+  go cs mk ts = case cs of
+    []                 -> let txt = T.concat $ reverse ts
+                          in use ctx (VString (fromMaybe "" mk) txt)
+    (CString k t : cs) -> go cs (mk <|> pure k) (t:ts)
+    (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
+    (Value v     : cs) -> handle ctx ("Invalid_StringConcat_ArgType", [v]) []
+    _                  -> handle ctx ("Invalid_StringConcat_ArgRequest",[]) []

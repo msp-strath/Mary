@@ -16,6 +16,6 @@ map(f,[x|xs]) -> [f(x)|map(f,xs)]
 
 bipper() -> semi('send('get()),semi('put(['bip|'get()]),bipper()))
 
-main() -> [ primStringAppend("hello", foo" world"foo)
+main() -> [ primStringConcat(["hello" | foo" world"foo])
           | runState([],pipe(bipper(),map({x -> 'recv()},[[] [] [] []])))
           ]
