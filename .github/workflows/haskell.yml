@@ -28,10 +28,14 @@ jobs:
         path: ~/.cabal/
         key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}
 
+    - name: Remove existing binary
+      run: rm -rf ~/.cabal/bin/
+
     - uses: actions/setup-haskell@v1
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
+
     - name: Install dependencies
       run: |
         cabal update
