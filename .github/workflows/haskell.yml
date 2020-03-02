@@ -22,6 +22,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
     - uses: actions/cache@v1
       name: Cache ~/.cabal/
       with:
@@ -30,11 +35,6 @@ jobs:
 
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
-
-    - uses: actions/setup-haskell@v1
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
 
     - name: Install dependencies
       run: |
