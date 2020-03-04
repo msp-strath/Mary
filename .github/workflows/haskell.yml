@@ -49,13 +49,17 @@ jobs:
 
     - name: Legacy install dependencies
       if: matrix.cabal != '3.0'
-      run: |
-        cabal install --only-dependencies --enable-tests
+      run: cabal install --only-dependencies --enable-tests
+
+    - name: Configure mary
+      run: cabal configure --enable-tests
+
+    - name: New install dependencies
+      if: matrix.cabal == '3.0'
+      run: cabal install --only-dependencies
 
     - name: Install mary
-      run: |
-        cabal configure --enable-tests
-        cabal install --enable-tests
+      run: cabal install --enable-tests
 
     - name: Run tests
       run: |
