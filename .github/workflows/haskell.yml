@@ -58,8 +58,13 @@ jobs:
       if: matrix.cabal == '3.0'
       run: cabal install --only-dependencies
 
-    - name: Build mary
+    - name: New build mary
+      if: matrix.cabal == '3.0'
       run: cabal build --enable-tests
+
+    - name: Legacy build mary
+      if: matrix.cabal != '3.0'
+      run: cabal build
 
     - name: Run tests
       run: |
