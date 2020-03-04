@@ -58,10 +58,11 @@ jobs:
       if: matrix.cabal == '3.0'
       run: cabal install --only-dependencies
 
-    - name: Install mary
-      run: cabal install --enable-tests
+    - name: Build mary
+      run: cabal build --enable-tests
 
     - name: Run tests
       run: |
+        cabal install
         export PATH=$PATH:~/.cabal/bin/
         cabal test
