@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ghc: ['8.4.4', '8.2.2', '8.0.2']
+        ghc: ['8.6.5', '8.4.4', '8.2.2', '8.0.2']
         include:
           - ghc: '8.8.1'
             cabal: '3.0'
