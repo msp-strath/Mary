@@ -18,10 +18,8 @@ decl :: Parser [[String]]
 decl = tupleOf (sep skipSpace atom) <* char ':'
 
 defn :: Parser Clause
-defn = (,) <$ punc '('
-          <*> sep (punc ',') pcomputation
-           <* punc ')' <* arrow <* skipSpace
-          <*> term
+defn = (,) <$> tupleOf pcomputation
+           <* arrow <* skipSpace <*> term
 
 punc :: Char -> Parser ()
 punc c = () <$ skipSpace <* char c <* skipSpace
