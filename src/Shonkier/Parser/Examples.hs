@@ -11,16 +11,6 @@ import Data.Attoparsec.Text
 import Data.Text
 import Data.Foldable
 
-getMeAProgram :: Text -> Program
-getMeAProgram txt = case parseOnly program txt of
-  Left err -> error err
-  Right t  -> t
-
-getMeATerm :: Text -> Term
-getMeATerm txt = case parseOnly (term <* endOfInput) txt of
-  Left err -> error err
-  Right t  -> t
-
 mapT :: Term
 mapT = getMeATerm
    "{ f, []     -> []                   \

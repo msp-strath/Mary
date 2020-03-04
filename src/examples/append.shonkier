@@ -1,0 +1,7 @@
+append([]    , ys) -> ys
+append([x|xs], ys) -> [x|append(xs, ys)]
+
+onetwo()    -> ['1 '2]
+threefour() -> ['3 '4]
+
+main() -> append(onetwo(), threefour())

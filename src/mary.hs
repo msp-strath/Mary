@@ -37,7 +37,7 @@ main = do
 interpretShonkier :: String -> IO ()
 interpretShonkier filename = do
   file <- TIO.readFile filename
-  let Right ps = parseOnly program file
+  let ps = getMeAProgram file
   let env = primEnv <> mkEnv ps
   case [ m | ("main", Right m) <- ps ] of
     [([],body)] ->

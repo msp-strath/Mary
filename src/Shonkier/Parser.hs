@@ -4,6 +4,7 @@ import Control.Applicative
 import Data.Attoparsec.Text
 import Data.Char
 import Data.Ratio
+import Data.Text(Text)
 import qualified Data.Text as T
 
 import Shonkier.Syntax
@@ -14,14 +15,12 @@ program = id <$ skipSpace
              <* endOfInput
 
 decl :: Parser [[String]]
-decl = id <$ punc '('
-          <*> sep (punc ',') (sep skipSpace atom)
-          <* punc ')'  <* char ':'
+decl = tupleOf (sep skipSpace atom) <* char ':'
 
 defn :: Parser Clause
 defn = (,) <$ punc '('
           <*> sep (punc ',') pcomputation
-           <* punc ')'  <* arrow <* skipSpace
+           <* punc ')' <* arrow <* skipSpace
           <*> term
 
 punc :: Char -> Parser ()
@@ -56,8 +55,6 @@ stringlit = do
   String k <$  char '"'
            <*> (T.dropEnd (length end) <$> scan end delim)
 
-  
-
 data NumExtension
   = Dot   String
   | Slash String
@@ -75,23 +72,29 @@ numlit = do
     Slash rs -> n % read rs
     None     -> n % 1
 
+listOf :: Parser a -> a -> Parser ([a], a)
+listOf p nil = (,) <$ char '['
+      <*> many (skipSpace *> p) <* skipSpace
+      <*> (id <$ char '|' <* skipSpace <*> p <|> pure nil)
+      <* skipSpace <* char ']'
+
+tupleOf :: Parser a -> Parser [a]
+tupleOf p = id <$ punc '(' <*> sep (punc ',') p <* punc ')'
+
 weeTerm :: Parser Term
 weeTerm =
-  Atom <$>  atom
+  Atom <$> atom
   <|>
   Lit <$> literal
   <|>
   Var <$> identifier
   <|>
-  flip (foldr Cell) <$ char '['
-    <*> many (skipSpace *> term) <* skipSpace
-    <*> (id <$ char '|' <* skipSpace <*> term <|> pure (Atom ""))
-    <* skipSpace <* char ']'
+  uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
   <|>
   Fun [] <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
 
 moreTerm :: Term -> Parser Term
-moreTerm t = ((App t <$ punc '(' <*> sep (punc ',') term <* punc ')') >>= moreTerm)
+moreTerm t = (App t <$> tupleOf term >>= moreTerm)
            <|> pure t
 
 
@@ -105,16 +108,24 @@ pcomputation
   =   PValue <$> pvalue
   <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
-       <|> PRequest <$> ((,) <$> atom <* punc '(' <*> sep (punc ',') pvalue <* punc ')')
+       <|> PRequest <$> ((,) <$> atom <*> tupleOf pvalue)
            <* arrow <* skipSpace <*> identifier
       ) <* skipSpace <* char '}'
 
 pvalue :: Parser PValue
 pvalue =
-  PAtom <$ char '\'' <*> some (satisfy isAlphaNum)
+  PAtom <$> atom
   <|>
-  PBind <$> some (satisfy isAlphaNum)
+  PBind <$> identifier
   <|>
-  flip (foldr PCell) <$ char '[' <*> many (skipSpace *> pvalue) <* skipSpace
-          <*> (id <$ char '|' <* skipSpace <*> pvalue <|> pure (PAtom ""))
-           <* skipSpace <* char ']'
+  uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
+
+getMeAProgram :: Text -> Program
+getMeAProgram txt = case parseOnly program txt of
+  Left err -> error err
+  Right t  -> t
+
+getMeATerm :: Text -> Term
+getMeATerm txt = case parseOnly (term <* endOfInput) txt of
+  Left err -> error err
+  Right t  -> t
