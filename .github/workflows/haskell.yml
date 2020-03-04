@@ -67,7 +67,7 @@ jobs:
     - name: Legacy build mary
       if: matrix.cabal != '3.0'
       run: |
-        cabal build
+        cabal build --enable-tests
         cabal install
 
     - name: Run tests
