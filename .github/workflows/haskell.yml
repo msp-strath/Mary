@@ -68,6 +68,5 @@ jobs:
 
     - name: Run tests
       run: |
-        cabal install
         export PATH=$PATH:~/.cabal/bin/
         cabal test
