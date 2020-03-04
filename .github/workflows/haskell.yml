@@ -48,7 +48,7 @@ jobs:
       run: cabal update
 
     - name: Legacy install dependencies
-      if: ${{ matrix.cabal }} == '3.0'
+      if: ${{ matrix.cabal }} != '3.0'
       run: |
         cabal install --only-dependencies --enable-tests
 
