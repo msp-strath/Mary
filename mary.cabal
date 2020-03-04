@@ -55,10 +55,15 @@ extra-source-files:  README.md
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
-
 executable mary
-  -- .hs or .lhs file containing the Main module.
+  hs-source-dirs:      src
   main-is:             mary.hs
+  build-depends:       attoparsec >=0.13 && <0.14
+                     , base >=4.9.1.0 && <4.14
+                     , mtl >=2 && <3
+                     , pandoc-types >=1.19 && <1.21
+                     , prettyprinter >=1.6 && <1.7
+                     , text >=1.2 && <1.3
 
   -- Modules included in this executable, other than Main.
   other-modules:       Data.Bwd
@@ -100,3 +105,20 @@ executable mary
                        -Woverlapping-patterns
                        -Wtabs
                        -fwarn-unused-imports
+
+test-suite mary-tests
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test/
+  main-is:          Main.hs
+  other-modules:    Shonkier.Tests
+
+  build-depends:    base >=4.9.1.0 && <4.14
+                  , directory >=1.3.3.0 && <1.4
+                  , filepath >=1.4.2.1 && <1.5
+                  , process >=1.6.5.0 && <1.7
+                  , tasty >=0.8 && <1.3
+                  , tasty-silver >=3.0.1.0 && <3.2
+                  , text >=1.2 && <1.3
+
+  -- Base language which the package is written in.
+  default-language:    Haskell2010
