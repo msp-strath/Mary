@@ -55,4 +55,6 @@ jobs:
         cabal install --enable-tests
 
     - name: Run tests
-      run: cabal test
+      run: |
+        export PATH=$PATH:~/.cabal/bin/
+        cabal test
