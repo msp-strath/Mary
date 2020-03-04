@@ -51,7 +51,7 @@ jobs:
         cabal install --only-dependencies
 
     - name: Install mary
-        cabal install --enable-tests
+      run: cabal install --enable-tests
 
     - name: Run tests
       run: cabal test
