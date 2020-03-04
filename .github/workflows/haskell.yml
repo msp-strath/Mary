@@ -33,13 +33,15 @@ jobs:
       name: Cache ~/.cabal/
       with:
         path: ~/.cabal/
-        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-cabal
+        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-cabal-${{ hashFiles('**/mary.cabal')
+        restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-cabal
 
     - uses: actions/cache@v1
       name: Cache ~/.ghc/
       with:
         path: ~/.ghc/
-        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc
+        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-${{ hashFiles('**/mary.cabal')
+        restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc
 
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
