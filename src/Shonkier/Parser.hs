@@ -34,7 +34,7 @@ atom :: Parser String
 atom = id <$ char '\'' <*> some (satisfy isAlphaNum)
 
 identifier :: Parser String
-identifier = some (satisfy isAlphaNum)
+identifier = (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)
 
 arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
