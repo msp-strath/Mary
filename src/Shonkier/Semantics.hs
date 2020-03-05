@@ -255,3 +255,14 @@ primStringConcat ctx cs = go cs Nothing [] where
     (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
     (Value v     : cs) -> handle ctx ("Invalid_StringConcat_ArgType", [v]) []
     _                  -> handle ctx ("Invalid_StringConcat_ArgRequest",[]) []
+
+---------------------------------------------------------------------------
+-- FROMVALUE
+---------------------------------------------------------------------------
+
+class FromValue t where
+  fromValue :: Value -> t
+
+instance FromValue t => FromValue [t] where
+  fromValue (VCell t ts) = fromValue t : fromValue ts
+  fromValue _ = []

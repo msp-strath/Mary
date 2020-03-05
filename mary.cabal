@@ -68,6 +68,7 @@ executable mary
   -- Modules included in this executable, other than Main.
   other-modules:       Data.Bwd
                      , Shonkier.Examples
+                     , Shonkier.Pandoc
                      , Shonkier.Parser
                      , Shonkier.Parser.Examples
                      , Shonkier.Pretty
