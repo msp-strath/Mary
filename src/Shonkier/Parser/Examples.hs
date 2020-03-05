@@ -7,8 +7,6 @@ import Shonkier.Parser
 import Shonkier.Syntax
 import Shonkier.Semantics
 
-import Data.Attoparsec.Text
-import Data.Text
 import Data.Foldable
 
 mapT :: Term

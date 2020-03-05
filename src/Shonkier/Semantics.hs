@@ -72,6 +72,7 @@ vmatch :: Eq a => PValue' a -> Value' a -> Maybe (Env' a)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
 vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
+vmatch PWild       v           = pure mempty
 vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
 vmatch _ _ = Nothing
 

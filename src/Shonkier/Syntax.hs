@@ -34,6 +34,7 @@ data PValue' a
   = PAtom a
   | PLit Literal
   | PBind Variable
+  | PWild
   | PCell (PValue' a) (PValue' a)
   deriving (Show)
 type PValue = PValue' String

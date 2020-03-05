@@ -116,6 +116,8 @@ pvalue =
   <|>
   PBind <$> identifier
   <|>
+  PWild <$ char '_'
+  <|>
   uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
 
 getMeAProgram :: Text -> Program

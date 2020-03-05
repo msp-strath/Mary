@@ -1,0 +1,10 @@
+runReader(, 'ask):
+runReader(r, val)           -> val
+runReader(r, {'ask() -> k}) -> runReader(r, k(r))
+
+append([]    , ys) -> ys
+append([x|xs], ys) -> [x|append(xs, ys)]
+
+onetwo() -> ['1 '2]
+
+main() -> runReader(onetwo(), append('ask(), 'ask()))
