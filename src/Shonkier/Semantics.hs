@@ -1,8 +1,12 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Shonkier.Semantics where
 
 import Control.Applicative
 import Control.Arrow ((***))
 import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.State
 
 import Data.Foldable
 import Data.Function
@@ -36,6 +40,7 @@ pattern CNum n        = Value (VNum n)
 pattern VString k str = VLit (String k str)
 pattern CString k str = Value (VString k str)
 pattern CCell a b     = Value (VCell a b)
+pattern CAtom a       = Value (VAtom a)
 
 -- environments
 
@@ -45,18 +50,17 @@ type Env = Env' String
 merge :: Env' a -> Env' a -> Env' a
 merge = flip (<>)
 
-mkEnv :: Program -> Env
-mkEnv ls0 = env
-  where
-  ls1 = sortBy (compare `on` (id *** isRight)) ls0
-  lss = groupBy ((==) `on` fst) ls1
-  env = fold
-          [ singleton f $
-             VFun [] env
-               (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
-               [cl | (_, Right cl) <- grp]
-          | grp@((f, _) : _) <- lss
-          ]
+mkGlobalEnv :: Program -> Env
+mkGlobalEnv ls = primEnv <> fold
+  [ singleton f $
+     VFun [] mempty
+       (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
+       [cl | (_, Right cl) <- grp]
+  | grp@((f, _) : _) <- groupBy ((==) `on` fst) $
+                        -- Note: sortBy is stable
+                        sortBy (compare `on` (id *** isRight)) $
+                        ls
+  ]
 
 padCat :: Eq a => [[a]] -> [[a]] -> [[a]]
 padCat [] hs = hs
@@ -141,60 +145,89 @@ data Computation' a
 
 type Computation = Computation' String
 
-eval :: Context -> (Env, Term) -> Computation
-eval ctx (rho, t) = case t of
+newtype Shonkier a = Shonkier { runShonkier :: StateT Context (Reader Env) a }
+  deriving (Functor, Applicative, Monad, MonadState Context, MonadReader Env)
+
+shonkier :: Env -> Term -> Computation
+shonkier rho t = runReader (evalStateT (runShonkier $ eval (mempty, t)) Nil) rho
+
+push :: Frame -> Shonkier ()
+push fr = modify (:< fr)
+
+pop :: Shonkier (Maybe Frame)
+pop = do
+  x <- get
+  case x of
+    Nil -> return Nothing
+    ctx :< fr -> do
+      put ctx
+      return (Just fr)
+
+globalLookup :: String -> Shonkier (Maybe Value)
+globalLookup n = asks (!? n)
+
+eval :: (Env, Term) -> Shonkier Computation
+eval (rho, t) = case t of
   Var x     -> case rho !? x of
-    Just v  -> use ctx v
-    Nothing -> handle ctx ("OutOfScope", []) []
+    Just v  -> use v
+    Nothing -> globalLookup x >>= \case
+      Just v  -> use v
+      Nothing -> handle ("OutOfScope", []) []
   -- move left; start evaluating left to right
-  Atom a    -> use ctx (VAtom a)
-  Lit l     -> use ctx (VLit l)
-  Cell a b  -> eval (ctx :< CellL rho b) (rho, a)
-  App f as  -> eval (ctx :< AppL rho as) (rho, f)
-  Fun es cs -> use ctx (VFun [] rho es cs)
+  Atom a    -> use (VAtom a)
+  Lit l     -> use (VLit l)
+  Cell a b  -> do push (CellL rho b)
+                  eval (rho, a)
+  App f as  -> do push (AppL rho as)
+                  eval (rho, f)
+  Fun es cs -> use (VFun [] rho es cs)
 
-use :: Context -> Value -> Computation
-use Nil         v = Value v
-use (ctx :< fr) v = case fr of
-  -- move right or upwards
-  CellL rho b -> eval (ctx :< CellR v rho) (rho, b)
-  CellR u rho -> use ctx (VCell u v)
-  -- we better be making a request or using a function
-  AppL rho as -> case v of
-    VAtom f            ->
-      -- Here we are enforcing the invariant:
-      -- Atomic functions i.e. requests only ever offer
-      -- to handle the empty list of requests.
-      let cs = map ([],) as
-      in app ctx (FAtom f) Nil rho cs
-    VPrim f hs          ->
-      let cs = zip (hs ++ repeat []) as
-      in app ctx (FPrim f) Nil rho cs
-    VFun frs sig hs cls ->
-      let cs = zip (hs ++ repeat []) as
-      in app ctx (FFun frs sig cls) Nil rho cs
-    VThunk c -> case as of
-      [] -> case c of
-        Value v       -> use ctx v
-        Request r frs -> handle ctx r frs
-      _  -> handle ctx ("ThunksAreNullary", [v]) []
-    _ -> handle ctx ("NoFun",[v]) []
-  AppR f vz (_, rho) as -> app ctx f (vz :< Value v) rho as
+use :: Value -> Shonkier Computation
+use v = pop >>= \case
+  Nothing -> return (Value v)
+  Just fr -> case fr of
+    -- move right or upwards
+    CellL rho b -> do push (CellR v rho)
+                      eval (rho, b)
+    CellR u rho -> use (VCell u v)
+    -- we better be making a request or using a function
+    AppL rho as -> case v of
+      VAtom f            ->
+        -- Here we are enforcing the invariant:
+        -- Atomic functions i.e. requests only ever offer
+        -- to handle the empty list of requests.
+        let cs = map ([],) as
+        in app (FAtom f) Nil rho cs
+      VPrim f hs          ->
+        let cs = zip (hs ++ repeat []) as
+        in app (FPrim f) Nil rho cs
+      VFun frs sig hs cls ->
+        let cs = zip (hs ++ repeat []) as
+        in app (FFun frs sig cls) Nil rho cs
+      VThunk c -> case as of
+        [] -> case c of
+          Value v       -> use v
+          Request r frs -> handle r frs
+        _  -> handle ("ThunksAreNullary", [v]) []
+      _ -> handle ("NoFun",[v]) []
+    AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
 
-app :: Context -> Funy
+app :: Funy
     -> Bwd Computation -> Env -> [([String],Term)]
-    -> Computation
-app ctx f cz rho as = case as of
+    -> Shonkier Computation
+app f cz rho = \case
   []             -> case f of
     FAtom a         ->
       -- Here we are relying on the invariant:
       -- Atomic functions i.e. requests only ever offer
       -- to handle the empty list of requests.
       let vs = map unsafeComToValue (cz <>> []) in
-      handle ctx (a, vs) []
-    FPrim p         -> prim ctx p (cz <>> [])
-    FFun frs sig cs -> call (ctx <>< frs) sig cs (cz <>> [])
-  ((hs, a) : as) -> eval (ctx :< AppR f cz (hs, rho) as) (rho, a)
+      handle (a, vs) []
+    FPrim p         -> prim p (cz <>> [])
+    FFun frs sig cs -> do traverse push frs
+                          call sig cs (cz <>> [])
+  ((hs, a) : as) -> do push (AppR f cz (hs, rho) as)
+                       eval (rho, a)
 
 unsafeComToValue :: Computation -> Value
 unsafeComToValue = \case
@@ -204,57 +237,64 @@ unsafeComToValue = \case
     , show r
     ]
 
-handle :: Context -> Request -> [Frame]
-       -> Computation
-handle ctx r@(a, vs) frs = case ctx of
-  Nil         -> Request r frs
-  (ctx :< fr) -> case fr of
+handle :: Request -> [Frame]
+       -> Shonkier Computation
+handle r@(a, vs) frs = pop >>= \case
+  Nothing         -> return (Request r frs)
+  Just fr -> case fr of
     AppR f cz (hs, rho) as | a `elem` hs ->
-      app ctx f (cz :< Request r frs) rho as
-    _ -> handle ctx r (fr : frs)
+      app f (cz :< Request r frs) rho as
+    _ -> handle r (fr : frs)
 
-call :: Context -> Env -> [Clause] -> [Computation]
-     -> Computation
-call ctx rho []                cs =
-  handle ctx ("IncompletePattern", []) []
-call ctx rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
-  Nothing  -> call ctx rho cls cs
-  Just sig -> eval ctx (merge rho sig, rhs)
+call :: Env -> [Clause] -> [Computation]
+     -> Shonkier Computation
+call rho []                cs =
+  handle ("IncompletePattern", []) []
+call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
+  Nothing  -> call rho cls cs
+  Just sig -> eval (merge rho sig, rhs)
 
 
 ---------------------------------------------------------------------------
 -- PRIMITIVES
 ---------------------------------------------------------------------------
 
-prim :: Context -> Primitive -> [Computation] -> Computation
-prim ctx "primStringConcat" vs = primStringConcat ctx vs
-prim ctx "primNumAdd"       vs = primNumAdd ctx vs
-prim ctx f _ = handle ctx ("NoPrim",[VPrim f []]) []
+primEnv :: Env
+primEnv = foldMap (\ str -> singleton str $ VPrim str [])
+        [ "primStringConcat"
+        , "primNumAdd"
+        ]
+
+prim :: Primitive -> [Computation] -> Shonkier Computation
+prim "primStringConcat" vs = primStringConcat vs
+prim "primNumAdd"       vs = primNumAdd vs
+prim f _ = handle ("NoPrim",[VPrim f []]) []
 
 ---------------------------------------------------------------------------
 -- NUM
 
-primNumAdd :: Context -> [Computation] -> Computation
-primNumAdd ctx = \case
-  [CNum m, CNum n]   -> use ctx (VNum (m + n))
-  [Value m, Value n] -> handle ctx ("Invalid_NumAdd_ArgType", [m, n]) []
-  [_,_]              -> handle ctx ("Invalid_NumAdd_ArgRequest",[]) []
-  _                  -> handle ctx ("Invalid_NumAdd_Arity", []) []
+primNumAdd :: [Computation] -> Shonkier Computation
+primNumAdd = \case
+  [CNum m, CNum n]   -> use (VNum (m + n))
+  [Value m, Value n] -> handle ("Invalid_NumAdd_ArgType", [m, n]) []
+  [_,_]              -> handle ("Invalid_NumAdd_ArgRequest",[]) []
+  _                  -> handle ("Invalid_NumAdd_Arity", []) []
 
 ---------------------------------------------------------------------------
 -- STRING
 
-primStringConcat :: Context -> [Computation] -> Computation
-primStringConcat ctx cs = go cs Nothing [] where
+primStringConcat :: [Computation] -> Shonkier Computation
+primStringConcat cs = go cs Nothing [] where
 
-  go :: [Computation] -> Maybe Keyword -> [Text] -> Computation
+  go :: [Computation] -> Maybe Keyword -> [Text] -> Shonkier Computation
   go cs mk ts = case cs of
     []                 -> let txt = T.concat $ reverse ts
-                          in use ctx (VString (fromMaybe "" mk) txt)
+                          in use (VString (fromMaybe "" mk) txt)
     (CString k t : cs) -> go cs (mk <|> pure k) (t:ts)
     (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
-    (Value v     : cs) -> handle ctx ("Invalid_StringConcat_ArgType", [v]) []
-    _                  -> handle ctx ("Invalid_StringConcat_ArgRequest",[]) []
+    (CAtom {}    : cs) -> go cs mk ts
+    (Value v     : cs) -> handle ("Invalid_StringConcat_ArgType", [v]) []
+    _                  -> handle ("Invalid_StringConcat_ArgRequest",[]) []
 
 ---------------------------------------------------------------------------
 -- FROMVALUE

@@ -2,7 +2,6 @@
 
 module Shonkier.Parser.Examples where
 
-import Data.Bwd
 import Shonkier.Parser
 import Shonkier.Syntax
 import Shonkier.Semantics
@@ -46,7 +45,7 @@ pipeP = getMeAProgram
 
 
 test0 :: Computation
-test0 = eval Nil . (,) (mkEnv . fold $ [runReaderP, appendP]) $ getMeATerm
+test0 = shonkier (mkGlobalEnv . fold $ [runReaderP, appendP]) $ getMeATerm
   "runReader(['1 '2],append('ask(),'ask()))"
 
 runStateP :: Program
@@ -66,7 +65,7 @@ bipperP = getMeAProgram
   "bipper() -> semi('send('get()),semi('put(['bip|'get()]),bipper()))"
 
 test1 :: Computation
-test1 = eval Nil . (,) (mkEnv . fold $ [runStateP, pipeP, semiP, bipperP, mapP]) $ getMeATerm
+test1 = shonkier (mkGlobalEnv . fold $ [runStateP, pipeP, semiP, bipperP, mapP]) $ getMeATerm
   "runState([],pipe(bipper(),map({x -> 'recv()},[[] [] [] []])))"
 
 string :: Term

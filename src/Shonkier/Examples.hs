@@ -31,7 +31,7 @@ onetwothreefour :: Term
 onetwothreefour = App (Var "append") [onetwo, threefour]
 
 appendTest :: Computation
-appendTest = eval Nil (appendEnv, onetwothreefour)
+appendTest = shonkier appendEnv onetwothreefour
 
 
 readerEnv :: Env
@@ -54,7 +54,7 @@ onetwoSquared = App (Var "runReader")
 
 
 askTest :: Computation
-askTest = eval Nil (appendEnv <> readerEnv, onetwoSquared)
+askTest = shonkier (appendEnv <> readerEnv) onetwoSquared
 
 
 stateEnv :: Env
@@ -109,16 +109,10 @@ bipping = App (Var "runState")
   ]
 
 stateTest :: Computation
-stateTest = eval Nil (mapEnv <> stateEnv <> appendEnv, bipping)
-
-primEnv :: Env
-primEnv = foldMap (\ str -> singleton str $ VPrim str [])
-        [ "primStringConcat"
-        , "primNumAdd"
-        ]
+stateTest = shonkier (mapEnv <> stateEnv <> appendEnv) bipping
 
 mkPrim :: String -> [Literal] -> Computation
-mkPrim p ls = eval Nil (primEnv, App (Var p) (Lit <$> ls))
+mkPrim p ls = shonkier primEnv $ App (Var p) (Lit <$> ls)
 
 strConcat :: [Literal] -> Computation
 strConcat = mkPrim "primStringConcat"
@@ -133,7 +127,7 @@ foogoo :: Computation
 foogoo = strConcat [String "foo" "fo", String "goo" "\"foo", String "" " oof!"]
 
 listConcat :: Computation
-listConcat = eval Nil (primEnv, App (Var "primStringConcat") [str]) where
+listConcat = shonkier primEnv $ App (Var "primStringConcat") [str] where
   str = Cell (Cell (TString "" "hello")
                    (Cell (TString "" " ") (TString "" "world")))
              (Cell (TString "" "!") (TString "" "\n"))

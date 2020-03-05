@@ -17,7 +17,7 @@ process :: Pandoc -> IO Pandoc
 process doc0 = return doc2 where
   (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
   ps = concat [p | ds <- defns, let Right p = parseOnly program ds]
-  env = mkEnv ps
+  env = mkGlobalEnv ps
   doc2 = walk (evalMary env) doc1
 
 snarfMaryDef :: Block -> Writer [T.Text] Block
@@ -28,7 +28,7 @@ evalMary :: Env -> Block -> Block
 evalMary env (CodeBlock (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Null
-    Right t -> case eval Nil (env, t) of
+    Right t -> case shonkier env t of
       Value v -> fromValue v
       _ -> Null
 evalMary _ b = b
