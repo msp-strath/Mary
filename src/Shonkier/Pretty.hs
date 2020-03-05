@@ -74,6 +74,7 @@ instance Pretty PValue where
     PAtom a   -> ppAtom a
     PLit l    -> pretty l
     PBind v   -> pretty v
+    PWild     -> "_"
     PCell a b -> ppCell a b
 
 instance Pretty PComputation where
