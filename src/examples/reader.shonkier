@@ -1,5 +1,5 @@
 runReader(, 'ask):
-runReader(r, val)           -> val
+runReader(_, val)           -> val
 runReader(r, {'ask() -> k}) -> runReader(r, k(r))
 
 append([]    , ys) -> ys
