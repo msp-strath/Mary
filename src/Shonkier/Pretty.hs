@@ -6,6 +6,8 @@ module Shonkier.Pretty where
 import Shonkier.Syntax
 import Shonkier.Semantics
 
+import Control.Arrow ((***))
+
 import Data.Char
 import Data.Foldable
 import Data.Ratio
@@ -18,8 +20,43 @@ ppAtom = \case
   [] -> "[]"
   a  -> squote <> pretty a
 
-ppCell :: Pretty a => a -> a -> Doc ann
-ppCell a b = encloseSep lbracket rbracket pipe $ pretty <$> [a, b]
+{-
+Lisp conventions for ppList:
+[xs]           |-> [xs]
+[1|[2|[3|xs]]] |-> [1 2 3|xs]
+[1|[2|[3|[]]]] |-> [1 2 3]
+-}
+
+ppList :: Pretty a => ([a], Maybe a) -> Doc ann
+ppList (as, m) = encloseSep lbracket closing space $ pretty <$> as
+  where
+  closing = maybe mempty ((pipe <>) . pretty) m <> rbracket
+
+data ListView a la = ItsNil | ItsCons a la | ItsNot
+
+listView :: (la -> ListView a la) -> la -> ([a], Maybe la)
+listView coalg seed = case coalg seed of
+  ItsNil       -> ([], Nothing)
+  ItsCons x xs -> (x :) *** id $ listView coalg xs
+  ItsNot       -> ([], Just seed)
+
+termCoalg :: Term -> ListView Term Term
+termCoalg = \case
+  Atom ""  -> ItsNil
+  Cell a b -> ItsCons a b
+  _        -> ItsNot
+
+valueCoalg :: Value -> ListView Value Value
+valueCoalg = \case
+  VAtom ""  -> ItsNil
+  VCell a b -> ItsCons a b
+  _         -> ItsNot
+
+pvalueCoalg :: PValue -> ListView PValue PValue
+pvalueCoalg = \case
+  PAtom ""  -> ItsNil
+  PCell a b -> ItsCons a b
+  _         -> ItsNot
 
 ppApp :: Pretty a => Doc ann -> [a] -> Doc ann
 ppApp f ts = f <> tupled (pretty <$> ts)
@@ -61,36 +98,42 @@ instance Pretty Literal where
     Num r        -> pretty r
 
 instance Pretty Term where
-  pretty = \case
-    Atom a     -> ppAtom a
-    Lit l      -> pretty l
-    Var v      -> pretty v
-    Cell a b   -> ppCell a b
-    App f ts   -> ppApp (pretty f) ts
-    Fun hs cls -> ppFun hs cls
+  pretty t = case listView termCoalg t of
+    ([], Just _) -> case t of
+      Atom a     -> ppAtom a
+      Lit l      -> pretty l
+      Var v      -> pretty v
+      Cell a b   -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      App f ts   -> ppApp (pretty f) ts
+      Fun hs cls -> ppFun hs cls
+    it -> ppList it
 
 instance Pretty PValue where
-  pretty = \case
-    PAtom a   -> ppAtom a
-    PLit l    -> pretty l
-    PBind v   -> pretty v
-    PWild     -> "_"
-    PCell a b -> ppCell a b
+  pretty p = case listView pvalueCoalg p of
+    ([], Just _) -> case p of
+      PAtom a   -> ppAtom a
+      PLit l    -> pretty l
+      PBind v   -> pretty v
+      PWild     -> "_"
+      PCell a b -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+    it -> ppList it
 
 instance Pretty PComputation where
   pretty = \case
     PValue p           -> pretty p
-    PRequest (a, vs) v -> angles $ hsep [ppApp (ppAtom a) vs, "->", pretty v]
-    PThunk v           -> angles $ pretty v
+    PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, "->", pretty v]
+    PThunk v           -> braces $ pretty v
 
 instance Pretty Value where
-  pretty = \case
-    VAtom a            -> ppAtom a
-    VLit l             -> pretty l
-    VPrim f _          -> pretty f
-    VCell a b          -> ppCell a b
-    VFun fr rho hs cls -> ppFun hs cls
-    VThunk c           -> angles $ pretty c
+  pretty v = case listView valueCoalg v of
+    ([], Just _) -> case v of
+      VAtom a            -> ppAtom a
+      VLit l             -> pretty l
+      VPrim f _          -> pretty f
+      VCell a b          -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      VFun fr rho hs cls -> ppFun hs cls
+      VThunk c           -> braces $ pretty c
+    it -> ppList it
 
 instance Pretty Computation where
   pretty = \case
