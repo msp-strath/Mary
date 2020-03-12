@@ -22,7 +22,7 @@ mary inp = do
                   , std_out = CreatePipe
                   }
   (_ , Just hout, _, _) <-
-    createProcess (proc "pandoc" ["-s", "-f", "json", "-t", "html"])
+    createProcess (proc "pandoc" ["-s", "-f", "json", "-t", "html", "--template", "templates/mary.html5"])
                   { std_in = UseHandle hmary
                   , std_out = CreatePipe
                   }

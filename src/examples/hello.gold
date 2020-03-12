@@ -16,9 +16,12 @@
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
+  <script src="https://raw.githubusercontent.com/msp-strath/Mary/master/src/Shonkier/Shonkier.js"></script>
 </head>
 <body>
+<form method="post">
 <h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as Fenced Code Blocks</h1>
 <p>Hello</p>
+</form>
 </body>
 </html>
