@@ -22,5 +22,9 @@ install-hasktags:
 	cabal update
 	cabal install hasktags
 
+.PHONY: test
+test:
+	runhaskell -itest test/Test/Main.hs -i
+
 TAGS:
 	hasktags --etags .
