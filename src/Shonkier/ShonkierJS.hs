@@ -60,12 +60,12 @@ instance JSAtom a => JS (PValue' a) where
   js PWild        = ["PWild"]
 
 jsGlobalEnv :: Program -> Text
-jsGlobalEnv ls = Data.Text.concat $
-  "var globalEnv = {}; " :
+jsGlobalEnv ls = Data.Text.intercalate " " $
+  "var globalEnv = {};" :
   ((`foldMapWithKey` mkGlobalEnv ls) $ \ f -> \case
-    VFun [] _ hs cs ->
+    VFun [] _ hs cs -> pure $ Data.Text.concat $
       ["globalEnv[", jsAtom f, "] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
-      ++ ["); "]
+      ++ [");"]
     _ -> [])

@@ -61,6 +61,7 @@ library
                      , base >=4.9.1.0 && <4.14
                      , containers >=0.6 && <0.7
                      , mtl >=2 && <3
+                     , newtype >=0.2 && <0.3
                      , pandoc-types >=1.19 && <1.21
                      , prettyprinter >=1.6 && <1.7
                      , process >=1.6.5.0 && <1.7
