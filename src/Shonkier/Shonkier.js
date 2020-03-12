@@ -4,6 +4,9 @@
 /*****                                                                   ****/
 /****************************************************************************/
 
+
+// variables are strings, environments are objects
+
 // Constructors for Term, Pattern, Value
 
 function Atom(a) { // Atom a
@@ -24,8 +27,6 @@ function Fun(hs, cs) { // Fun hs cs, both arrays
     return {tag: "Fun", handles: hs, clauses: cs};
 };
 
-// variables are strings, environments are objects
-
 // PValue only
 const PWild = {tag: "Wild"};
 
@@ -34,13 +35,13 @@ function Value(p) {
     return {tag: "Value", value: p};
 };
 function Request(a, ps, k) {
-    return {tag: "Request", request: a, args: ps, cont: k};
+    return {tag: "Request", cmd: a, args: ps, cont: k};
 }; 
 
 // a thunk pattern is a string
 
 // Lit
-function LitString(k,t) { return t; };
+//function LitString(k,t) { return t; };
 function LitNum(n,d) {
     if (n==0) { return {num: n, den: 1}; };
     if (d==0) { return null; };
@@ -80,32 +81,29 @@ function VFun(fs     // null-terminated Cons-list of frames
              ) {
     return {tag: "VFun", cont: fs, env: rho, handles: hs, clauses: cs};
 };
-function VThunk(k) {
-    return {tag: "VThunk", thunk: k};
+function VThunk(c) {
+    return {tag: "VThunk", thunk: c};
 };
 
 // what does a value, used as a function, handle in its arguments?
 function fhandles(v) {
-    if (v.tag == "VFun") { return v.handles; };
+    if (v.tag == "VFun" || v.tag == "VPrim") { return v.handles; };
     return null;
 };
 
+function hasLength(x) {
+    return (!(x === null || x === undefined || x.length === undefined));
+};
+
 // is command c handled in position i by handlers hs?
-function inhandles(c,i,h) {
-    if (h === null
-        || h === undefined
-        || h.length === undefined
-        || i >= h.length) {
-        return false;
-    };
-    h = h[i];
-    if (h === null
-        || h === undefined
-        || h.length === undefined) {
-        return false;
-    };
-    for (i = 0; i < h.length; i++) {
-        if (c === h[i]) { return true; };
+function inhandles(c,i,hss) {
+    if (hasLength(hss) && i < hss.length) {
+        var hs = hss[i];
+        if (hasLength(hs)) {
+            for (i = 0; i < hs.length; i++) {
+                if (c === hs[i]) { return true; };
+            };
+        };
     };
     return false;
 };
@@ -135,7 +133,7 @@ function cmatch(rho, q, c) {
         case "Value" :
             return vmatch(rho,q.value,c.value);
         case "Request" :
-            if (q.request == c.request && vmatches(rho,q.args,c.args)) {
+            if (q.cmd == c.cmd && vmatches(rho,q.args,c.args)) {
                 rho[q.cont] = c.cont; return true;
             };
             return false;
@@ -187,12 +185,14 @@ function AppR(f,cz,rho,i,hs,ts) { // carefully engineered pun with Apply
 };
 
 // State
+// pop states, ie those which pop ctx until done
 function Use(v) {
     return {tag: 0, val: v};
 };
 function Handle(c,as,k) {
     return {tag: 1, cmd: c, args: as, cont: k};
 };
+// push states, ie those which grow ctx
 function Eval(rho, t) {
     return {tag: 2, env: rho, term: t};
 };
@@ -215,7 +215,8 @@ function shonkier(glob,t) {
     function push(f) { ctx = {top: f, pop:ctx}; };
     function pop() { fr = ctx.top; ctx = ctx.pop; };
     var state = Eval({},t);
-    while (state.tag > 1 || ctx != null) {
+    while (state.tag > 1 || ctx != null) // done when ctx is null in a pop state
+    {
         switch (state.tag) {
         case 0: // Use
             pop();
@@ -231,13 +232,28 @@ function shonkier(glob,t) {
                 state = Apply(state.val,null,fr.env,0,fhandles(state.val),fr.args);
                 continue;
             case 3: // AppR
-                state = Apply(fr.fun,Cons(Value(state.val),fr.done),fr.env,fr.now+1,fr.handles,fr.args);
+                state = Apply(fr.fun
+                              ,Cons(Value(state.val),fr.done) // stash value
+                              ,fr.env
+                              ,fr.now+1 // move yer finger
+                              ,fr.handles,fr.args);
                 continue;
             };
             state = Handle("BadFrame",[],null);
             continue;
         case 1: // Handle
             pop();
+            if (fr.tag == 3
+                && inhandles(state.cmd,fr.now,fr.handles)
+               ) {
+                state = Apply(fr.fun
+                              ,Cons(Request(state.cmd,state.args,state.cont),fr.done)
+                              ,fr.env
+                              ,fr.now+1
+                              ,fr.handles
+                              ,fr.args);
+                continue;
+            };
             state = Handle(state.cmd, state.args, Cons(fr,state.cont));
             continue;
         case 2: // Eval
@@ -300,6 +316,16 @@ function shonkier(glob,t) {
                 while (d != null) { push(d.hd); d = d.tl; }
                 state = Call(state.fun.env,state.fun.clauses,args);
                 continue;
+            case "VThunk":
+                d = state.fun.thunk;
+                switch (d.tag) {
+                case "Value":
+                    state = Use(d.value);
+                    continue;
+                case "Request":
+                    state = Handle(d.cmd,d.args,d.cont);
+                    continue;
+                };
             };
             state = Handle("NotFuny",[],null);
             continue;
@@ -333,7 +359,7 @@ function render(v) {
         v = stk.hd;
         stk = stk.tl;
         switch (v.tag) {
-        case "Atom": continue;
+        case "Atom": xs[i] = "'".concat(v.atom); i++; continue;
         case "Cell": stk = Cons (v.fst, Cons(v.snd, stk)); continue;
         case "Lit":
             if (stringy(v.literal)) {

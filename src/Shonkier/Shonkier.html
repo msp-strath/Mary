@@ -10,19 +10,10 @@
 
 <p id="demo"></p>
 <script>
-var sig = {};
-sig["append"] = VFun(null,{},[],
-  [  Clause([Value(Atom("")),Value("ys")],"ys")
-  ,  Clause([Value(Cell("x","xs")),Value("ys")],Cell("x",App("append",["xs","ys"])))
-  ]);
-document.getElementById("demo").innerHTML = render(
-shonkier(sig,App("append",
-  [Cell(Lit("a"),Cell(Lit("b"),Atom("")))
-  ,Cell(Lit("c"),Cell(Lit("d"),Atom("")))
-  ]))
-);
+var globalEnv = {}; globalEnv["append"] = VFun(null,{},[],[Clause([Value(Atom("")),Value("ys")],"ys"),Clause([Value(Cell("x","xs")),Value("ys")],Cell("x",App("append",["xs","ys"])))]); globalEnv["main"] = VFun(null,{},[],[Clause([],App("append",[App("onetwo",[]),App("threefour",[])]))]); globalEnv["onetwo"] = VFun(null,{},[],[Clause([],Cell(Atom("1"),Cell(Atom("2"),Atom(""))))]); globalEnv["threefour"] = VFun(null,{},[],[Clause([],Cell(Atom("3"),Cell(Atom("4"),Atom(""))))]);
+document.getElementById("demo").innerHTML = render(shonkier(globalEnv,App("main",[])));
 </script>
 
 <hr>
-<!-- hhmts start -->Last modified: Wed Mar 11 12:03:25 GMT 2020 <!-- hhmts end -->
+<!-- hhmts start -->Last modified: Thu Mar 12 16:14:18 GMT 2020 <!-- hhmts end -->
 </body> </html>
