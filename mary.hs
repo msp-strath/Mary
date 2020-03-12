@@ -14,12 +14,15 @@ import Shonkier.Parser
 import Shonkier.Pretty ()
 import Shonkier.Semantics
 
+import Mary.ServePage
+
 main :: IO ()
 main = do
   xs <- getArgs
   case xs of
     ["-pandoc"]             -> toJSONFilter process
     ["-shonkier", filename] -> interpretShonkier filename
+    ["-page", filename]     -> servePage filename >>= TIO.putStrLn
     _ -> TIO.putStr "# mary says\nI don't know what you're on about.\n\n"
 
 interpretShonkier :: String -> IO ()
