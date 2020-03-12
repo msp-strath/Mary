@@ -46,7 +46,7 @@ jobs:
     - uses: r-lib/actions/setup-pandoc@v1
       name: Install pandoc
       with:
-        pandoc-version: '2.8'
+        pandoc-version: '2.9'
 
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
