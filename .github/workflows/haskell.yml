@@ -46,6 +46,9 @@ jobs:
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
+    - name: Install pandoc
+      run: sudo apt-get install pandoc
+
     - name: Cabal update
       run: cabal update
 
