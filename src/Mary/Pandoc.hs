@@ -1,4 +1,4 @@
-module Shonkier.Pandoc where
+module Mary.Pandoc where
 
 import Control.Monad.Writer (Writer, runWriter, tell)
 

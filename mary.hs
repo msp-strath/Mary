@@ -9,11 +9,11 @@ import System.Environment
 
 import Text.Pandoc.JSON
 
-import Shonkier.Pandoc
 import Shonkier.Parser
 import Shonkier.Pretty ()
 import Shonkier.Semantics
 
+import Mary.Pandoc
 import Mary.ServePage
 
 main :: IO ()
