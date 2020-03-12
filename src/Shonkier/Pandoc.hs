@@ -8,7 +8,6 @@ import qualified Data.Text as T
 import Text.Pandoc.Definition
 import Text.Pandoc.Walk
 
-import Data.Bwd
 import Shonkier.Parser
 import Shonkier.Semantics
 import Shonkier.Syntax

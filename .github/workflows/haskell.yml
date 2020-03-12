@@ -43,6 +43,11 @@ jobs:
         key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-${{ hashFiles('**/mary.cabal') }}
         restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-
 
+    - uses: r-lib/actions/setup-pandoc@v1
+      name: Install pandoc
+      with:
+        pandoc-version: '2.9'
+
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
