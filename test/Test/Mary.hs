@@ -13,7 +13,7 @@ import Test.Tasty (TestTree)
 mary :: FilePath -> IO Text
 mary inp = do
   (_, Just hpandoc, _, _) <-
-    createProcess (proc "pandoc" ["-s", inp, "-t", "json"])
+    createProcess (proc "pandoc" ["-s", inp, "-f", "markdown", "-t", "json"])
                   { std_out = CreatePipe
                   }
   (_, Just hmary, _, _) <-
@@ -22,7 +22,7 @@ mary inp = do
                   , std_out = CreatePipe
                   }
   (_ , Just hout, _, _) <-
-    createProcess (proc "pandoc" ["-s", "-f", "json"])
+    createProcess (proc "pandoc" ["-s", "-f", "json", "-t", "html"])
                   { std_in = UseHandle hmary
                   , std_out = CreatePipe
                   }
