@@ -24,7 +24,8 @@ install-hasktags:
 
 .PHONY: test
 test:
-	runhaskell -itest test/Test/Main.hs -i
+	cabal new-run mary-tests -- -i
+#	runhaskell -itest test/Test/Main.hs -i
 
 TAGS:
 	hasktags --etags .
