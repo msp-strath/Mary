@@ -43,17 +43,29 @@ evalMary env (CodeBlock (_, cs, _) e) | elem "mary" cs =
       _ -> Null
 evalMary _ b = b
 
-unary :: (FromValue a) => (a -> b) -> Value -> b
-unary = (. fromValue)
+listy :: (FromValue a) => ([a] -> b) -> Value -> b
+listy = (. fromValue)
 
-binary :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> c
-binary c (VCell a b) = c (fromValue a) (fromValue b)
-binary c _ = binary c (VCell VNil VNil)
+after1Listy :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> c
+after1Listy c (VCell a b) = c (fromValue a) (fromValue b)
+after1Listy c _ = after1Listy c (VCell VNil VNil)
 
-ternary :: (FromValue a, FromValue b, FromValue c)
+after2Listy :: (FromValue a, FromValue b, FromValue c)
         => (a -> b -> c -> d) -> Value -> d
-ternary c (VCell a bc) = binary (c (fromValue a)) bc
-ternary c _ = ternary c (VCell VNil (VCell VNil VNil))
+after2Listy c (VCell a bc) = after1Listy (c (fromValue a)) bc
+after2Listy c _ = after2Listy c (VCell VNil (VCell VNil VNil))
+
+takes1 :: FromValue a => (a -> b) -> Value -> b
+takes1 f (VCell a _) = f (fromValue a)
+takes1 f _ = f (fromValue VNil)
+
+takes2 :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> c
+takes2 f (VCell a x) = takes1 (f (fromValue a)) x
+takes2 f v = takes1 (f (fromValue VNil)) v
+
+takes3 :: (FromValue a, FromValue b, FromValue c) => (a -> b -> c -> d) -> Value -> d
+takes3 f (VCell a x) = takes2 (f (fromValue a)) x
+takes3 f v = takes2 (f (fromValue VNil)) v
 
 instance FromValue Int where
   fromValue (VNum d) = truncate d
@@ -64,7 +76,7 @@ instance FromValue Text where
   fromValue _ = ""
 
 instance FromValue Format where
-  fromValue = unary Format
+  fromValue = Format . fromValue
 
 instance FromValue ListNumberDelim where
   fromValue (VAtom tag) = case tag of
@@ -89,23 +101,42 @@ instance FromValue ListNumberStyle where
 
 instance FromValue Block where
   fromValue (VCell (VAtom tag) is) = ($ is) $ case tag of
-    "Plain"          -> unary Plain
-    "Para"           -> unary Para
-    "LineBlock"      -> unary LineBlock
-    "CodeBlock"      -> binary CodeBlock
-    "RawBlock"       -> binary RawBlock
-    "BlockQuote"     -> unary BlockQuote
-    "OrderedList"    -> binary OrderedList
-    "BulletList"     -> unary BulletList
-    "DefinitionList" -> unary DefinitionList
-    "Header"         -> ternary Header
+    "Plain"          -> listy Plain
+    "Para"           -> listy Para
+    "LineBlock"      -> listy LineBlock
+    "CodeBlock"      -> takes2 CodeBlock
+    "RawBlock"       -> takes2 RawBlock
+    "BlockQuote"     -> listy BlockQuote
+    "OrderedList"    -> after1Listy OrderedList
+    "BulletList"     -> listy BulletList
+    "DefinitionList" -> listy DefinitionList
+    "Header"         -> after2Listy Header
     "HorizontalRule" -> const HorizontalRule
     -- TODO: Table
-    "Div"            -> binary Div
+    "Div"            -> after1Listy Div
     "Null"           -> const Null
     _                -> const Null
   fromValue _ = Null
 
 instance FromValue Inline where
   fromValue (VString _ t) = Str t
+  fromValue (VCell (VAtom tag) is) = ($ is) $ case tag of
+    "Emph"        -> listy Emph
+    "Strong"      -> listy Strong
+    "StrikeOut"   -> listy Strikeout
+    "Superscript" -> listy Superscript
+    "Subscript"   -> listy Subscript
+    "SmallCaps"   -> listy SmallCaps
+    -- TODO: Quoted
+    -- TODO: Cite
+    "Code"        -> takes2 Code
+    "SoftBreak"   -> const SoftBreak
+    "LineBreak"   -> const SoftBreak
+    -- TODO: Math
+    "RawInline"   -> takes2 RawInline
+    "Link"        -> takes3 Link
+    "Image"       -> takes3 Image
+    "Note"        -> listy Note
+    "Span"        -> after1Listy Span
+    _             -> const Space
   fromValue _ = Space
