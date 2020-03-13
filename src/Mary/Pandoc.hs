@@ -31,7 +31,11 @@ process doc0 = return doc3 where
        $ doc2
 
 snarfMaryDef :: Block -> Writer [Text] Block
-snarfMaryDef (CodeBlock (_, cs, _) p) | elem "mary-def" cs = Null <$ tell [p]
+snarfMaryDef c@(CodeBlock (_, cs, _) p)
+  | elem "mary-def" cs
+  = if "keep" `elem` cs
+    then c <$ tell [p]
+    else Null <$ tell [p]
 snarfMaryDef b = return b
 
 evalMary :: Env -> Block -> Block
