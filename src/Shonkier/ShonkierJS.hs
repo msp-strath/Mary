@@ -69,4 +69,8 @@ jsGlobalEnv ls = Data.Text.intercalate " " $
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
       ++ [");"]
+    VPrim g hs ->  pure $ Data.Text.concat $
+      ["globalEnv[", jsAtom f, "] = VPrim(", jsAtom g , ","]
+      ++ js (fmap (fmap jsAtom) hs)
+      ++ [");"]
     _ -> [])

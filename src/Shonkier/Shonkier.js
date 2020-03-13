@@ -208,6 +208,58 @@ function Call(rho,cs,as) {
     return {tag: 4, env: rho, clauses: cs, args: as};
 };
 
+// Primitives
+function prim(f, vs) {
+    function primStringConcat(vs) {
+        var ts = []; // final string
+        var cs = vs.reverse(); // stack of arguments to go through
+
+        while (hasLength(cs) && cs.length > 0) {
+            var x = cs.pop();
+            if (x.tag == "Value") { x = x.value; };
+
+            switch (x.tag) {
+            case "Lit":
+                if (stringy(x.literal)) { ts += x.literal; continue; }
+                else return Handle("Invalid_StringConcat_ArgType",[],null);
+            case "Cell":
+                cs.push(x.snd,x.fst); // note push in the right order!
+                continue;
+            case "Atom":
+                continue;
+            default:
+                return Handle("Invalid_StringConcat_ArgType",[],null);
+            };
+        };
+        return Use(Lit(ts));
+
+    };
+
+    function primNumAdd(cs) {
+        if (hasLength(cs) && cs.length == 2) {
+            if (cs[0].tag == "Value" && cs[1].tag == "Value" &&
+                cs[0].value.tag == "Lit" && cs[1].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                var y = cs[1].value.literal;
+                if (!stringy(x) && !stringy(y)) {
+                    return Use(Lit(LitNum(x.num*y.den + y.num*x.den,x.den*y.den)));
+                };
+                return Handle("Invalid_NumAdd_ArgType",[],null);
+            };
+            return Handle("Invalid_NumAdd_ArgRequest",[],null);
+        };
+        return Handle("Invalid_NumAdd_Arity",[],null);
+    };
+
+    switch (f) {
+    case "primStringConcat":
+        return primStringConcat(vs);
+    case "primNumAdd":
+        return primNumAdd(vs);
+    default:
+        return Handle("NoPrim",[],null);
+    };
+};
 
 // Continuations made by null and
 function Cons(h,t) {
@@ -217,8 +269,10 @@ function Cons(h,t) {
 function shonkier(glob,t) {
     var ctx = null;
     var fr = null;
+
     function push(f) { ctx = {top: f, pop:ctx}; };
-    function pop() { fr = ctx.top; ctx = ctx.pop; };
+    function pop()   { fr = ctx.top; ctx = ctx.pop; };
+
     var state = Eval({},t);
     while (state.tag > 1 || ctx != null) // done when ctx is null in a pop state
     {
@@ -278,10 +332,10 @@ function shonkier(glob,t) {
                 continue;
             };
             switch (t.tag) {
-            case "Lit":
+            case "Atom":
                 state = Use(t);
                 continue;
-            case "Atom":
+            case "Lit":
                 state = Use(t);
                 continue;
             case "Cell":
@@ -315,6 +369,9 @@ function shonkier(glob,t) {
             case "Atom":
                 for (i = 0; i < args.length; i++) { args[i] = args[i].val; }
                 state = Handle(state.fun.atom,args,null);
+                continue;
+            case "VPrim":
+                state = prim(state.fun.prim, args);
                 continue;
             case "VFun":
                 d = state.fun.cont;
