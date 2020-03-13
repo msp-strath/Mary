@@ -114,6 +114,7 @@ instance Pretty PValue where
       PAtom a   -> ppAtom a
       PLit l    -> pretty l
       PBind v   -> pretty v
+      PAs v p   -> pretty v <> "@" <> pretty p
       PWild     -> "_"
       PCell a b -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
     it -> ppList it

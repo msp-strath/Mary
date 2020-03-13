@@ -35,6 +35,7 @@ data PValue' a
   | PLit Literal
   | PBind Variable
   | PWild
+  | PAs Variable (PValue' a)
   | PCell (PValue' a) (PValue' a)
   deriving (Show)
 type PValue = PValue' String

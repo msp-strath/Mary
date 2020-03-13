@@ -11,24 +11,28 @@
 
 function Atom(a) { // Atom a
     return {tag: "Atom", atom: a};
-};                 
+};
 function Lit(l) { // Lit l
     return {tag: "Lit", literal: l};
-};               
+};
 function Cell(x,y) { // Cell x y
     return {tag: "Cell", fst: x, snd: y};
-};         
+};
 
 // Term only
 function App(f, as) {       // App f as, where as is an array
     return {tag: "App", fun: f, args: as};
-};  
+};
 function Fun(hs, cs) { // Fun hs cs, both arrays
     return {tag: "Fun", handles: hs, clauses: cs};
 };
 
 // PValue only
 const PWild = {tag: "Wild"};
+
+function PAs(x, p) {
+    return {tag: "As", var: x, pat: p}
+};
 
 // PComputation, Computation
 function Value(p) {
@@ -154,6 +158,7 @@ function vmatches(rho, ps, vs) {
 function vmatch(rho, p, v) {
     if (stringy(p)) { rho[p] = v; return true; };
     if (p.tag == "Wild") { return true; };
+    if (p.tag == "As") { rho[p.var] = v; return (vmatch(rho,p.pat,v)); }
     if (p.tag == v.tag) {
         switch (p.tag) {
         case "Atom" :

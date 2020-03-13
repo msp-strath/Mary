@@ -110,11 +110,18 @@ pcomputation
            <* arrow <* skipSpace <*> identifier
       ) <* skipSpace <* char '}'
 
+pvar :: Parser PValue
+pvar = do
+  var <- identifier
+  choice [ PAs var <$ char '@' <*> pvalue
+         , pure (PBind var)
+         ]
+
 pvalue :: Parser PValue
 pvalue =
   PAtom <$> atom
   <|>
-  PBind <$> identifier
+  pvar
   <|>
   PWild <$ char '_'
   <|>

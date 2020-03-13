@@ -37,7 +37,7 @@ instance JSAtom a => JS (Term' a) where
   js (Fun hs cs) = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
                 ++ js cs
                 ++ [")"]
-  
+
 instance JS Literal where
   js (String _ txt) = ["\""] ++ (unpack txt >>= ch) ++ ["\""] where
     ch c | c < ' ' = ["\\", pack [chr (64 + ord c)]]
@@ -56,6 +56,7 @@ instance JSAtom a => JS (PValue' a) where
   js (PAtom a)    = ["Atom(", jsAtom a, ")"]
   js (PLit l)     = ["Lit("] ++ js l ++ [")"]
   js (PBind x)    = ["\"",pack x,"\""]
+  js (PAs x p)    = ["PAs("] ++ ["\"",pack x,"\""] ++ [","] ++ js p ++ [")"]
   js (PCell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js PWild        = ["PWild"]
 

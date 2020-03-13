@@ -1,0 +1,4 @@
+tails(xs@[_|tl]) -> [xs|tails(tl)]
+tails([])        -> [[]]
+
+main() -> tails(['1 '2 '3])
