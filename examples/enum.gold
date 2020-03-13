@@ -8,7 +8,7 @@
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
-  <script src="https://raw.githubusercontent.com/msp-strath/Mary/master/src/Shonkier/Shonkier.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/Shonkier/Shonkier.js"></script>
   <script>
   var globalEnv = {}; globalEnv["enum"] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App("primStringConcat",["xs"]),Atom(""))),Cell(Cell(Atom("BulletList"),App("map",["enum","xs"])),Atom("")))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]); globalEnv["map"] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App("map",["f","xs"])))]); globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Lit("Enums"),Cell(Atom(""),Cell(Atom(""),App("enum",[Cell(Lit("A"),Cell(Cell(Cell(Lit("b"),Cell(Lit("c"),Atom(""))),Cell(Lit("d"),Atom(""))),Atom("")))]))))))]);
   </script>
