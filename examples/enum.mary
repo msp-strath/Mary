@@ -1,20 +1,20 @@
 # Recursively building content
 
-```mary-def
-map(f, [])     -> []
-map(f, [x|xs]) -> [f(x)|map(f, xs)]
-
-enum(xs@[_|_]) -> [['BulletList|map(enum,xs)]]
-enum(xs)       -> [['Plain xs]]
-
-unlist([x]) -> x
-
-test() ->
-  unlist(enum(["A" [["b" "c"] "d"]]))
-```
-
-This is a nested enumeration
+This is a nested enumeration with concatenated sublists as
+intermediate items.
 
 ```mary
 test()
+```
+
+It was generated using the following code:
+
+``` { .mary-def .keep }
+map(f, [])     -> []
+map(f, [x|xs]) -> [f(x)|map(f, xs)]
+
+enum(xs@[_|_]) -> [['Plain primStringConcat(xs)] ['BulletList|map(enum,xs)]]
+enum(xs)       -> [['Plain xs]]
+
+test() -> ['Div "Enums" [] []|enum(["A" [["b" "c"] "d"]])]
 ```

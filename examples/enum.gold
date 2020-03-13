@@ -10,23 +10,36 @@
   <![endif]-->
   <script src="https://raw.githubusercontent.com/msp-strath/Mary/master/src/Shonkier/Shonkier.js"></script>
   <script>
-  var globalEnv = {}; globalEnv["enum"] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("BulletList"),App("map",["enum","xs"])),Atom(""))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]); globalEnv["map"] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App("map",["f","xs"])))]); globalEnv["test"] = VFun(null,{},[],[Clause([],App("unlist",[App("enum",[Cell(Lit("A"),Cell(Cell(Cell(Lit("b"),Cell(Lit("c"),Atom(""))),Cell(Lit("d"),Atom(""))),Atom("")))])]))]); globalEnv["unlist"] = VFun(null,{},[],[Clause([Value(Cell("x",Atom("")))],"x")]);
+  var globalEnv = {}; globalEnv["enum"] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App("primStringConcat",["xs"]),Atom(""))),Cell(Cell(Atom("BulletList"),App("map",["enum","xs"])),Atom("")))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]); globalEnv["map"] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App("map",["f","xs"])))]); globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Lit("Enums"),Cell(Atom(""),Cell(Atom(""),App("enum",[Cell(Lit("A"),Cell(Cell(Cell(Lit("b"),Cell(Lit("c"),Atom(""))),Cell(Lit("d"),Atom(""))),Atom("")))]))))))]);
   </script>
 </head>
 <body>
 <form method="post">
 <h1 id="recursively-building-content">Recursively building content</h1>
-<p>This is a nested enumeration</p>
+<p>This is a nested enumeration with concatenated sublists as intermediate items.</p>
+<div>
+Abcd
 <ul>
 <li>A</li>
-<li><ul>
-<li><ul>
+<li>bcd
+<ul>
+<li>bc
+<ul>
 <li>b</li>
 <li>c</li>
 </ul></li>
 <li>d</li>
 </ul></li>
 </ul>
+</div>
+<p>It was generated using the following code:</p>
+<pre class="mary-def keep"><code>map(f, [])     -&gt; []
+map(f, [x|xs]) -&gt; [f(x)|map(f, xs)]
+
+enum(xs@[_|_]) -&gt; [[&#39;Plain primStringConcat(xs)] [&#39;BulletList|map(enum,xs)]]
+enum(xs)       -&gt; [[&#39;Plain xs]]
+
+test() -&gt; [&#39;Div &quot;Enums&quot; [] []|enum([&quot;A&quot; [[&quot;b&quot; &quot;c&quot;] &quot;d&quot;]])]</code></pre>
 </form>
 </body>
 </html>
