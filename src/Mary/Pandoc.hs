@@ -20,7 +20,7 @@ process doc0 = return doc3 where
   (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
   ps = concat [p | ds <- defns, let Right p = parseOnly program ds]
   env = mkGlobalEnv ps
-  doc2 = walk (evalMary env) doc1
+  doc2 = walk (evalMaryInline env) . walk (evalMaryBlock env) $ doc1
 
   h1 :: Block -> Maybe Inlines
   h1 (Header 1 _ is) = Just (fromList is)
@@ -38,14 +38,23 @@ snarfMaryDef c@(CodeBlock (_, cs, _) p)
     else Null <$ tell [p]
 snarfMaryDef b = return b
 
-evalMary :: Env -> Block -> Block
-evalMary env (CodeBlock (_, cs, _) e) | elem "mary" cs =
+evalMaryBlock :: Env -> Block -> Block
+evalMaryBlock env (CodeBlock (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Null
     Right t -> case shonkier env t of
       Value v -> fromValue v
       _ -> Null
-evalMary _ b = b
+evalMaryBlock _ b = b
+
+evalMaryInline :: Env -> Inline -> Inline
+evalMaryInline env (Code (_, cs, _) e) | elem "mary" cs =
+  case parseOnly (term <* endOfInput) e of
+    Left _ -> Space
+    Right t -> case shonkier env t of
+      Value v -> fromValue v
+      _ -> Space
+evalMaryInline _ b = b
 
 listy :: (FromValue a) => ([a] -> b) -> Value -> b
 listy = (. fromValue)

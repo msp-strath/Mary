@@ -10,13 +10,16 @@
   <![endif]-->
   <script src="https://raw.githubusercontent.com/msp-strath/Mary/master/src/Shonkier/Shonkier.js"></script>
   <script>
-  var globalEnv = {}; globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Lit("World"),Atom(""))),Atom(""))))))]);
+  var globalEnv = {}; globalEnv["testBlock"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Lit("World"),Atom(""))),Atom(""))))))]); globalEnv["testInline"] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Lit("blether"),Atom(""))))]);
   </script>
 </head>
 <body>
 <form method="post">
 <h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as Fenced Code Blocks</h1>
+<p><input type=text name="foo"></p>
 <p>Hello <strong>World</strong></p>
+<p>Perhaps this will achieve some <em>blether</em>.</p>
+<p><input type=submit></p>
 </form>
 </body>
 </html>

@@ -1,9 +1,16 @@
 # Embedding Programs as Fenced Code Blocks
 
 ```mary-def
-test() -> ['Para "Hello" [] ['Strong "World"]]
+testBlock() -> ['Para "Hello" [] ['Strong "World"]]
+testInline() -> ['Emph "blether"]
 ```
 
+`<input type=text name="foo">`{=html}
+
 ```mary
-test()
+testBlock()
 ```
+
+Perhaps this will achieve some `testInline()`{.mary}.
+
+`<input type=submit>`{=html}
