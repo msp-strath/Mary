@@ -1,0 +1,20 @@
+# Recursively building content
+
+```mary-def
+map(f, [])     -> []
+map(f, [x|xs]) -> [f(x)|map(f, xs)]
+
+enum(xs@[_|_]) -> [['BulletList|map(enum,xs)]]
+enum(xs)       -> [['Plain xs]]
+
+unlist([x]) -> x
+
+test() ->
+  unlist(enum(["A" [["b" "c"] "d"]]))
+```
+
+This is a nested enumeration
+
+```mary
+test()
+```

@@ -6,7 +6,7 @@ import Control.Newtype
 import Data.Attoparsec.Text
 import Data.Maybe
 import Data.Monoid
-import qualified Data.Text as T
+import Data.Text (Text)
 
 import Text.Pandoc.Builder
 import Text.Pandoc.Walk
@@ -14,7 +14,6 @@ import Text.Pandoc.Walk
 import Shonkier.Parser
 import Shonkier.Semantics
 import Shonkier.ShonkierJS
-import Shonkier.Syntax
 
 process :: Pandoc -> IO Pandoc
 process doc0 = return doc3 where
@@ -31,7 +30,7 @@ process doc0 = return doc3 where
        . setMeta "jsGlobalEnv" (jsGlobalEnv ps)
        $ doc2
 
-snarfMaryDef :: Block -> Writer [T.Text] Block
+snarfMaryDef :: Block -> Writer [Text] Block
 snarfMaryDef (CodeBlock (_, cs, _) p) | elem "mary-def" cs = Null <$ tell [p]
 snarfMaryDef b = return b
 
@@ -44,12 +43,69 @@ evalMary env (CodeBlock (_, cs, _) e) | elem "mary" cs =
       _ -> Null
 evalMary _ b = b
 
---
+unary :: (FromValue a) => (a -> b) -> Value -> b
+unary = (. fromValue)
+
+binary :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> c
+binary c (VCell a b) = c (fromValue a) (fromValue b)
+binary c _ = binary c (VCell VNil VNil)
+
+ternary :: (FromValue a, FromValue b, FromValue c)
+        => (a -> b -> c -> d) -> Value -> d
+ternary c (VCell a bc) = binary (c (fromValue a)) bc
+ternary c _ = ternary c (VCell VNil (VCell VNil VNil))
+
+instance FromValue Int where
+  fromValue (VNum d) = truncate d
+  fromValue _ = 0
+
+instance FromValue Text where
+  fromValue (VString _ s) = s
+  fromValue _ = ""
+
+instance FromValue Format where
+  fromValue = unary Format
+
+instance FromValue ListNumberDelim where
+  fromValue (VAtom tag) = case tag of
+    "DefaultDelim" -> DefaultDelim
+    "Period"       -> Period
+    "OneParen"     -> OneParen
+    "TwoParens"    -> TwoParens
+    _              -> DefaultDelim
+  fromValue _ = DefaultDelim
+
+instance FromValue ListNumberStyle where
+  fromValue (VAtom tag) = case tag of
+    "DefaultStyle" -> DefaultStyle
+    "Example"      -> Example
+    "Decimal"      -> Decimal
+    "LowerRoman"   -> LowerRoman
+    "UpperRoman"   -> UpperRoman
+    "LowerAlpha"   -> LowerAlpha
+    "UpperAlpha"   -> UpperAlpha
+    _              -> DefaultStyle
+  fromValue _ = DefaultStyle
 
 instance FromValue Block where
-  fromValue (VCell (VAtom "Para") is) = Para (fromValue is)
+  fromValue (VCell (VAtom tag) is) = ($ is) $ case tag of
+    "Plain"          -> unary Plain
+    "Para"           -> unary Para
+    "LineBlock"      -> unary LineBlock
+    "CodeBlock"      -> binary CodeBlock
+    "RawBlock"       -> binary RawBlock
+    "BlockQuote"     -> unary BlockQuote
+    "OrderedList"    -> binary OrderedList
+    "BulletList"     -> unary BulletList
+    "DefinitionList" -> unary DefinitionList
+    "Header"         -> ternary Header
+    "HorizontalRule" -> const HorizontalRule
+    -- TODO: Table
+    "Div"            -> binary Div
+    "Null"           -> const Null
+    _                -> const Null
   fromValue _ = Null
 
 instance FromValue Inline where
-  fromValue (VLit (String _ t)) = Str t
+  fromValue (VString _ t) = Str t
   fromValue _ = Space

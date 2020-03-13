@@ -39,6 +39,7 @@ pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
 pattern VString k str = VLit (String k str)
 pattern CString k str = Value (VString k str)
+pattern VNil          = VAtom ""
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
 
@@ -307,3 +308,11 @@ class FromValue t where
 instance FromValue t => FromValue [t] where
   fromValue (VCell t ts) = fromValue t : fromValue ts
   fromValue _ = []
+
+instance (FromValue a, FromValue b) => FromValue (a, b) where
+  fromValue (VCell a b) = (fromValue a, fromValue b)
+  fromValue _ = (fromValue VNil, fromValue VNil)
+
+instance (FromValue a, FromValue b, FromValue c) => FromValue (a, b, c) where
+  fromValue (VCell a (VCell b c)) = (fromValue a, fromValue b, fromValue c)
+  fromValue _ = (fromValue VNil, fromValue VNil, fromValue VNil)
