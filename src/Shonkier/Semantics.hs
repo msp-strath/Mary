@@ -87,10 +87,12 @@ cmatch (PValue p)           (Value v)             = vmatch p v
 cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   guard (a == b)
   rho <- matches vmatch ps vs
-  return $ merge rho $ singleton k $
-    VFun frs mempty [] [( [PValue (PBind "_return")]
-                        , Var "_return"
-                        )]
+  return $ merge rho $ case k of
+    Nothing -> mempty
+    Just k  -> singleton k $
+      VFun frs mempty [] [( [PValue (PBind "_return")]
+                          , Var "_return"
+                          )]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 

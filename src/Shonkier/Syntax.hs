@@ -42,7 +42,7 @@ type PValue = PValue' String
 
 data PComputation' a
   = PValue (PValue' a)
-  | PRequest (a, [PValue' a]) Variable
+  | PRequest (a, [PValue' a]) (Maybe Variable) -- we may throw the binder away
     -- ^ var: resumption
   | PThunk Variable
     -- ^ grab any of the computations we are willing
