@@ -38,7 +38,7 @@ readerEnv = singleton "runReader" $ VFun [] readerEnv [[],["ask"]]
      [ ( PValue <$> [PBind "_", PBind "val"]
        , Var "val"
        )
-     , ( [PValue (PBind "r"), PRequest ("ask", []) "k"]
+     , ( [PValue (PBind "r"), PRequest ("ask", []) (Just "k")]
        , App (Var "runReader") [ Var "r"
                                , App (Var "k") [Var "r"]
                                ]
@@ -61,12 +61,12 @@ stateEnv = singleton "runState" $ VFun [] stateEnv [[],["get", "put"]]
   [ ( PValue <$> [PBind "_", PBind "val"]
     , Var "val"
     )
-  , ( [ PValue (PBind "s"), PRequest ("get", []) "k"]
+  , ( [ PValue (PBind "s"), PRequest ("get", []) (Just "k")]
     , App (Var "runState") [ Var "s"
                            , App (Var "k") [Var "s"]
                            ]
     )
-  , ( [ PValue (PBind "_"), PRequest ("put", [PBind "s"]) "k"]
+  , ( [ PValue (PBind "_"), PRequest ("put", [PBind "s"]) (Just "k")]
     , App (Var "runState") [ Var "s"
                            , App (Var "k") [Atom ""]
                            ]

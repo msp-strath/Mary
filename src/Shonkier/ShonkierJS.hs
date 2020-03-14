@@ -49,7 +49,7 @@ instance JS Literal where
 instance JSAtom a => JS (PComputation' a) where
   js (PValue p) = ["Value("] ++ js p ++ [")"]
   js (PRequest (a, ps) k) =
-    ["Request(", jsAtom a] ++ [","] ++ js ps ++ [",\"", pack k, "\")"]
+    ["Request(", jsAtom a] ++ [","] ++ js ps ++ [",\"", maybe "_" pack k, "\")"]
   js (PThunk x) = ["\"",pack x,"\""]
 
 instance JSAtom a => JS (PValue' a) where

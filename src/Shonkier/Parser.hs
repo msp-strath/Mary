@@ -107,7 +107,7 @@ pcomputation
   <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
        <|> PRequest <$> ((,) <$> atom <*> tupleOf pvalue)
-           <* arrow <* skipSpace <*> identifier
+           <* arrow <* skipSpace <*> (Just <$> identifier <|> Nothing <$ char '_')
       ) <* skipSpace <* char '}'
 
 pvar :: Parser PValue
