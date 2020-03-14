@@ -1,0 +1,31 @@
+runParser(,'getChar 'fail):
+runParser([c|cs], {'getChar() -> k}) -> runParser(cs,k({c}))
+runParser([]    , {'getChar() -> k}) -> k('fail)
+runParser(cs    , {'fail()    -> _}) -> [cs]
+runParser(cs    , v)                 -> [v|cs]
+
+anyChar() -> 'getChar()()
+
+ifte('True,l,r)  -> l()
+ifte('False,l,r) -> r()
+
+satisfy(p) -> filter(p,anyChar())
+filter(p,c) -> ifte(p(c),{c},'fail)
+
+choice('fail):
+choice(p, _)              -> p
+choice({'fail() -> _}, p) -> p()
+
+some(p) -> [p()|many(p)]
+many(p) -> choice(some(p),{[]})
+
+isBin('0') -> 'True
+isBin('1') -> 'True
+isBin(_)   -> 'False
+
+bin() -> some({satisfy(isBin)})
+
+main() -> [ runParser("101", bin())
+            runParser("1O1", bin())
+          ]
+
