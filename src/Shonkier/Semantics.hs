@@ -262,25 +262,35 @@ call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
 ---------------------------------------------------------------------------
 
 primEnv :: Env
-primEnv = foldMap (\ str -> singleton str $ VPrim str [])
-        [ "primStringConcat"
-        , "primNumAdd"
-        ]
+primEnv = foldMap (\ (str, _) -> singleton str $ VPrim str []) primitives
 
 prim :: Primitive -> [Computation] -> Shonkier Computation
-prim "primStringConcat" vs = primStringConcat vs
-prim "primNumAdd"       vs = primNumAdd vs
-prim f _ = handle ("NoPrim",[VPrim f []]) []
+prim nm vs = case lookup nm primitives of
+  Nothing -> handle ("NoPrim",[VPrim nm []]) []
+  Just f  -> f vs
+
+primitives :: [(Primitive,[Computation] -> Shonkier Computation)]
+primitives =
+  [ ("primStringConcat", primStringConcat)
+  , ("primNumAdd"      , primNumAdd)
+  , ("primNumMinus"    , primNumMinus)
+  , ("primNumMult"     , primNumMult)
+  ]
 
 ---------------------------------------------------------------------------
 -- NUM
 
-primNumAdd :: [Computation] -> Shonkier Computation
-primNumAdd = \case
-  [CNum m, CNum n]   -> use (VNum (m + n))
-  [Value m, Value n] -> handle ("Invalid_NumAdd_ArgType", [m, n]) []
-  [_,_]              -> handle ("Invalid_NumAdd_ArgRequest",[]) []
-  _                  -> handle ("Invalid_NumAdd_Arity", []) []
+primNumBin :: String -> (Rational -> Rational -> Rational)
+           -> [Computation] -> Shonkier Computation
+primNumBin nm op = \case
+  [CNum m, CNum n]   -> use (VNum (op m n))
+  [Value m, Value n] -> handle ("Invalid_" ++ nm ++ "_ArgType", [m, n]) []
+  [_,_]              -> handle ("Invalid_" ++ nm ++ "Add_ArgRequest",[]) []
+  _                  -> handle ("Invalid_" ++ nm ++ "_Arity", []) []
+
+primNumAdd   = primNumBin "primNumAdd" (+)
+primNumMinus = primNumBin "primNumMinus" (-)
+primNumMult  = primNumBin "primNumMult" (*)
 
 ---------------------------------------------------------------------------
 -- STRING
