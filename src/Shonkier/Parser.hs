@@ -118,14 +118,13 @@ pvar = do
          ]
 
 pvalue :: Parser PValue
-pvalue =
-  PAtom <$> atom
-  <|>
-  pvar
-  <|>
-  PWild <$ char '_'
-  <|>
-  uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
+pvalue = choice
+  [ PLit <$> literal
+  , PAtom <$> atom
+  , pvar
+  , PWild <$ char '_'
+  , uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
+  ]
 
 getMeAProgram :: Text -> Program
 getMeAProgram txt = case parseOnly program txt of
