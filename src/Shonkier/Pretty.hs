@@ -95,6 +95,8 @@ instance Pretty Rational where
 instance Pretty Literal where
   pretty = \case
     String k str -> ppStringLit k str
+    Char k c     -> let kw = pretty k in
+                    kw <> "'" <> pretty c <> "'" <> kw
     Num r        -> pretty r
 
 instance Pretty Term where

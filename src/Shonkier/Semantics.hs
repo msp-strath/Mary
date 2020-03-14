@@ -11,9 +11,9 @@ import Control.Monad.State
 import Data.Foldable
 import Data.Function
 import Data.Either
-import Data.Map (Map, singleton, (!?))
 import Data.List (sortBy, groupBy, nub)
-import Data.Maybe (fromMaybe)
+import Data.Map (Map, singleton, (!?))
+import Data.Maybe (fromMaybe, isNothing)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -39,9 +39,16 @@ pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
 pattern VString k str = VLit (String k str)
 pattern CString k str = Value (VString k str)
+pattern VChar k c     = VLit (Char k c)
+pattern CChar k c     = Value (VChar k c)
 pattern VNil          = VAtom ""
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
+
+-- smart constructors
+vChar :: Char -> Value' a
+vChar c@'\'' = VChar "c" c
+vChar c      = VChar "" c
 
 -- environments
 
@@ -70,16 +77,23 @@ padCat (a : as) (b : bs) = (a ++ b) : padCat as bs
 
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch (String _ str) (String _ str') = guard (str == str')
+lmatch (Char _ c)     (Char _ c')     = guard (c == c')
 lmatch (Num q)        (Num q')        = guard (q == q')
 lmatch _ _ = Nothing
 
 vmatch :: Eq a => PValue' a -> Value' a -> Maybe (Env' a)
-vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
-vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
-vmatch (PBind x)   v           = pure (singleton x v)
-vmatch (PAs x p)   v           = merge (singleton x v) <$> vmatch p v
-vmatch PWild       v           = pure mempty
-vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
+vmatch (PAtom a)   (VAtom b)     = mempty <$ guard (a == b)
+vmatch (PLit l)    (VLit l')     = mempty <$ lmatch l l'
+vmatch (PBind x)   v             = pure (singleton x v)
+vmatch (PAs x p)   v             = merge (singleton x v) <$> vmatch p v
+vmatch PWild       v             = pure mempty
+vmatch (PCell p q) (VCell v w)   = merge <$> vmatch p v <*> vmatch q w
+-- special String matching
+vmatch (PAtom _)   (VString k v) = mempty <$ guard (isNothing (T.uncons v))
+vmatch (PCell p q) (VString k v)
+  | Just (c, w) <- T.uncons v
+  = merge <$> vmatch p (vChar c) <*> vmatch q (VString k w)
+-- catch-all
 vmatch _ _ = Nothing
 
 cmatch :: Eq a => PComputation' a -> Computation' a -> Maybe (Env' a)

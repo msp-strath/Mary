@@ -10,7 +10,7 @@
   <![endif]-->
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/Shonkier/Shonkier.js"></script>
   <script>
-  var globalEnv = {}; globalEnv["enum"] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App("primStringConcat",["xs"]),Atom(""))),Cell(Cell(Atom("BulletList"),App("map",["enum","xs"])),Atom("")))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]); globalEnv["map"] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App("map",["f","xs"])))]); globalEnv["primNumAdd"] = VPrim("primNumAdd",[]); globalEnv["primNumMinus"] = VPrim("primNumMinus",[]); globalEnv["primNumMult"] = VPrim("primNumMult",[]); globalEnv["primStringConcat"] = VPrim("primStringConcat",[]); globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Lit("Enums"),Cell(Atom(""),Cell(Atom(""),App("enum",[Cell(Lit("A"),Cell(Cell(Cell(Lit("b"),Cell(Lit("c"),Atom(""))),Cell(Lit("d"),Atom(""))),Atom("")))]))))))]);
+  var globalEnv = {}; globalEnv["enum"] = VFun(null,{},[],[Clause([Value(Cell(Atom("Node"),"xs"))],Cell(Cell(Atom("Plain"),Cell(App("primStringConcat",["xs"]),Atom(""))),Cell(Cell(Atom("BulletList"),App("map",["enum","xs"])),Atom("")))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]); globalEnv["map"] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App("map",["f","xs"])))]); globalEnv["primNumAdd"] = VPrim("primNumAdd",[]); globalEnv["primNumMinus"] = VPrim("primNumMinus",[]); globalEnv["primNumMult"] = VPrim("primNumMult",[]); globalEnv["primStringConcat"] = VPrim("primStringConcat",[]); globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Lit("Enums"),Cell(Atom(""),Cell(Atom(""),App("enum",[Cell(Atom("Node"),Cell(Lit("A"),Cell(Cell(Atom("Node"),Cell(Cell(Atom("Node"),Cell(Lit("b"),Cell(Lit("c"),Atom("")))),Cell(Lit("d"),Atom("")))),Atom(""))))]))))))]);
   </script>
 </head>
 <body>
@@ -32,14 +32,15 @@ Abcd
 </ul></li>
 </ul>
 </div>
-<p>It was generated using the following code:</p>
+<p>It was generated using the following program <code>test()</code>:</p>
 <pre class="mary-def keep"><code>map(f, [])     -&gt; []
 map(f, [x|xs]) -&gt; [f(x)|map(f, xs)]
 
-enum(xs@[_|_]) -&gt; [[&#39;Plain primStringConcat(xs)] [&#39;BulletList|map(enum,xs)]]
-enum(xs)       -&gt; [[&#39;Plain xs]]
+enum([&#39;Node|xs]) -&gt; [[&#39;Plain primStringConcat(xs)] [&#39;BulletList|map(enum,xs)]]
+enum(xs)         -&gt; [[&#39;Plain xs]]
 
-test() -&gt; [&#39;Div &quot;Enums&quot; [] []|enum([&quot;A&quot; [[&quot;b&quot; &quot;c&quot;] &quot;d&quot;]])]</code></pre>
+test() -&gt; [&#39;Div &quot;Enums&quot; [] []
+          |enum([&#39;Node &quot;A&quot; [&#39;Node [&#39;Node &quot;b&quot; &quot;c&quot;] &quot;d&quot;]])]</code></pre>
 </form>
 </body>
 </html>

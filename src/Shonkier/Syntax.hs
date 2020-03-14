@@ -8,6 +8,7 @@ type Variable  = String
 
 data Literal
   = String Keyword Text
+  | Char Keyword Char
   | Num Rational
   deriving (Show)
 

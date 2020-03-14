@@ -40,7 +40,7 @@ arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
 
 literal :: Parser Literal
-literal = stringlit <|> numlit
+literal = stringlit <|> charlit <|> numlit
 
 stringlit :: Parser Literal
 stringlit = do
@@ -52,6 +52,12 @@ stringlit = do
         | otherwise = Just end
   String k <$  char '"'
            <*> (T.dropEnd (length end) <$> scan end delim)
+
+charlit :: Parser Literal
+charlit = do
+  k <- option "" identifier
+  let end = T.pack $ '\'':k
+  Char k <$ char '\'' <*> anyChar <* string end
 
 data NumExtension
   = Dot   String

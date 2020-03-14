@@ -1,0 +1,11 @@
+head([c|cs])    -> c
+dropH(['h'|cs]) -> cs
+
+drop(0, cs)     -> cs
+drop(n, [])     -> []
+drop(n, [c|cs]) -> drop(primNumMinus(n,1),cs)
+
+main() -> [ head("hello")
+            dropH("hello")
+            drop(3, "hello")
+          ]

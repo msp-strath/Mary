@@ -7,14 +7,15 @@ intermediate items.
 test()
 ```
 
-It was generated using the following code:
+It was generated using the following program `test()`:
 
 ``` { .mary-def .keep }
 map(f, [])     -> []
 map(f, [x|xs]) -> [f(x)|map(f, xs)]
 
-enum(xs@[_|_]) -> [['Plain primStringConcat(xs)] ['BulletList|map(enum,xs)]]
-enum(xs)       -> [['Plain xs]]
+enum(['Node|xs]) -> [['Plain primStringConcat(xs)] ['BulletList|map(enum,xs)]]
+enum(xs)         -> [['Plain xs]]
 
-test() -> ['Div "Enums" [] []|enum(["A" [["b" "c"] "d"]])]
+test() -> ['Div "Enums" [] []
+          |enum(['Node "A" ['Node ['Node "b" "c"] "d"]])]
 ```

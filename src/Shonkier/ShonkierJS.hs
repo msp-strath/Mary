@@ -44,6 +44,7 @@ instance JS Literal where
     ch '"' = ["\\\""]
     ch '\\' = ["\\\\"]
     ch c = [pack [c]]
+  js (Char _ c) = ["\""] ++ [singleton c] ++ ["\""]
   js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
 
 instance JSAtom a => JS (PComputation' a) where
