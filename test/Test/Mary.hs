@@ -6,4 +6,4 @@ import Test.Tasty (TestTree)
 import Mary.ServePage
 
 maryTests :: IO TestTree
-maryTests = ioTests "Mary" [".mary"] servePage
+maryTests = ioTests "Mary" [".mary"] (servePage testConfig)

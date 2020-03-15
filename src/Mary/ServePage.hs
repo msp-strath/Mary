@@ -5,11 +5,21 @@ module Mary.ServePage where
 import Data.Text
 import Data.Text.IO as TIO
 
-import System.Environment
 import System.Process
 
-servePage :: FilePath -> FilePath -> IO Text
-servePage pandoc inp = getExecutablePath >>= \ mary ->
+data Config = Config
+  { mary   :: FilePath
+  , pandoc :: FilePath
+  }
+
+testConfig :: Config
+testConfig = Config
+  { mary   = "mary"
+  , pandoc = "pandoc"
+  }
+
+servePage :: Config -> FilePath -> IO Text
+servePage Config{..} inp =
   withCreateProcess ((proc pandoc ["-s", inp, "-f", "markdown", "-t", "json"])
                      { std_out = CreatePipe
                      }) $ \ _ (Just hpandoc) _ _ ->
