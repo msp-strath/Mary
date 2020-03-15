@@ -60,17 +60,17 @@ instance JSAtom a => JS (PValue' a) where
   js (PCell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js PWild        = ["PWild"]
 
-jsGlobalEnv :: Program -> Text
-jsGlobalEnv ls = Data.Text.intercalate " " $
-  "var globalEnv = {};" :
+jsGlobalEnv :: Program -> [Text]
+jsGlobalEnv ls =
+  "var globalEnv = {};\n" :
   ((`foldMapWithKey` mkGlobalEnv ls) $ \ f -> \case
     VFun [] _ hs cs -> pure $ Data.Text.concat $
       ["globalEnv[", jsAtom f, "] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
-      ++ [");"]
+      ++ [");\n"]
     VPrim g hs ->  pure $ Data.Text.concat $
       ["globalEnv[", jsAtom f, "] = VPrim(", jsAtom g , ","]
       ++ js (fmap (fmap jsAtom) hs)
-      ++ [");"]
+      ++ [");\n"]
     _ -> [])

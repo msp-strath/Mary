@@ -27,7 +27,7 @@ process doc0 = return doc3 where
   h1 _ = Nothing
 
   doc3 = setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
-       . setMeta "jsGlobalEnv" (jsGlobalEnv ps)
+       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv ps)
        $ doc2
 
 snarfMaryDef :: Block -> Writer [Text] Block

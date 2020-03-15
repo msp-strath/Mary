@@ -10,7 +10,12 @@
   <![endif]-->
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/Shonkier/Shonkier.js"></script>
   <script>
-  var globalEnv = {}; globalEnv["primNumAdd"] = VPrim("primNumAdd",[]); globalEnv["primNumMinus"] = VPrim("primNumMinus",[]); globalEnv["primNumMult"] = VPrim("primNumMult",[]); globalEnv["primStringConcat"] = VPrim("primStringConcat",[]); globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Atom(""))))]);
+  var globalEnv = {};
+  globalEnv["primNumAdd"] = VPrim("primNumAdd",[]);
+  globalEnv["primNumMinus"] = VPrim("primNumMinus",[]);
+  globalEnv["primNumMult"] = VPrim("primNumMult",[]);
+  globalEnv["primStringConcat"] = VPrim("primStringConcat",[]);
+  globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Atom(""))))]);
   </script>
 </head>
 <body>
