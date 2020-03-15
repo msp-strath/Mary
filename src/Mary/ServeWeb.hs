@@ -41,7 +41,7 @@ serveWeb config sitesRoot user page = do
         else do
           case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
             Just (Just ()) -> callCommand . L.concat $
-              ["pushd ", sitesRoot </> site, " ; git pull ; popd"]
+              ["bash -c \"pushd ", sitesRoot </> site, " ; git pull ; popd\""]
             _ -> return ()
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
