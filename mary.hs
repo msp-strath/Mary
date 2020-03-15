@@ -23,7 +23,7 @@ main = do
   case xs of
     ["-pandoc"]             -> toJSONFilter process
     ["-shonkier", filename] -> interpretShonkier filename
-    ["-page", filename]     -> servePage filename >>= TIO.putStrLn
+    ["-page", filename]     -> servePage "pandoc" filename >>= TIO.putStrLn
     ["-web", user, page]    -> serveWeb user page >>= TIO.putStrLn
     _ -> TIO.putStr "# mary says\nI don't know what you're on about.\n\n"
 

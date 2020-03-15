@@ -47,6 +47,6 @@ serveWeb user page = do
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
           if not fileEx then return $ T.concat ["Mary cannot find page ", pack page, "!"]
-            else servePage sitePage
+            else servePage "./pandoc" sitePage
     _ -> return "Mary does not know which page you want!"
     
