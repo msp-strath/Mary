@@ -1,4 +1,5 @@
 <?php
+
 $user_id = escapeshellarg($_SERVER['HTTP_CIS_REMOTE_USER']);
 $page_id = escapeshellarg($_GET["page"]);
 
@@ -8,7 +9,7 @@ $descriptorspec = array(
    2 => array("file", "/tmp/error-output.txt", "a") // stderr is a file to write to
 );
 
-$cmd = "mary -web $user_id $page_id";
+$cmd = "./mary -web $user_id $page_id";
 
 $cwd = NULL;
 $env = NULL;
