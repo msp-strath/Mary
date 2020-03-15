@@ -14,9 +14,6 @@ import System.Process
 
 import Mary.ServePage -- for now
 
-sitesRoot :: FilePath
-sitesRoot = "../MarySites/"
-
 postText :: PHPSessionValue -> Y.Value
 postText (PHPSessionValueArray kvs) = object
   [ (decodeUtf8 (B.toStrict k) .= decodeUtf8 (B.toStrict v))
@@ -24,10 +21,12 @@ postText (PHPSessionValueArray kvs) = object
   ]
 postText _ = Y.Null
 
-serveWeb :: String     -- username
+serveWeb :: FilePath   -- where is pandoc?
+         -> FilePath   -- what is the site root?
+         -> String     -- username
          -> FilePath   -- page
          -> IO Text    -- expecting get and post data to be serialised on stdin
-serveWeb user page = do
+serveWeb pandoc sitesRoot user page = do
   pbs <- B.getContents
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
   let (postData, getData) = case mpost of
@@ -47,6 +46,6 @@ serveWeb user page = do
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
           if not fileEx then return $ T.concat ["Mary cannot find page ", pack page, "!"]
-            else servePage "./pandoc" sitePage
+            else servePage pandoc sitePage
     _ -> return "Mary does not know which page you want!"
     

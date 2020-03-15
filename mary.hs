@@ -24,7 +24,8 @@ main = do
     ["-pandoc"]             -> toJSONFilter process
     ["-shonkier", filename] -> interpretShonkier filename
     ["-page", filename]     -> servePage "pandoc" filename >>= TIO.putStrLn
-    ["-web", user, page]    -> serveWeb user page >>= TIO.putStrLn
+    ["-web", pandoc, sitesRoot, user, page]    ->
+      serveWeb pandoc sitesRoot user page >>= TIO.putStrLn
     _ -> TIO.putStr "# mary says\nI don't know what you're on about.\n\n"
 
 interpretShonkier :: String -> IO ()
