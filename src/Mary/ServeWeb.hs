@@ -8,6 +8,14 @@ import Data.List as L
 import Data.Yaml as Y
 import Data.Text as T
 import Data.Text.Encoding
+import System.FilePath
+import System.Directory
+import System.Process
+
+import Mary.ServePage -- for now
+
+sitesRoot :: FilePath
+sitesRoot = "../MarySites/"
 
 postText :: PHPSessionValue -> Y.Value
 postText (PHPSessionValueArray kvs) = object
@@ -16,18 +24,26 @@ postText (PHPSessionValueArray kvs) = object
   ]
 postText _ = Y.Null
 
-serveWeb :: String   -- username
-         -> String   -- page
-         -> IO Text  -- expecting get and post data to be serialised on stdin
+serveWeb :: String     -- username
+         -> FilePath   -- page
+         -> IO Text    -- expecting get and post data to be serialised on stdin
 serveWeb user page = do
   pbs <- B.getContents
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
   let (postData, getData) = case mpost of
         (p : g : _) -> (postText p, postText g)
         _ -> (Y.Null, Y.Null)
-  return . T.concat $
-    [ "Hi!\n"
-    , decodeUtf8 (Y.encode (object ["user" .= T.pack user]))
-    , decodeUtf8 (Y.encode getData)
-    , decodeUtf8 (Y.encode postData)
-    ]
+  case splitDirectories page of
+    (site : _) -> do
+      let siteDir = sitesRoot </> site
+      dirEx <- doesDirectoryExist siteDir
+      if not dirEx || not (isValid page)
+        then return $ T.concat ["Mary cannot find site ", pack site, "!"]
+        else do
+          case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
+            Just (Just ()) -> callCommand . L.concat $
+              ["pushd ", sitesRoot </> site, " ; git pull ; popd"]
+            _ -> return ()
+          servePage (sitesRoot </> page)
+    _ -> return "Mary does not know which page you want!"
+    
