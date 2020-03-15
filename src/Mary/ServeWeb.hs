@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module Mary.ServeWeb where
 
@@ -7,6 +7,7 @@ import Data.ByteString.Lazy as B (getContents, toStrict)
 import Data.List as L
 import Data.Yaml as Y
 import Data.Text as T
+import Data.Text.IO as TIO
 import Data.Text.Encoding
 import System.FilePath
 import System.Directory
@@ -40,11 +41,13 @@ serveWeb config sitesRoot user page = do
         then return $ T.concat ["Mary cannot find site ", pack site, "!"]
         else do
           case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
-            Just (Just ()) -> callCommand . L.concat $
-              ["bash -c \"pushd ", sitesRoot </> site, " ; git pull ; popd\""]
+            Just (Just (_ :: Text)) -> callCommand . L.concat $
+                ["bash -c \"pushd ", sitesRoot </> site, " ; git pull ; popd\""]
             _ -> return ()
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
           if not fileEx then return $ T.concat ["Mary cannot find page ", pack page, "!"]
-            else servePage config sitePage
+            else do
+              TIO.putStrLn "Hello!"
+              servePage config sitePage
     _ -> return "Mary does not know which page you want!"
