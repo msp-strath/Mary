@@ -97,6 +97,7 @@ library
                      , LambdaCase
                      , OverloadedStrings
                      , PatternSynonyms
+                     , RecordWildCards
                      , TupleSections
 
   ghc-options:         -Wincomplete-patterns
@@ -123,11 +124,9 @@ executable mary
   default-language:    Haskell2010
 
     -- LANGUAGE extensions used by modules in this package.
-  default-extensions:  DeriveTraversable
-                     , LambdaCase
+  default-extensions:  LambdaCase
                      , OverloadedStrings
-                     , PatternSynonyms
-                     , TupleSections
+                     , RecordWildCards
 
   ghc-options:         -Wincomplete-patterns
                        -Wmissing-signatures

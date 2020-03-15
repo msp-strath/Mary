@@ -21,12 +21,12 @@ postText (PHPSessionValueArray kvs) = object
   ]
 postText _ = Y.Null
 
-serveWeb :: FilePath   -- where is pandoc?
+serveWeb :: Config     -- where are mary and pandoc?
          -> FilePath   -- what is the site root?
          -> String     -- username
          -> FilePath   -- page
          -> IO Text    -- expecting get and post data to be serialised on stdin
-serveWeb pandoc sitesRoot user page = do
+serveWeb config sitesRoot user page = do
   pbs <- B.getContents
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
   let (postData, getData) = case mpost of
@@ -46,6 +46,5 @@ serveWeb pandoc sitesRoot user page = do
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
           if not fileEx then return $ T.concat ["Mary cannot find page ", pack page, "!"]
-            else servePage pandoc sitePage
+            else servePage config sitePage
     _ -> return "Mary does not know which page you want!"
-    

@@ -23,9 +23,11 @@ main = do
   case xs of
     ["-pandoc"]             -> toJSONFilter process
     ["-shonkier", filename] -> interpretShonkier filename
-    ["-page", filename]     -> servePage "pandoc" filename >>= TIO.putStrLn
-    ["-web", pandoc, sitesRoot, user, page]    ->
-      serveWeb pandoc sitesRoot user page >>= TIO.putStrLn
+    ["-page", filename]     -> servePage testConfig filename >>= TIO.putStrLn
+    ["-web", pandoc, sitesRoot, user, page] -> do
+      mary    <- getExecutablePath
+      content <- serveWeb Config{..} sitesRoot user page
+      TIO.putStrLn content
     _ -> TIO.putStr "# mary says\nI don't know what you're on about.\n\n"
 
 interpretShonkier :: String -> IO ()
