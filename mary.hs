@@ -15,6 +15,7 @@ import Shonkier.Semantics
 
 import Mary.Pandoc
 import Mary.ServePage
+import Mary.ServeWeb
 
 main :: IO ()
 main = do
@@ -23,6 +24,7 @@ main = do
     ["-pandoc"]             -> toJSONFilter process
     ["-shonkier", filename] -> interpretShonkier filename
     ["-page", filename]     -> servePage filename >>= TIO.putStrLn
+    ["-web", user, page]    -> serveWeb user page >>= TIO.putStrLn
     _ -> TIO.putStr "# mary says\nI don't know what you're on about.\n\n"
 
 interpretShonkier :: String -> IO ()
