@@ -44,6 +44,9 @@ serveWeb user page = do
             Just (Just ()) -> callCommand . L.concat $
               ["pushd ", sitesRoot </> site, " ; git pull ; popd"]
             _ -> return ()
-          servePage (sitesRoot </> page)
+          let sitePage = sitesRoot </> page
+          fileEx <- doesFileExist sitePage
+          if not fileEx then return $ T.concat ["Mary cannot find page ", pack page, "!"]
+            else servePage sitePage
     _ -> return "Mary does not know which page you want!"
     
