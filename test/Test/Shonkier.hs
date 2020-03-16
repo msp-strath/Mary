@@ -35,4 +35,9 @@ shonkierJSTests = do
   let name = "ShonkierJS"
   let extension = ".shonkier"
   let goldenExt = ".jsgold"
-  ioTests TestConfig{..} shonkierJS ["./examples/quick-exit.shonkier"]
+  ioTests TestConfig{..} shonkierJS $
+    fmap (\ t -> "./examples/" ++ t ++ ".shonkier")
+    [ "quick-exit"
+    , "bipping"
+    , "reader"
+    ]
