@@ -10,7 +10,7 @@ import Test.Tasty (TestTree)
 import Test.Utils
 
 shonkier :: FilePath -> IO Text
-shonkier inp = T.pack <$> readProcess "mary" ["-shonkier", inp] ""
+shonkier inp = T.pack <$> readProcess "mary" ["shonkier", inp] ""
 
 shonkierTests :: IO TestTree
 shonkierTests = do
@@ -23,7 +23,7 @@ shonkierTests = do
 
 shonkierJS :: FilePath -> IO Text
 shonkierJS inp =
-  withCreateProcess ((proc "mary" ["-shonkierjs", inp])
+  withCreateProcess ((proc "mary" ["shonkierjs", inp])
                      { std_out = CreatePipe
                      }) $ \ _ (Just hmary) _ _ ->
   withCreateProcess ((proc "node" ["-"])
