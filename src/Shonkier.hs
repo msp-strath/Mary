@@ -32,6 +32,11 @@ compileShonkier = onShonkierProgram $ \ ps _ -> do
   -- Couldn't figure how to import in node so I just concat the
   -- whol interpreter defined 'Shonkier.js' on top
   interpreter <- TIO.readFile "./src/Shonkier/Shonkier.js"
-  pure $ T.unlines $ [interpreter]
+  let header txt = T.concat ["\n/***** "
+                            , txt
+                            , " "
+                            , T.pack (replicate (72 - 10 - T.length txt) '*')
+                            , "*/\n\n"]
+  pure $ T.concat $ [interpreter, header "Global env"]
                   ++ jsGlobalEnv ps
-                  ++ [jsMain]
+                  ++ [header "Main", jsMain]

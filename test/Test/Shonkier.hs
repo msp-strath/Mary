@@ -17,7 +17,9 @@ shonkierTests = do
   let name = "Shonkier"
   let extension = ".shonkier"
   let goldenExt = ".gold"
-  ioTests TestConfig{..} shonkier []
+  ioTests TestConfig{..} shonkier
+    -- excluded tests:
+    []
 
 shonkierJS :: FilePath -> IO Text
 shonkierJS inp =
@@ -36,8 +38,6 @@ shonkierJSTests = do
   let extension = ".shonkier"
   let goldenExt = ".jsgold"
   ioTests TestConfig{..} shonkierJS $
+    -- excluded tests:
     fmap (\ t -> "./examples/" ++ t ++ ".shonkier")
-    [ "quick-exit"
-    , "bipping"
-    , "reader"
-    ]
+      []
