@@ -40,7 +40,7 @@ function Value(p) {
 };
 function Request(a, ps, k) {
     return {tag: "Request", cmd: a, args: ps, cont: k};
-}; 
+};
 
 // a thunk pattern is a string
 
@@ -411,30 +411,63 @@ function shonkier(glob,t) {
     return null;
 };
 
+function renderList(a,b) {
+    var xs = [];
+    var i = 0;
+    function output(str) {
+        xs[i] = str;
+        i++;
+    };
+    var hd = a;
+    var tl = b;
+    var space = false;
+    while (tl != null) {
+        if (space) { output(" "); }
+        space = true;
+        output(render(Value(hd)));
+        switch (tl.tag) {
+        case "Atom":
+            if (tl.atom === "") { tl = null; continue; };
+            output(render(Value(tl))); tl = null; continue;
+        case "Cell": hd = tl.fst; tl = tl.snd; continue;
+        default: output(" "); output(render(Value(tl))); tl = null; continue;
+        };
+    };
+    output("]");
+    return xs.join('');
+};
+
 function render(v) {
     if (v.tag == "Request") { return v.cmd; };
     v = v.value;
     var xs = [];
     var i = 0;
     var stk = Cons(v,null);
+    function output(str) {
+        xs[i] = str;
+        i++;
+    };
     while (stk != null) {
         v = stk.hd;
         stk = stk.tl;
         switch (v.tag) {
-        case "Atom": xs[i] = "'".concat(v.atom); i++; continue;
-        case "Cell": stk = Cons (v.fst, Cons(v.snd, stk)); continue;
+        case "Atom":
+            if (v.atom === "") { output("[]"); continue; };
+            output("'".concat(v.atom)); continue;
+        case "Cell": output("[");output(renderList(v.fst,v.snd)); continue;
         case "Lit":
             if (stringy(v.literal)) {
-                xs[i] = v.literal; i++;
-                continue;
-            };
-            xs[i] = v.literal.num.toString(); i++;
+                output("\"");
+                output(v.literal);
+                output("\"");
+                continue; };
+            output (v.literal.num.toString());
             if (v.literal.den == 1) { continue; };
-            xs[i] = "/"; i++;
-            xs[i] = v.literal.den.toString(); i++;
+            output("/");
+            output(v.literal.den.toString());
             continue;
         default: continue;
         };
     };
-    return xs.join();
+    return xs.join('');
 };

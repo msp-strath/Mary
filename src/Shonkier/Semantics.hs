@@ -271,7 +271,9 @@ prim nm vs = case lookup nm primitives of
   Nothing -> handle ("NoPrim",[VPrim nm []]) []
   Just f  -> f vs
 
-primitives :: [(Primitive,[Computation] -> Shonkier Computation)]
+type PRIMITIVE = [Computation] -> Shonkier Computation
+
+primitives :: [(Primitive, PRIMITIVE)]
 primitives =
   [ ("primStringConcat", primStringConcat)
   , ("primNumAdd"      , primNumAdd)
@@ -283,13 +285,14 @@ primitives =
 -- NUM
 
 primNumBin :: String -> (Rational -> Rational -> Rational)
-           -> [Computation] -> Shonkier Computation
+           -> PRIMITIVE
 primNumBin nm op = \case
   [CNum m, CNum n]   -> use (VNum (op m n))
   [Value m, Value n] -> handle ("Invalid_" ++ nm ++ "_ArgType", [m, n]) []
   [_,_]              -> handle ("Invalid_" ++ nm ++ "Add_ArgRequest",[]) []
   _                  -> handle ("Invalid_" ++ nm ++ "_Arity", []) []
 
+primNumAdd, primNumMinus, primNumMult :: PRIMITIVE
 primNumAdd   = primNumBin "primNumAdd" (+)
 primNumMinus = primNumBin "primNumMinus" (-)
 primNumMult  = primNumBin "primNumMult" (*)
@@ -297,7 +300,7 @@ primNumMult  = primNumBin "primNumMult" (*)
 ---------------------------------------------------------------------------
 -- STRING
 
-primStringConcat :: [Computation] -> Shonkier Computation
+primStringConcat :: PRIMITIVE
 primStringConcat cs = go cs Nothing [] where
 
   go :: [Computation] -> Maybe Keyword -> [Text] -> Shonkier Computation

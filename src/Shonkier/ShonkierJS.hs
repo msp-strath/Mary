@@ -2,7 +2,8 @@
 
 module Shonkier.ShonkierJS where
 
-import Data.Text
+import Data.Text (Text, pack, unpack)
+import qualified Data.Text as T
 import Data.List
 import Data.Char
 import Data.Ratio
@@ -14,7 +15,7 @@ class JSAtom a where
   jsAtom :: a -> Text
 
 instance JSAtom String where
-  jsAtom a = Data.Text.concat ["\"",pack a,"\""]
+  jsAtom a = T.concat ["\"",pack a,"\""]
 
 class JS t where
   js :: t -> [Text]
@@ -64,13 +65,21 @@ jsGlobalEnv :: Program -> [Text]
 jsGlobalEnv ls =
   "var globalEnv = {};\n" :
   ((`foldMapWithKey` mkGlobalEnv ls) $ \ f -> \case
-    VFun [] _ hs cs -> pure $ Data.Text.concat $
+    VFun [] _ hs cs -> pure $ T.concat $
       ["globalEnv[", jsAtom f, "] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
       ++ [");\n"]
-    VPrim g hs ->  pure $ Data.Text.concat $
+    VPrim g hs ->  pure $ T.concat $
       ["globalEnv[", jsAtom f, "] = VPrim(", jsAtom g , ","]
       ++ js (fmap (fmap jsAtom) hs)
       ++ [");\n"]
     _ -> [])
+
+jsMain :: Text
+jsMain = T.concat
+  [ "console.log("
+  , "render("
+  , "shonkier(globalEnv,App(\"main\", []))"
+  , "));"
+  ]
