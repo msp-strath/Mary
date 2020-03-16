@@ -411,6 +411,32 @@ function shonkier(glob,t) {
     return null;
 };
 
+function renderList(a,b) {
+    var xs = [];
+    var i = 0;
+    function output(str) {
+        xs[i] = str;
+        i++;
+    };
+    var hd = a;
+    var tl = b;
+    var space = false;
+    while (tl != null) {
+        if (space) { output(" "); }
+        space = true;
+        output(render(Value(hd)));
+        switch (tl.tag) {
+        case "Atom":
+            if (tl.atom === "") { tl = null; continue; };
+            output(render(Value(tl))); tl = null; continue;
+        case "Cell": hd = tl.fst; tl = tl.snd; continue;
+        default: output(" "); output(render(Value(tl))); tl = null; continue;
+        };
+    };
+    output("]");
+    return xs.join('');
+};
+
 function render(v) {
     if (v.tag == "Request") { return v.cmd; };
     v = v.value;
@@ -428,9 +454,13 @@ function render(v) {
         case "Atom":
             if (v.atom === "") { output("[]"); continue; };
             output("'".concat(v.atom)); continue;
-        case "Cell": stk = Cons (v.fst, Cons(v.snd, stk)); continue;
+        case "Cell": output("[");output(renderList(v.fst,v.snd)); continue;
         case "Lit":
-            if (stringy(v.literal)) { output(v.literal); continue; };
+            if (stringy(v.literal)) {
+                output("\"");
+                output(v.literal);
+                output("\"");
+                continue; };
             output (v.literal.num.toString());
             if (v.literal.den == 1) { continue; };
             output("/");
