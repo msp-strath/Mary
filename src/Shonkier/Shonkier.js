@@ -40,7 +40,7 @@ function Value(p) {
 };
 function Request(a, ps, k) {
     return {tag: "Request", cmd: a, args: ps, cont: k};
-}; 
+};
 
 // a thunk pattern is a string
 
@@ -417,24 +417,27 @@ function render(v) {
     var xs = [];
     var i = 0;
     var stk = Cons(v,null);
+    function output(str) {
+        xs[i] = str;
+        i++;
+    };
     while (stk != null) {
         v = stk.hd;
         stk = stk.tl;
         switch (v.tag) {
-        case "Atom": xs[i] = "'".concat(v.atom); i++; continue;
+        case "Atom":
+            if (v.atom === "") { output("[]"); continue; };
+            output("'".concat(v.atom)); continue;
         case "Cell": stk = Cons (v.fst, Cons(v.snd, stk)); continue;
         case "Lit":
-            if (stringy(v.literal)) {
-                xs[i] = v.literal; i++;
-                continue;
-            };
-            xs[i] = v.literal.num.toString(); i++;
+            if (stringy(v.literal)) { output(v.literal); continue; };
+            output (v.literal.num.toString());
             if (v.literal.den == 1) { continue; };
-            xs[i] = "/"; i++;
-            xs[i] = v.literal.den.toString(); i++;
+            output("/");
+            output(v.literal.den.toString());
             continue;
         default: continue;
         };
     };
-    return xs.join();
+    return xs.join('');
 };

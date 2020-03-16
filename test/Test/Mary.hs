@@ -6,4 +6,8 @@ import Test.Tasty (TestTree)
 import Mary.ServePage
 
 maryTests :: IO TestTree
-maryTests = ioTests "Mary" [".mary"] (servePage testConfig)
+maryTests = do
+  let name      = "Mary"
+  let extension = ".mary"
+  let goldenExt = ".gold"
+  ioTests TestConfig{..} (servePage testConfig) []
