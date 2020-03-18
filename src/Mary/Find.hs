@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
-module Mary.ServeWeb where
+module Mary.Find where
 
 import Data.PHPSession
 import Data.ByteString.Lazy as B (getContents, toStrict)
@@ -13,8 +13,6 @@ import System.FilePath
 import System.Directory
 import System.Process
 
-import Mary.ServePage -- for now
-
 postText :: PHPSessionValue -> Y.Value
 postText (PHPSessionValueArray kvs) = object
   [ (decodeUtf8 (B.toStrict k) .= decodeUtf8 (B.toStrict v))
@@ -22,30 +20,41 @@ postText (PHPSessionValueArray kvs) = object
   ]
 postText _ = Y.Null
 
-serveWeb :: Config     -- where are mary and pandoc?
-         -> FilePath   -- what is the site root?
+maryFind :: FilePath   -- what is the site root?
          -> String     -- username
          -> FilePath   -- page
-         -> IO Text    -- expecting get and post data to be serialised on stdin
-serveWeb config sitesRoot user page = do
+         -> IO ()      -- PHP $POST $GET -[mary find user site page>- --- YAML ... markdown
+maryFind user sitesRoot page = do
   pbs <- B.getContents
+  -- the inputs are serialised PHP objects representing post and get data, respectively
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
   let (postData, getData) = case mpost of
         (p : g : _) -> (postText p, postText g)
         _ -> (Y.Null, Y.Null)
+  -- now we have made them YAML objects
   case splitDirectories page of
     (site : _) -> do
       dirEx <- doesDirectoryExist (sitesRoot </> site)
       if not dirEx || not (isValid page)
-        then return $ T.concat ["Mary cannot find site ", pack site, "!"]
+        then TIO.putStrLn $ T.concat ["Mary cannot find site ", pack site, "!"]
         else do
+          -- have we been asked to update the site? if so, git pull!
           case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
             Just (Just (_ :: Text)) -> callProcess (sitesRoot </> "gitpullsite") [site]
             _ -> return ()
+          -- now let us serve up (for pandoc) the YAML data, then the markdown page
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
-          if not fileEx then return $ T.concat ["Mary cannot find page ", pack page, "!"]
+          if not fileEx then TIO.putStrLn $ T.concat ["Mary cannot find page ", pack page, "!"]
             else do
-              TIO.putStrLn "Hello!"
-              servePage config sitePage
-    _ -> return "Mary does not know which page you want!"
+              TIO.putStrLn "---"
+              TIO.putStrLn (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
+              case postData of
+                Y.Null -> return ()
+                _      -> TIO.putStrLn (decodeUtf8 (Y.encode postData))
+              case getData of
+                Y.Null -> return ()
+                _      -> TIO.putStrLn (decodeUtf8 (Y.encode getData))
+              TIO.putStrLn "..."
+              TIO.readFile sitePage >>= TIO.putStr
+    _ -> TIO.putStrLn "Mary does not know which page you want!"

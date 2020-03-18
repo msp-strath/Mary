@@ -76,7 +76,7 @@ library
   exposed-modules:     Data.Bwd
                      , Mary.Pandoc
                      , Mary.ServePage
-                     , Mary.ServeWeb
+                     , Mary.Find
                      , Shonkier
                      , Shonkier.Examples
                      , Shonkier.Parser

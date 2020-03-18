@@ -13,7 +13,7 @@ import Shonkier
 
 import Mary.Pandoc
 import Mary.ServePage
-import Mary.ServeWeb
+import Mary.Find
 
 main :: IO ()
 main = customExecParser (prefs showHelpOnEmpty) opts >>= \case
@@ -21,10 +21,7 @@ main = customExecParser (prefs showHelpOnEmpty) opts >>= \case
   Shonkier filename   -> interpretShonkier filename
   Shonkierjs filename -> compileShonkier filename >>= TIO.putStrLn
   Page filename       -> servePage testConfig filename >>= TIO.putStrLn
-  Web{..}             -> do
-    mary    <- getExecutablePath
-    content <- serveWeb Config{..} sitesRoot user page
-    TIO.putStrLn content
+  Find{..}            -> maryFind user sitesRoot page
   where
     opts = info (optsParser <**> helper)
       ( fullDesc
@@ -35,9 +32,8 @@ data Options
   | Shonkier   { filename :: String }
   | Shonkierjs { filename :: String }
   | Page       { filename :: String }
-  | Web        { pandoc    :: String
+  | Find       { user      :: String
                , sitesRoot :: String
-               , user      :: String
                , page      :: String
                }
 
@@ -58,12 +54,11 @@ optsParser = subparser
              (Page <$> strArgument
                   (metavar "FILE" <> action "file" <> help "Input Mary file"))
              "Generate HTML from Mary file"
- <> command' "web"
-             (Web <$> strArgument (metavar "PANDOC" <> action "file" <> help "Path to pandoc.")
-                  <*> strArgument (metavar "ROOT" <> action "directory" <> help "Path to site root.")
-                  <*> strArgument (metavar "USER" <> action "user" <> help "Username.")
-                  <*> strArgument (metavar "PAGE" <> action "file" <> help "Page to serve."))
-             "Serve webpage")
+ <> command' "find"
+             (Find <$> strArgument (metavar "USER" <> action "user" <> help "Username.")
+                   <*> strArgument (metavar "ROOT" <> action "directory" <> help "Path to site root.")
+                   <*> strArgument (metavar "PAGE" <> action "file" <> help "Page to serve."))
+             "Find webpage and output markdown")
   where
     command' :: String -> Parser a -> String -> Mod CommandFields a
     command' label parser description =
