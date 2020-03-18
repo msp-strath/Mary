@@ -40,7 +40,7 @@ serveWeb config sitesRoot user page = do
         then return $ T.concat ["Mary cannot find site ", pack site, "!"]
         else do
           case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
-            Just (Just (_ :: Text)) -> callProcess "./gitpullsite" [site]
+            Just (Just (_ :: Text)) -> callProcess (sitesRoot </> "gitpullsite") [site]
             _ -> return ()
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
