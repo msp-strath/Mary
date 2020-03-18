@@ -9,5 +9,6 @@ import Test.Tasty.Silver.Interactive
 main :: IO ()
 main = defaultMain . testGroup "Tests" =<< sequence
   [ shonkierTests
+  , shonkierJSTests
   , maryTests
   ]

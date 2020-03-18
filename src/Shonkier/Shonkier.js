@@ -31,7 +31,7 @@ function Fun(hs, cs) { // Fun hs cs, both arrays
 const PWild = {tag: "Wild"};
 
 function PAs(x, p) {
-    return {tag: "As", var: x, pat: p}
+    return {tag: "As", var: x, pat: p};
 };
 
 // PComputation, Computation
@@ -40,7 +40,7 @@ function Value(p) {
 };
 function Request(a, ps, k) {
     return {tag: "Request", cmd: a, args: ps, cont: k};
-}; 
+};
 
 // a thunk pattern is a string
 
@@ -138,7 +138,8 @@ function cmatch(rho, q, c) {
             return vmatch(rho,q.value,c.value);
         case "Request" :
             if (q.cmd == c.cmd && vmatches(rho,q.args,c.args)) {
-                rho[q.cont] = c.cont; return true;
+                rho[q.cont] = VFun(c.cont,[],null,[Clause([Value("_return")],"_return")]);
+                return true;
             };
             return false;
         };
@@ -169,7 +170,7 @@ function vmatch(rho, p, v) {
             };
             return false;
         case "Lit" :
-            return LitEq(p.lit,v.lit);
+            return LitEq(p.literal,v.literal);
         };
     };
     return false;
@@ -235,20 +236,38 @@ function prim(f, vs) {
 
     };
 
-    function primNumAdd(cs) {
+    function primNumBin(nm,implem,cs) {
         if (hasLength(cs) && cs.length == 2) {
             if (cs[0].tag == "Value" && cs[1].tag == "Value" &&
                 cs[0].value.tag == "Lit" && cs[1].value.tag == "Lit") {
                 var x = cs[0].value.literal;
                 var y = cs[1].value.literal;
                 if (!stringy(x) && !stringy(y)) {
-                    return Use(Lit(LitNum(x.num*y.den + y.num*x.den,x.den*y.den)));
+                    return Use(Lit(implem(x,y)));
                 };
-                return Handle("Invalid_NumAdd_ArgType",[],null);
+                return Handle("Invalid_" + nm + "_ArgType",[],null);
             };
-            return Handle("Invalid_NumAdd_ArgRequest",[],null);
+            return Handle("Invalid_" + nm + "_ArgRequest",[],null);
         };
-        return Handle("Invalid_NumAdd_Arity",[],null);
+        return Handle("Invalid_" + nm + "_Arity",[],null);
+    };
+    function primNumAdd(cs) {
+        return primNumBin("primNumAdd"
+                          , function(x,y){ return LitNum(x.num*y.den + y.num*x.den,x.den*y.den);}
+                          , cs
+                         );
+    };
+    function primNumMult(cs) {
+        return primNumBin("primNumMult"
+                          , function(x,y){ return LitNum(x.num*y.num,x.den*y.den);}
+                          , cs
+                         );
+    };
+    function primNumMinus(cs) {
+        return primNumBin("primNumMinus"
+                          , function(x,y){ return LitNum(x.num*y.den - y.num*x.den,x.den*y.den);}
+                          , cs
+                         );
     };
 
     switch (f) {
@@ -256,6 +275,10 @@ function prim(f, vs) {
         return primStringConcat(vs);
     case "primNumAdd":
         return primNumAdd(vs);
+    case "primNumMinus":
+        return primNumMinus(vs);
+    case "primNumMult":
+        return primNumMult(vs);
     default:
         return Handle("NoPrim",[],null);
     };
@@ -358,7 +381,7 @@ function shonkier(glob,t) {
                 continue;
             };
             var args = [];
-            var d = state.done
+            var d = state.done;
             var i = state.now;
             while (i > 0) {
                 i--;
@@ -367,7 +390,7 @@ function shonkier(glob,t) {
             };
             switch (state.fun.tag) {
             case "Atom":
-                for (i = 0; i < args.length; i++) { args[i] = args[i].val; }
+                for (i = 0; i < args.length; i++) { args[i] = args[i].value; }
                 state = Handle(state.fun.atom,args,null);
                 continue;
             case "VPrim":
@@ -411,30 +434,63 @@ function shonkier(glob,t) {
     return null;
 };
 
+function renderList(a,b) {
+    var xs = [];
+    var i = 0;
+    function output(str) {
+        xs[i] = str;
+        i++;
+    };
+    var hd = a;
+    var tl = b;
+    var space = false;
+    while (tl != null) {
+        if (space) { output(" "); }
+        space = true;
+        output(render(Value(hd)));
+        switch (tl.tag) {
+        case "Atom":
+            if (tl.atom === "") { tl = null; continue; };
+            output(render(Value(tl))); tl = null; continue;
+        case "Cell": hd = tl.fst; tl = tl.snd; continue;
+        default: output(" "); output(render(Value(tl))); tl = null; continue;
+        };
+    };
+    output("]");
+    return xs.join('');
+};
+
 function render(v) {
     if (v.tag == "Request") { return v.cmd; };
     v = v.value;
     var xs = [];
     var i = 0;
     var stk = Cons(v,null);
+    function output(str) {
+        xs[i] = str;
+        i++;
+    };
     while (stk != null) {
         v = stk.hd;
         stk = stk.tl;
         switch (v.tag) {
-        case "Atom": xs[i] = "'".concat(v.atom); i++; continue;
-        case "Cell": stk = Cons (v.fst, Cons(v.snd, stk)); continue;
+        case "Atom":
+            if (v.atom === "") { output("[]"); continue; };
+            output("'".concat(v.atom)); continue;
+        case "Cell": output("[");output(renderList(v.fst,v.snd)); continue;
         case "Lit":
             if (stringy(v.literal)) {
-                xs[i] = v.literal; i++;
-                continue;
-            };
-            xs[i] = v.literal.num.toString(); i++;
+                output("\"");
+                output(v.literal);
+                output("\"");
+                continue; };
+            output (v.literal.num.toString());
             if (v.literal.den == 1) { continue; };
-            xs[i] = "/"; i++;
-            xs[i] = v.literal.den.toString(); i++;
+            output("/");
+            output(v.literal.den.toString());
             continue;
         default: continue;
         };
     };
-    return xs.join();
+    return xs.join('');
 };
