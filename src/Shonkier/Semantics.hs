@@ -13,7 +13,6 @@ import Control.Monad.State
 import Data.Either
 import Data.Foldable
 import Data.Function
-import Data.Functor
 import Data.Map (Map, singleton, (!?))
 import qualified Data.Map as Map
 import Data.List (sortBy, groupBy, nub)
@@ -230,7 +229,11 @@ pop = do
       return (Just fr)
 
 globalLookup :: Monad m => FilePath -> Variable -> ShonkierT m (Maybe Value)
-globalLookup fp x = get <&> \ st -> globals st !? x >>= (!? fp)
+globalLookup fp x = do
+  st <- get
+  pure $ do
+    candidates <- globals st !? x
+    candidates !? fp
 
 eval :: Monad m => (LocalEnv, Term) -> ShonkierT m Computation
 eval (rho, t) = case t of
