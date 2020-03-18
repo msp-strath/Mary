@@ -9,6 +9,10 @@
 
 // Constructors for Term, Pattern, Value
 
+function GVar(fp,v) { // Global variable
+    return {tag: "GVar", file: fp, name: v};
+};
+
 function Atom(a) { // Atom a
     return {tag: "Atom", atom: a};
 };
@@ -346,7 +350,11 @@ function shonkier(glob,t) {
                     state = Use(v);
                     continue;
                 };
-                v = glob[t];
+                state = Handle("OutOfScope",[],null);
+                continue;
+            };
+            if (t.tag == "GVar") {
+                v = glob[t.name][t.file];
                 if (v != undefined) {
                     state = Use(v);
                     continue;

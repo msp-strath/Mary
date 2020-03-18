@@ -31,7 +31,7 @@ process doc0 = do
            . walk (evalMaryBlock env)
            $ doc1
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
-       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv (snd mod))
+       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
        $ doc2
 
   where

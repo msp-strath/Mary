@@ -11,11 +11,16 @@
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/Shonkier/Shonkier.js"></script>
   <script>
   var globalEnv = {};
-  globalEnv["primNumAdd"] = VPrim("primNumAdd",[]);
-  globalEnv["primNumMinus"] = VPrim("primNumMinus",[]);
-  globalEnv["primNumMult"] = VPrim("primNumMult",[]);
-  globalEnv["primStringConcat"] = VPrim("primStringConcat",[]);
-  globalEnv["test"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Atom(""))))]);
+  globalEnv["primNumAdd"] = {};
+  globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
+  globalEnv["primNumMinus"] = {};
+  globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
+  globalEnv["primNumMult"] = {};
+  globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["primStringConcat"] = {};
+  globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["test"] = {};
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Atom(""))))]);
   </script>
 </head>
 <body>
