@@ -7,31 +7,31 @@ import Data.Attoparsec.Text
 import Data.Foldable
 import Data.Maybe
 import Data.Monoid
+import qualified Data.Set as Set
 import Data.Text (Text)
 
 import Text.Pandoc.Builder
 import Text.Pandoc.Walk
 
 import Shonkier.Parser
+import Shonkier.Value
+import Shonkier.Import
 import Shonkier.Semantics
 import Shonkier.ShonkierJS
 
 process :: Pandoc -> IO Pandoc
-process = return
-
-{-
-process :: Pandoc -> IO Pandoc
 process doc0 = do
   let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
-  let mod@(is, ps)  = fold [ (is, p)
-                           | ds <- defns
-                           , let Right (is, p) = parseOnly module_ ds
-                           ]
-  env <- globals <$> execShonkierT (loadModule "." mod) emptyShonkierState
+  let rm@(is, ps)  = fold [ (is, p)
+                          | ds <- defns
+                          , let Right (is, p) = parseOnly module_ ds
+                          ]
+  (mod, env) <- loadToplevelModule "." rm
   let doc2 = walk (evalMaryInline env)
-           . walk (evalMaryBlock env) $ doc1
+           . walk (evalMaryBlock env)
+           $ doc1
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
-       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv ps)
+       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv (snd mod))
        $ doc2
 
   where
@@ -53,7 +53,7 @@ evalMaryBlock :: GlobalEnv -> Block -> Block
 evalMaryBlock env (CodeBlock (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Null
-    Right t -> case shonkier env t of
+    Right t -> case rawShonkier Set.empty env t of
       Value v -> fromValue v
       _ -> Null
 evalMaryBlock _ b = b
@@ -62,7 +62,7 @@ evalMaryInline :: GlobalEnv -> Inline -> Inline
 evalMaryInline env (Code (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Space
-    Right t -> case shonkier env t of
+    Right t -> case rawShonkier Set.empty env t of
       Value v -> fromValue v
       _ -> Space
 evalMaryInline _ b = b
@@ -164,4 +164,3 @@ instance FromValue Inline where
     "Span"        -> after1Listy Span
     _             -> const Space
   fromValue _ = Space
--}

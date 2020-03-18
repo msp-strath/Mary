@@ -71,7 +71,7 @@ loadModule :: FilePath -> RawModule -> ImportT IO Module
 loadModule fp (is, ls) = do
   mapM_ importModule is
   scope <- gets (fmap Map.keysSet . globals)
-  let ps = checkProgram fp (Set.fromList ("." : fp : is)) scope ls
+  let ps = checkRaw fp (Set.fromList is) scope ls
   let env = mkGlobalEnv fp ps
   modify (\ r -> r { globals = Map.unionWith (<>) (globals r) env
                    , visited = Set.insert fp (visited r)

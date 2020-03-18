@@ -5,10 +5,12 @@ import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.Maybe (fromMaybe)
-import Data.Map (singleton, (!?))
+import Data.Map (singleton, (!?), keysSet)
+import Data.Set (Set)
 
 import Data.Bwd
 import Shonkier.Syntax
+import Shonkier.Scope
 import Shonkier.Value
 import Shonkier.Primitives (prim)
 
@@ -63,6 +65,12 @@ execShonkier m gl s = snd $ runShonkier m gl s
 
 shonkier :: GlobalEnv -> Term -> Computation
 shonkier rho t = evalShonkier (eval (mempty, t)) rho Nil
+
+rawShonkier :: Set FilePath -> GlobalEnv -> RawTerm -> Computation
+rawShonkier is gl t =
+  let scope = fmap keysSet gl
+      term  = checkRaw "." is scope t
+  in shonkier gl term
 
 push :: Frame -> Shonkier ()
 push fr = modify (:< fr)

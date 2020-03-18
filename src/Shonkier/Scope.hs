@@ -4,7 +4,7 @@
 
 module Shonkier.Scope
        ( GlobalScope
-       , checkProgram
+       , checkRaw
        ) where
 
 import Control.Monad
@@ -45,9 +45,12 @@ declare v = do
 evalScopeM :: ScopeM a -> ScopeState -> a
 evalScopeM = evalState . getScopeM
 
-checkProgram :: FilePath -> Set FilePath -> GlobalScope -> RawProgram -> Program
-checkProgram fp is gl p = evalScopeM (scopeCheck Set.empty p) (ScopeState fp is gl)
-
+checkRaw :: ScopeCheck t u
+         => FilePath -> Set FilePath -> GlobalScope -> t -> u
+checkRaw fp is gl p =
+  let imported  = Set.union (Set.fromList [".", fp]) is
+      initState = ScopeState fp imported gl
+  in evalScopeM (scopeCheck Set.empty p) initState
 
 instance ScopeCheck RawProgram Program where
   scopeCheck local ps = do
