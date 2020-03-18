@@ -1,0 +1,3 @@
+pushd ../MarySites/$1
+git pull
+popd
