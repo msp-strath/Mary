@@ -10,7 +10,7 @@ import qualified Data.Text as T
 import Shonkier.Syntax
 
 module_ :: Parser RawModule
-module_ = (,) <$> (many (import_ <* skipSpace)) <*> program
+module_ = (,) <$> many (import_ <* skipSpace) <*> program
 
 import_ :: Parser FilePath
 import_ = do
