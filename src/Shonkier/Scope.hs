@@ -18,6 +18,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 
 import Shonkier.Syntax
 
