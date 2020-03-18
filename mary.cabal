@@ -69,6 +69,7 @@ library
                      , pandoc-types >=1.19 && <1.21
                      , prettyprinter >=1.6 && <1.7
                      , process >=1.6.5.0 && <1.7
+                     , unordered-containers >=0.2.10.0 && <0.2.11
                      , text >=1.2 && <1.3
                      , yaml >=0.11.2.0 && < 0.12
 

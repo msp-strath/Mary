@@ -4,6 +4,7 @@ module Mary.Find where
 
 import Data.PHPSession
 import Data.ByteString.Lazy as B (getContents, toStrict)
+import Data.HashMap.Strict as H
 import Data.List as L
 import Data.Yaml as Y
 import Data.Text as T
@@ -48,13 +49,14 @@ maryFind user sitesRoot page = do
           if not fileEx then TIO.putStrLn $ T.concat ["Mary cannot find page ", pack page, "!"]
             else do
               TIO.putStrLn "---"
-              TIO.putStrLn (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
+              TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
               case postData of
-                Y.Null -> return ()
-                _      -> TIO.putStrLn (decodeUtf8 (Y.encode postData))
+                Y.Object o | not (H.null o) -> TIO.putStr (decodeUtf8 (Y.encode postData))
+                _ -> return ()
               case getData of
-                Y.Null -> return ()
-                _      -> TIO.putStrLn (decodeUtf8 (Y.encode getData))
+                Y.Object o | not (H.null o) -> TIO.putStr (decodeUtf8 (Y.encode getData))
+                _ -> return ()
               TIO.putStrLn "..."
+              TIO.putStrLn ""
               TIO.readFile sitePage >>= TIO.putStr
     _ -> TIO.putStrLn "Mary does not know which page you want!"
