@@ -1,0 +1,11 @@
+import "examples/list.shonkier"
+import "examples/append.shonkier"
+
+suc(_,x)   -> primNumAdd(1,x)
+length(xs) -> fold(suc,0,xs)
+
+const(_) -> '1
+
+main() -> [ length(onetwo())
+          | length(map(const,onetwo()))
+          ]

@@ -97,6 +97,13 @@ instance Pretty Literal where
     String k str -> ppStringLit k str
     Num r        -> pretty r
 
+instance Pretty ScopedVariable where
+  pretty = \case
+    LocalVar x       -> pretty x
+    GlobalVar _ x    -> pretty x
+    AmbiguousVar _ x -> pretty x
+    OutOfScope x     -> pretty x
+
 instance Pretty Term where
   pretty t = case listView termCoalg t of
     ([], Just _) -> case t of
@@ -128,12 +135,12 @@ instance Pretty PComputation where
 instance Pretty Value where
   pretty v = case listView valueCoalg v of
     ([], Just _) -> case v of
-      VAtom a            -> ppAtom a
-      VLit l             -> pretty l
-      VPrim f _          -> pretty f
-      VCell a b          -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      VFun fr rho hs cls -> ppFun hs cls
-      VThunk c           -> braces $ pretty c
+      VAtom a          -> ppAtom a
+      VLit l           -> pretty l
+      VPrim f _        -> pretty f
+      VCell a b        -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      VFun _ _ hs cls  -> ppFun hs cls
+      VThunk c         -> braces $ pretty c
     it -> ppList it
 
 instance Pretty Computation where

@@ -26,13 +26,13 @@ instance JS Text where
 instance JS a => JS [a] where
   js as = ["["] ++ Data.List.intercalate [","] (fmap js as) ++ ["]"]
 
-instance JSAtom a => JS (Clause' a) where
+instance (JS v, JSAtom a) => JS (Clause' v a) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
 
-instance JSAtom a => JS (Term' a) where
+instance (JS v, JSAtom a) => JS (Term' v a) where
   js (Atom a)    = ["Atom(", jsAtom a, ")"]
   js (Lit l)     = ["Lit("] ++ js l ++ [")"]
-  js (Var x)     = ["\"",pack x,"\""]
+  js (Var x)     = js x
   js (Cell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js (App f as)  = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
   js (Fun hs cs) = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
@@ -62,10 +62,11 @@ instance JSAtom a => JS (PValue' a) where
   js PWild        = ["PWild"]
 
 jsGlobalEnv :: Program -> [Text]
-jsGlobalEnv ls =
+jsGlobalEnv ls = []
+{-
   "var globalEnv = {};\n" :
   ((`foldMapWithKey` mkGlobalEnv ls) $ \ f -> \case
-    VFun [] _ hs cs -> pure $ T.concat $
+    VFun _ [] _ hs cs -> pure $ T.concat $
       ["globalEnv[", jsAtom f, "] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
@@ -75,7 +76,7 @@ jsGlobalEnv ls =
       ++ js (fmap (fmap jsAtom) hs)
       ++ [");\n"]
     _ -> [])
-
+-}
 jsMain :: Text
 jsMain = T.concat
   [ "console.log("

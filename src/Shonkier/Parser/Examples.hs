@@ -2,19 +2,20 @@
 
 module Shonkier.Parser.Examples where
 
+{-
 import Shonkier.Parser
 import Shonkier.Syntax
 import Shonkier.Semantics
 
 import Data.Foldable
 
-mapT :: Term
+mapT :: RawTerm
 mapT = getMeATerm
    "{ f, []     -> []                   \
   \ | f, [x|xs] -> [f(x)|map(f, xs)]   \
   \ }"
 
-runReaderT :: Term
+runReaderT :: RawTerm
 runReaderT = getMeATerm
    "{ r, v              -> v                    \
   \ | r, {'ask() -> k}  -> runReaderT(r, k(r))  \
@@ -45,7 +46,9 @@ pipeP = getMeAProgram
 
 
 test0 :: Computation
-test0 = shonkier (mkGlobalEnv . fold $ [runReaderP, appendP]) $ getMeATerm
+test0 =
+  let env = mkGlobalEnv "." mempty $ fold [runReaderP, appendP]
+  in shonkier env $ getMeATerm
   "runReader(['1 '2],append('ask(),'ask()))"
 
 runStateP :: Program
@@ -65,16 +68,19 @@ bipperP = getMeAProgram
   "bipper() -> semi('send('get()),semi('put(['bip|'get()]),bipper()))"
 
 test1 :: Computation
-test1 = shonkier (mkGlobalEnv . fold $ [runStateP, pipeP, semiP, bipperP, mapP]) $ getMeATerm
+test1 =
+  let env = mkGlobalEnv "." mempty $ fold [runStateP, pipeP, semiP, bipperP, mapP]
+  in shonkier env $ getMeATerm
   "runState([],pipe(bipper(),map({x -> 'recv()},[[] [] [] []])))"
 
-string :: Term
+string :: RawTerm
 string = getMeATerm "f(foo\"oulala\"foo, g(\"oula\", goo\"ou\"la\"la\"goo))"
 
-string2 :: Term
+string2 :: RawTerm
 string2 = getMeATerm "\" \
   \hallo   \n\
   \ wolrd\n\""
 
-num :: Term
+num :: RawTerm
 num = getMeATerm "foo(3.4,6.75,8.25,2/3,1/4,18.000,6/4,3.400,3)"
+-}
