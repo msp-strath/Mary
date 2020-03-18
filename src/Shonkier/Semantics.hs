@@ -86,7 +86,7 @@ globalLookup fp x = do
 eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
   Var x     -> case x of
-    LocalVar x     -> use (fromMaybe (error $ "The IMPOSSIBLE happened!") $ rho !? x)
+    LocalVar x     -> use (fromMaybe (error "The IMPOSSIBLE happened!") $ rho !? x)
     GlobalVar fp x -> do v <- globalLookup fp x
                          use (fromMaybe (error "The IMPOSSIBLE happened!") v)
     AmbiguousVar{} -> handle ("AmbiguousName", []) []
