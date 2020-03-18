@@ -146,5 +146,3 @@ getMeAProgram = getMeA program
 
 getMeATerm :: Text -> RawTerm
 getMeATerm = getMeA (term <* endOfInput)
-
-
