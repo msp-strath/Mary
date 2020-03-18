@@ -1,72 +1,18 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-
 module Shonkier.Semantics where
 
-import Control.Applicative
-import Control.Arrow ((***))
 import Control.Monad
-import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
 
-import Data.Either
-import Data.Foldable
-import Data.Function
-import Data.Map (Map, singleton, (!?))
-import qualified Data.Map as Map
-import Data.List (sortBy, groupBy, nub)
 import Data.Maybe (fromMaybe)
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-
-import System.Directory
+import Data.Map (singleton, (!?))
 
 import Data.Bwd
-import Shonkier.Scope
 import Shonkier.Syntax
-import Shonkier.Parser
-
-data Value' a
-  = VAtom a
-  | VLit Literal
-  | VPrim Primitive [[a]]
-  | VCell (Value' a) (Value' a)
-  | VFun [Frame' a] (LocalEnv' a) [[a]] [Clause' ScopedVariable a]
-  -- ^ Env is the one the function was created in
-  --   Frames ??
-  | VThunk (Computation' a)
-  deriving (Show)
-
-type Value = Value' String
-
-pattern VNum n        = VLit (Num n)
-pattern CNum n        = Value (VNum n)
-pattern VString k str = VLit (String k str)
-pattern CString k str = Value (VString k str)
-pattern VNil          = VAtom ""
-pattern CCell a b     = Value (VCell a b)
-pattern CAtom a       = Value (VAtom a)
+import Shonkier.Value
+import Shonkier.Primitives (prim)
 
 -- environments
-
-type LocalEnv' a = Map Variable (Value' a)
-type LocalEnv = LocalEnv' String
-
-type GlobalEnv' a = Map Variable (Map FilePath (Value' a))
-type GlobalEnv = GlobalEnv' String
-
-merge :: LocalEnv' a -> LocalEnv' a -> LocalEnv' a
-merge = flip (<>)
-
-padCat :: Eq a => [[a]] -> [[a]] -> [[a]]
-padCat [] hs = hs
-padCat hs [] = hs
-padCat (a : as) (b : bs) = (a ++ b) : padCat as bs
 
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch (String _ str) (String _ str') = guard (str == str')
@@ -106,136 +52,38 @@ matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 -- Evaluation contexts
 
-data Funy' a
-  = FAtom a
-  | FPrim Primitive
-  | FFun [Frame' a] (LocalEnv' a) [Clause' ScopedVariable a]
-  deriving (Show)
-type Funy = Funy' String
+runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
+runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
 
--- The argument of type (LocalEnv' a) indicates the
--- cursor position
-data Frame' a
-  = CellL (LocalEnv' a) (Term' ScopedVariable a)
-  | CellR (Value' a) (LocalEnv' a)
-  | AppL (LocalEnv' a) [Term' ScopedVariable a]
-  | AppR (Funy' a)
-         (Bwd (Computation' a))
-         -- ^ already evaluated arguments (some requests we are
-         --   willing to handle may still need to be dealt with)
-         ([a], LocalEnv' a)
-         -- ^ focus: [a] = requests we are willing to handle
-         [([a], Term' ScopedVariable a)]
-         -- ^ each arg comes with requests we are willing to handle
-  deriving (Show)
+evalShonkier :: Shonkier a -> GlobalEnv -> Context -> a
+evalShonkier m gl s = fst $ runShonkier m gl s
 
-type Frame = Frame' String
-
-type Context' a = Bwd (Frame' a)
-type Context = Context' String
-
--- Evaluation functions
-
-type Request' a = (a, [Value' a])
-type Request = Request' String
-
-data Computation' a
-  = Value (Value' a)
-  | Request (Request' a) [Frame' a]
-  -- ^ Invoking an effect & none of the
-  -- frames present know how to interpret it
-  deriving (Show)
-
-type Computation = Computation' String
-
-data ShonkierState = ShonkierState
-  { visited :: Set FilePath
-  , globals :: GlobalEnv
-  , context :: Context
-  } deriving (Show)
-
-emptyShonkierState :: ShonkierState
-emptyShonkierState = ShonkierState
-  { visited = Set.empty
-  , globals = primEnv
-  , context = Nil
-  }
-
-newtype ShonkierT m a = ShonkierT
-  { getShonkierT :: StateT ShonkierState m a }
-  deriving ( Functor, Applicative, Monad
-           , MonadState ShonkierState, MonadIO)
-
-runShonkierT :: Monad m => ShonkierT m a -> ShonkierState -> m (a, ShonkierState)
-runShonkierT m s = (`runStateT` s) $ getShonkierT m
-
-evalShonkierT :: Monad m => ShonkierT m a -> ShonkierState -> m a
-evalShonkierT m s = fst <$> runShonkierT m s
-
-execShonkierT :: Monad m => ShonkierT m a -> ShonkierState -> m ShonkierState
-execShonkierT m s = snd <$> runShonkierT m s
-
-forceImportModule :: FilePath -> ShonkierT IO Module
-forceImportModule fp = do
-  txt <- liftIO $ TIO.readFile fp
-  loadModule fp $ getMeAModule txt
-
-importModule :: FilePath -> ShonkierT IO (Maybe Module)
-importModule fp = do
-  cached <- gets (Set.member fp . visited)
-  exists <- liftIO $ doesFileExist fp
-  if (cached || not exists)
-    then pure Nothing
-    else Just <$> forceImportModule fp
-
-loadModule :: FilePath -> RawModule -> ShonkierT IO Module
-loadModule fp (is, ls) = do
-  mapM_ importModule is
-  scope <- gets (fmap Map.keysSet . globals)
-  let ps = checkProgram fp (Set.fromList ("." : fp : is)) scope ls
-  let env = mkGlobalEnv fp ps
-  modify (\ r -> r { globals = Map.unionWith (<>) (globals r) env
-                   , visited = Set.insert fp (visited r)
-                   })
-  pure (is, ps)
-
-mkGlobalEnv :: FilePath -> Program -> GlobalEnv
-mkGlobalEnv fp ls = fold
-  [ singleton f $ singleton fp
-    $ VFun [] mempty
-      (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
-      [cl | (_, Right cl) <- grp]
-  | grp@((f, _) : _) <- groupBy ((==) `on` fst) $
-                     -- Note: sortBy is stable
-                        sortBy (compare `on` (id *** isRight)) $
-                        ls
-  ]
+execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
+execShonkier m gl s = snd $ runShonkier m gl s
 
 shonkier :: GlobalEnv -> Term -> Computation
-shonkier rho t =
-  runIdentity $ evalShonkierT (eval (mempty, t)) state where
-  state = emptyShonkierState { globals = rho }
+shonkier rho t = evalShonkier (eval (mempty, t)) rho Nil
 
-push :: Monad m => Frame -> ShonkierT m ()
-push fr = modify (\ r -> r { context = context r :< fr })
+push :: Frame -> Shonkier ()
+push fr = modify (:< fr)
 
-pop :: Monad m => ShonkierT m (Maybe Frame)
+pop :: Shonkier (Maybe Frame)
 pop = do
-  x <- gets context
+  x <- get
   case x of
     Nil -> return Nothing
     ctx :< fr -> do
-      modify (\ r -> r { context = ctx })
+      put ctx
       return (Just fr)
 
-globalLookup :: Monad m => FilePath -> Variable -> ShonkierT m (Maybe Value)
+globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
 globalLookup fp x = do
-  st <- get
+  st <- ask
   pure $ do
-    candidates <- globals st !? x
+    candidates <- st !? x
     candidates !? fp
 
-eval :: Monad m => (LocalEnv, Term) -> ShonkierT m Computation
+eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
   Var x     -> case x of
     LocalVar x     -> use (fromMaybe (error $ "The IMPOSSIBLE happened!") $ rho !? x)
@@ -252,7 +100,7 @@ eval (rho, t) = case t of
                   eval (rho, f)
   Fun es cs -> use (VFun [] rho es cs)
 
-use :: Monad m => Value -> ShonkierT m Computation
+use :: Value -> Shonkier Computation
 use v = pop >>= \case
   Nothing -> return (Value v)
   Just fr -> case fr of
@@ -282,9 +130,9 @@ use v = pop >>= \case
       _ -> handle ("NoFun",[v]) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
 
-app :: Monad m => Funy
+app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
-    -> ShonkierT m Computation
+    -> Shonkier Computation
 app f cz rho = \case
   []             -> case f of
     FAtom a         ->
@@ -307,8 +155,8 @@ unsafeComToValue = \case
     , show r
     ]
 
-handle :: Monad m => Request -> [Frame]
-       -> ShonkierT m Computation
+handle :: Request -> [Frame]
+       -> Shonkier Computation
 handle r@(a, vs) frs = pop >>= \case
   Nothing         -> return (Request r frs)
   Just fr -> case fr of
@@ -316,8 +164,8 @@ handle r@(a, vs) frs = pop >>= \case
       app f (cz :< Request r frs) rho as
     _ -> handle r (fr : frs)
 
-call :: Monad m => LocalEnv -> [Clause] -> [Computation]
-     -> ShonkierT m Computation
+call :: LocalEnv -> [Clause] -> [Computation]
+     -> Shonkier Computation
 call rho []                cs = do
   st <- get
   handle ("IncompletePattern", []) []
@@ -325,61 +173,6 @@ call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> eval (merge rho sig, rhs)
 
-
----------------------------------------------------------------------------
--- PRIMITIVES
----------------------------------------------------------------------------
-
-primEnv :: GlobalEnv
-primEnv = foldMap toVal (primitives :: [(Primitive, PRIMITIVE Identity)]) where
-  toVal (str, _) = singleton str $ singleton "." $ VPrim str []
-
-prim :: Monad m => Primitive -> [Computation] -> ShonkierT m Computation
-prim nm vs = case lookup nm primitives of
-  Nothing -> handle ("NoPrim",[VPrim nm []]) []
-  Just f  -> f vs
-
-type PRIMITIVE m = [Computation] -> ShonkierT m Computation
-
-primitives :: Monad m => [(Primitive, PRIMITIVE m)]
-primitives =
-  [ ("primStringConcat", primStringConcat)
-  , ("primNumAdd"      , primNumAdd)
-  , ("primNumMinus"    , primNumMinus)
-  , ("primNumMult"     , primNumMult)
-  ]
-
----------------------------------------------------------------------------
--- NUM
-
-primNumBin :: Monad m => String -> (Rational -> Rational -> Rational)
-           -> PRIMITIVE m
-primNumBin nm op = \case
-  [CNum m, CNum n]   -> use (VNum (op m n))
-  [Value m, Value n] -> handle ("Invalid_" ++ nm ++ "_ArgType", [m, n]) []
-  [_,_]              -> handle ("Invalid_" ++ nm ++ "Add_ArgRequest",[]) []
-  _                  -> handle ("Invalid_" ++ nm ++ "_Arity", []) []
-
-primNumAdd, primNumMinus, primNumMult :: Monad m => PRIMITIVE m
-primNumAdd   = primNumBin "primNumAdd" (+)
-primNumMinus = primNumBin "primNumMinus" (-)
-primNumMult  = primNumBin "primNumMult" (*)
-
----------------------------------------------------------------------------
--- STRING
-
-primStringConcat :: forall m. Monad m => PRIMITIVE m
-primStringConcat cs = go cs Nothing [] where
-
-  go :: [Computation] -> Maybe Keyword -> [Text] -> ShonkierT m Computation
-  go cs mk ts = case cs of
-    []                 -> let txt = T.concat $ reverse ts
-                          in use (VString (fromMaybe "" mk) txt)
-    (CString k t : cs) -> go cs (mk <|> pure k) (t:ts)
-    (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
-    (CAtom {}    : cs) -> go cs mk ts
-    (Value v     : cs) -> handle ("Invalid_StringConcat_ArgType", [v]) []
-    _                  -> handle ("Invalid_StringConcat_ArgRequest",[]) []
 
 ---------------------------------------------------------------------------
 -- FROMVALUE

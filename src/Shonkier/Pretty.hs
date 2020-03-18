@@ -3,9 +3,6 @@
 
 module Shonkier.Pretty where
 
-import Shonkier.Syntax
-import Shonkier.Semantics
-
 import Control.Arrow ((***))
 
 import Data.Char
@@ -14,6 +11,9 @@ import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc
+
+import Shonkier.Syntax
+import Shonkier.Value
 
 ppAtom :: String -> Doc ann
 ppAtom = \case
