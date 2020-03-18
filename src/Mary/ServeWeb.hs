@@ -35,14 +35,12 @@ serveWeb config sitesRoot user page = do
         _ -> (Y.Null, Y.Null)
   case splitDirectories page of
     (site : _) -> do
-      let siteDir = sitesRoot </> site
-      dirEx <- doesDirectoryExist siteDir
+      dirEx <- doesDirectoryExist (sitesRoot </> site)
       if not dirEx || not (isValid page)
         then return $ T.concat ["Mary cannot find site ", pack site, "!"]
         else do
           case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
-            Just (Just (_ :: Text)) -> callCommand . L.concat $
-                ["bash -c \"pushd ", sitesRoot </> site, " ; git pull ; popd\""]
+            Just (Just (_ :: Text)) -> callProcess "./gitpullsite" [site]
             _ -> return ()
           let sitePage = sitesRoot </> page
           fileEx <- doesFileExist sitePage
