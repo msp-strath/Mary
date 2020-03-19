@@ -29,9 +29,15 @@ instance JS a => JS [a] where
 
 instance JS ScopedVariable where
   js = \case
-    LocalVar v     -> [jsAtom v]
-    GlobalVar fp v -> ["GVar(", jsAtom fp, ",", jsAtom v, ")"]
-    _              -> ["null"]
+    LocalVar v         -> [jsAtom v]
+    GlobalVar fp v     -> ["GVar(", jsAtom fp, ",", jsAtom v, ")"]
+    AmbiguousVar{}     -> exception "AmbiguousVar"
+    InvalidNamespace{} -> exception "InvalidNamespace"
+    OutOfScope{}       -> exception "OutOfScope"
+
+    where
+      exception :: String -> [Text]
+      exception at = js (App (Atom at) [] :: Term)
 
 instance (JS v, JSAtom a) => JS (Clause' v a) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]

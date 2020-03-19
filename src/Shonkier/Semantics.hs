@@ -98,7 +98,7 @@ eval (rho, t) = case t of
     GlobalVar fp x -> do v <- globalLookup fp x
                          use (fromMaybe theIMPOSSIBLE v)
     -- error cases
-    AmbiguousVar{}     -> handle ("AmbiguousName", []) []
+    AmbiguousVar{}     -> handle ("AmbiguousVar", []) []
     OutOfScope{}       -> handle ("OutOfScope", []) []
     InvalidNamespace{} -> handle ("InvalidNamespace", []) []
   -- move left; start evaluating left to right

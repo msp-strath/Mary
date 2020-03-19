@@ -1,0 +1,11 @@
+import "examples/list.shonkier" as List
+import "examples/list2.shonkier" as List2
+import "examples/catch.shonkier"
+
+pred(n) -> primNumMinus(n,1)
+
+main() -> [ List.map(pred,[1 2 3])
+            List2.map(pred,[4 5 6])
+            catchAmbiguousVar(map(pred,[7 8 9]),{[]})
+            catchInvalidNamespace(LIST.map(pred,[10 11 12]),{[]})
+          ]
