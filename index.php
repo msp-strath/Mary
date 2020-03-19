@@ -42,7 +42,6 @@ if (filter_has_var(INPUT_GET, "page")) {
 elseif (filter_has_var(INPUT_GET, "pub")) {
   $pub_id = filter_input(INPUT_GET, 'pub', FILTER_SANITIZE_SPECIAL_CHARS);
   $target = realpath($site_root . "/" . $pub_id);
-  echo $target;
   if (!$target) {
     // realpath returns false if the target does not exist.
     trigger_error("Specified file does not exist.", E_USER_ERROR);
