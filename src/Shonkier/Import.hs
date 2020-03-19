@@ -34,8 +34,8 @@ data ImportState = ImportState
 
 emptyImportState :: ImportState
 emptyImportState = ImportState
-  { visited = Set.empty
-  , globals = primEnv
+  { visited    = Set.empty
+  , globals    = primEnv
   }
 
 newtype ImportT m a = ImportT { getImportT :: StateT ImportState m a }
@@ -64,15 +64,15 @@ importModule :: FilePath -> ImportT IO (Maybe Module)
 importModule fp = do
   cached <- gets (Set.member fp . visited)
   exists <- liftIO $ doesFileExist fp
-  if (cached || not exists)
+  if cached || not exists
     then pure Nothing
     else Just <$> forceImportModule fp
 
 loadModule :: FilePath -> RawModule -> ImportT IO Module
 loadModule fp (is, ls) = do
-  mapM_ importModule is
+  mapM_ (importModule . fst) is
   scope <- gets (fmap Map.keysSet . globals)
-  let ps = checkRaw fp (Set.fromList is) scope ls
+  let ps  = checkRaw fp is scope ls
   let env = mkGlobalEnv fp ps
   modify (\ r -> r { globals = Map.unionWith (<>) (globals r) env
                    , visited = Set.insert fp (visited r)
