@@ -67,7 +67,7 @@ evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
 evalMaryBlock _ _ b = b
 
 evalMaryInline :: [Import] -> GlobalEnv -> Text -> Inline -> Inline
-evalMaryInline is env page (Code (_, cs, _) e) | elem "mary" cs =
+evalMaryInline is env page (Code (_, cs, _) e) | "mary" `elem` cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Space
     Right t -> case rawShonkier is env t of
@@ -86,14 +86,14 @@ makeAbsolute page (url, title) = (absUrl, title)
     absUrl = if isAbsolute url then -- keep it as is
               url
              else
-               T.concat $ [baseURL, thing , "=", newUrl]
+               T.concat [baseURL, thing, "=", newUrl]
     thing = if isPub url then "?pub" else "?page"
     -- if current page is eg repo/lectures/bonus/two.md and requested
     -- URL is eg ../../basic/notes.pdf, new URL is repo/basic/notes.pdf
     newUrl = joinPathT $ normalise (L.init (splitOn "/" page))
                                    (L.filter (/= ".")  (splitOn "/" url))
 
-    isAbsolute t = or (fmap (flip T.isPrefixOf t)
+    isAbsolute t = or (fmap (`T.isPrefixOf` t)
                         ["https://", "http://", "ftp://", "//", "mailto:", "tel:"]) -- TODO: make more generic?
     isPub t      = ("pub/" `T.isPrefixOf` t || "/pub/" `T.isInfixOf` t)
                      && (not $ "pub/" `T.isSuffixOf` t)
