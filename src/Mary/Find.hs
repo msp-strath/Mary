@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
-module Mary.Find where
+module Mary.Find
+       ( maryFind
+       ) where
 
 import Data.PHPSession
 import Data.ByteString.Lazy as B (getContents, toStrict)
@@ -21,6 +23,10 @@ postText (PHPSessionValueArray kvs) = object
   ]
 postText _ = Y.Null
 
+outputMeta :: Value -> IO ()
+outputMeta d@(Y.Object o) | not (H.null o) = TIO.putStr (decodeUtf8 (Y.encode d))
+outputMeta _                               =  return ()
+
 maryFind :: FilePath   -- what is the site root?
          -> String     -- username
          -> FilePath   -- page
@@ -31,32 +37,33 @@ maryFind user sitesRoot page = do
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
   let (postData, getData) = case mpost of
         (p : g : _) -> (postText p, postText g)
-        _ -> (Y.Null, Y.Null)
+        _           -> (Y.Null, Y.Null)
   -- now we have made them YAML objects
   case splitDirectories page of
     (site : _) -> do
       dirEx <- doesDirectoryExist (sitesRoot </> site)
       if not dirEx || not (isValid page)
         then TIO.putStrLn $ T.concat ["Mary cannot find site ", pack site, "!"]
+      else do
+        -- have we been asked to update the site? if so, git pull!
+        case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
+          Just (Just (_ :: Text)) -> callProcess (sitesRoot </> "gitpullsite") [site]
+          _ -> return ()
+        -- now let us serve up (for pandoc) the YAML data, then the markdown page
+        let sitePage = sitesRoot </> page
+        fileEx <- doesFileExist sitePage
+        if not fileEx
+           then TIO.putStrLn $ T.concat ["Mary cannot find page ", pack page, "!"]
         else do
-          -- have we been asked to update the site? if so, git pull!
-          case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
-            Just (Just (_ :: Text)) -> callProcess (sitesRoot </> "gitpullsite") [site]
-            _ -> return ()
-          -- now let us serve up (for pandoc) the YAML data, then the markdown page
-          let sitePage = sitesRoot </> page
-          fileEx <- doesFileExist sitePage
-          if not fileEx then TIO.putStrLn $ T.concat ["Mary cannot find page ", pack page, "!"]
-            else do
-              TIO.putStrLn "---"
-              TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
-              case postData of
-                Y.Object o | not (H.null o) -> TIO.putStr (decodeUtf8 (Y.encode postData))
-                _ -> return ()
-              case getData of
-                Y.Object o | not (H.null o) -> TIO.putStr (decodeUtf8 (Y.encode getData))
-                _ -> return ()
-              TIO.putStrLn "..."
-              TIO.putStrLn ""
-              TIO.readFile sitePage >>= TIO.putStr
+            -- serve the metadata
+            TIO.putStrLn "---"
+            TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
+            TIO.putStr (decodeUtf8 (Y.encode (object ["sitesRoot" .= T.pack sitesRoot])))
+            TIO.putStr (decodeUtf8 (Y.encode (object ["page" .= T.pack page])))
+            outputMeta postData
+            outputMeta getData
+            TIO.putStrLn "..."
+            TIO.putStrLn ""
+            -- serve the markdown page
+            TIO.readFile sitePage >>= TIO.putStr
     _ -> TIO.putStrLn "Mary does not know which page you want!"
