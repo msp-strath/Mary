@@ -7,30 +7,32 @@ import qualified Data.Text.IO as TIO
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.Text
 
-import Shonkier.Parser
 import Shonkier.Pretty ()
+import Shonkier.Value
+import Shonkier.Import
 import Shonkier.Semantics
 import Shonkier.ShonkierJS
 import Shonkier.Syntax
 
-onShonkierProgram :: (Program -> Term -> IO a) -> String -> IO a
-onShonkierProgram action filename = do
-  file <- TIO.readFile filename
-  let ps = getMeAProgram file
+onShonkierModule :: (Module -> GlobalEnv -> Term -> IO a)
+                 -> FilePath -> IO a
+onShonkierModule action filename = do
+  (mod@(is, ps), gl) <- importToplevelModule filename
   case [ m | ("main", Right m) <- ps ] of
-    [([],body)] -> action ps body
+    [([],body)] -> action mod gl body
     _ -> error "not exactly one main function"
 
-interpretShonkier :: String -> IO ()
-interpretShonkier = onShonkierProgram $ \ ps body ->
-  case shonkier (mkGlobalEnv ps) body of
+interpretShonkier :: FilePath -> IO ()
+interpretShonkier = onShonkierModule $ \ _ gl body ->
+  case shonkier gl body of
     Value v -> putDoc $ pretty v <> line
     Request (r,_) fr -> error $ "unhandled request " ++ r
 
-compileShonkier :: String -> IO Text
-compileShonkier = onShonkierProgram $ \ ps _ -> do
+-- no support for imports here yet!
+compileShonkier :: FilePath -> IO Text
+compileShonkier fp = (`onShonkierModule` fp) $ \ _ env body -> do
   -- Couldn't figure how to import in node so I just concat the
-  -- whol interpreter defined 'Shonkier.js' on top
+  -- whole interpreter defined 'Shonkier.js' on top
   interpreter <- TIO.readFile "./src/Shonkier/Shonkier.js"
   let header txt = T.concat ["\n/***** "
                             , txt
@@ -38,5 +40,5 @@ compileShonkier = onShonkierProgram $ \ ps _ -> do
                             , T.pack (replicate (72 - 10 - T.length txt) '*')
                             , "*/\n\n"]
   pure $ T.concat $ [interpreter, header "Global env"]
-                  ++ jsGlobalEnv ps
-                  ++ [header "Main", jsMain]
+                  ++ jsGlobalEnv env
+                  ++ [header "Main", jsMain fp]

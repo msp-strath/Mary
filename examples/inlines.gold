@@ -11,12 +11,18 @@
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/Shonkier/Shonkier.js"></script>
   <script>
   var globalEnv = {};
-  globalEnv["primNumAdd"] = VPrim("primNumAdd",[]);
-  globalEnv["primNumMinus"] = VPrim("primNumMinus",[]);
-  globalEnv["primNumMult"] = VPrim("primNumMult",[]);
-  globalEnv["primStringConcat"] = VPrim("primStringConcat",[]);
-  globalEnv["testBlock"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Lit("World"),Atom(""))),Atom(""))))))]);
-  globalEnv["testInline"] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Lit("blether"),Atom(""))))]);
+  globalEnv["primNumAdd"] = {};
+  globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
+  globalEnv["primNumMinus"] = {};
+  globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
+  globalEnv["primNumMult"] = {};
+  globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["primStringConcat"] = {};
+  globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["testBlock"] = {};
+  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Lit("World"),Atom(""))),Atom(""))))))]);
+  globalEnv["testInline"] = {};
+  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Lit("blether"),Atom(""))))]);
   </script>
 </head>
 <body>

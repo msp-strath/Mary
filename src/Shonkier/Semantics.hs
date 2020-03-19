@@ -1,79 +1,27 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Shonkier.Semantics where
 
-import Control.Applicative
-import Control.Arrow ((***))
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
 
-import Data.Foldable
-import Data.Function
-import Data.Either
-import Data.Map (Map, singleton, (!?))
-import Data.List (sortBy, groupBy, nub)
 import Data.Maybe (fromMaybe)
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
-import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Map (singleton, (!?), keysSet)
+import Data.Set (Set)
 
 import Data.Bwd
 import Shonkier.Syntax
-
-
-data Value' a
-  = VAtom a
-  | VLit Literal
-  | VPrim Primitive [[a]]
-  | VCell (Value' a) (Value' a)
-  | VFun [Frame' a] (Env' a) [[a]] [Clause' a]
-  -- ^ Env is the one the function was created in
-  --   Frames ??
-  | VThunk (Computation' a)
-  deriving (Show)
-
-type Value = Value' String
-
-pattern VNum n        = VLit (Num n)
-pattern CNum n        = Value (VNum n)
-pattern VString k str = VLit (String k str)
-pattern CString k str = Value (VString k str)
-pattern VNil          = VAtom ""
-pattern CCell a b     = Value (VCell a b)
-pattern CAtom a       = Value (VAtom a)
+import Shonkier.Scope
+import Shonkier.Value
+import Shonkier.Primitives (prim)
 
 -- environments
-
-type Env' a = Map String (Value' a)
-type Env = Env' String
-
-merge :: Env' a -> Env' a -> Env' a
-merge = flip (<>)
-
-mkGlobalEnv :: Program -> Env
-mkGlobalEnv ls = primEnv <> fold
-  [ singleton f $
-     VFun [] mempty
-       (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
-       [cl | (_, Right cl) <- grp]
-  | grp@((f, _) : _) <- groupBy ((==) `on` fst) $
-                        -- Note: sortBy is stable
-                        sortBy (compare `on` (id *** isRight)) $
-                        ls
-  ]
-
-padCat :: Eq a => [[a]] -> [[a]] -> [[a]]
-padCat [] hs = hs
-padCat hs [] = hs
-padCat (a : as) (b : bs) = (a ++ b) : padCat as bs
 
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch (String _ str) (String _ str') = guard (str == str')
 lmatch (Num q)        (Num q')        = guard (q == q')
 lmatch _ _ = Nothing
 
-vmatch :: Eq a => PValue' a -> Value' a -> Maybe (Env' a)
+vmatch :: Eq a => PValue' a -> Value' a -> Maybe (LocalEnv' a)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
 vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
@@ -82,7 +30,7 @@ vmatch PWild       v           = pure mempty
 vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
 vmatch _ _ = Nothing
 
-cmatch :: Eq a => PComputation' a -> Computation' a -> Maybe (Env' a)
+cmatch :: PComputation -> Computation -> Maybe LocalEnv
 cmatch (PValue p)           (Value v)             = vmatch p v
 cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   guard (a == b)
@@ -90,9 +38,7 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   return $ merge rho $ case k of
     Nothing -> mempty
     Just k  -> singleton k $
-      VFun frs mempty [] [( [PValue (PBind "_return")]
-                          , Var "_return"
-                          )]
+      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar "_return"))]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
@@ -102,58 +48,29 @@ mayZipWith f (a : as) (b : bs) =
   (:) <$> f a b <*> mayZipWith f as bs
 mayZipWith _ _ _ = Nothing
 
-matches :: (a -> b -> Maybe (Env' c)) -> [a] -> [b] -> Maybe (Env' c)
+matches :: (a -> b -> Maybe (LocalEnv' c))
+        -> [a] -> [b] -> Maybe (LocalEnv' c)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 -- Evaluation contexts
 
-data Funy' a
-  = FAtom a
-  | FPrim Primitive
-  | FFun [Frame' a] (Env' a) [Clause' a]
-  deriving (Show)
-type Funy = Funy' String
+runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
+runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
 
--- The argument of type (Env' a) indicates the
--- cursor position
-data Frame' a
-  = CellL (Env' a) (Term' a)
-  | CellR (Value' a) (Env' a)
-  | AppL (Env' a) [Term' a]
-  | AppR (Funy' a)
-         (Bwd (Computation' a))
-         -- ^ already evaluated arguments (some requests we are
-         --   willing to handle may still need to be dealt with)
-         ([a], Env' a)
-         -- ^ focus: [a] = requests we are willing to handle
-         [([a],Term' a)]
-         -- ^ each arg comes with requests we are willing to handle
-  deriving (Show)
+evalShonkier :: Shonkier a -> GlobalEnv -> Context -> a
+evalShonkier m gl s = fst $ runShonkier m gl s
 
-type Frame = Frame' String
+execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
+execShonkier m gl s = snd $ runShonkier m gl s
 
-type Context' a = Bwd (Frame' a)
-type Context = Context' String
+shonkier :: GlobalEnv -> Term -> Computation
+shonkier rho t = evalShonkier (eval (mempty, t)) rho Nil
 
--- Evaluation functions
-
-type Request' a = (a, [Value' a])
-type Request = Request' String
-
-data Computation' a
-  = Value (Value' a)
-  | Request (Request' a) [Frame' a]
-  -- ^ Invoking an effect & none of the
-  -- frames present know how to interpret it
-  deriving (Show)
-
-type Computation = Computation' String
-
-newtype Shonkier a = Shonkier { runShonkier :: StateT Context (Reader Env) a }
-  deriving (Functor, Applicative, Monad, MonadState Context, MonadReader Env)
-
-shonkier :: Env -> Term -> Computation
-shonkier rho t = runReader (evalStateT (runShonkier $ eval (mempty, t)) Nil) rho
+rawShonkier :: Set FilePath -> GlobalEnv -> RawTerm -> Computation
+rawShonkier is gl t =
+  let scope = fmap keysSet gl
+      term  = checkRaw "." is scope t
+  in shonkier gl term
 
 push :: Frame -> Shonkier ()
 push fr = modify (:< fr)
@@ -167,16 +84,21 @@ pop = do
       put ctx
       return (Just fr)
 
-globalLookup :: String -> Shonkier (Maybe Value)
-globalLookup n = asks (!? n)
+globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
+globalLookup fp x = do
+  st <- ask
+  pure $ do
+    candidates <- st !? x
+    candidates !? fp
 
-eval :: (Env, Term) -> Shonkier Computation
+eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
-  Var x     -> case rho !? x of
-    Just v  -> use v
-    Nothing -> globalLookup x >>= \case
-      Just v  -> use v
-      Nothing -> handle ("OutOfScope", []) []
+  Var x     -> case x of
+    LocalVar x     -> use (fromMaybe (error "The IMPOSSIBLE happened!") $ rho !? x)
+    GlobalVar fp x -> do v <- globalLookup fp x
+                         use (fromMaybe (error "The IMPOSSIBLE happened!") v)
+    AmbiguousVar{} -> handle ("AmbiguousName", []) []
+    OutOfScope{}   -> handle ("OutOfScope", []) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
@@ -217,7 +139,7 @@ use v = pop >>= \case
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
 
 app :: Funy
-    -> Bwd Computation -> Env -> [([String],Term)]
+    -> Bwd Computation -> LocalEnv -> [([String],Term)]
     -> Shonkier Computation
 app f cz rho = \case
   []             -> case f of
@@ -250,68 +172,15 @@ handle r@(a, vs) frs = pop >>= \case
       app f (cz :< Request r frs) rho as
     _ -> handle r (fr : frs)
 
-call :: Env -> [Clause] -> [Computation]
+call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
-call rho []                cs =
+call rho []                cs = do
+  st <- get
   handle ("IncompletePattern", []) []
 call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> eval (merge rho sig, rhs)
 
-
----------------------------------------------------------------------------
--- PRIMITIVES
----------------------------------------------------------------------------
-
-primEnv :: Env
-primEnv = foldMap (\ (str, _) -> singleton str $ VPrim str []) primitives
-
-prim :: Primitive -> [Computation] -> Shonkier Computation
-prim nm vs = case lookup nm primitives of
-  Nothing -> handle ("NoPrim",[VPrim nm []]) []
-  Just f  -> f vs
-
-type PRIMITIVE = [Computation] -> Shonkier Computation
-
-primitives :: [(Primitive, PRIMITIVE)]
-primitives =
-  [ ("primStringConcat", primStringConcat)
-  , ("primNumAdd"      , primNumAdd)
-  , ("primNumMinus"    , primNumMinus)
-  , ("primNumMult"     , primNumMult)
-  ]
-
----------------------------------------------------------------------------
--- NUM
-
-primNumBin :: String -> (Rational -> Rational -> Rational)
-           -> PRIMITIVE
-primNumBin nm op = \case
-  [CNum m, CNum n]   -> use (VNum (op m n))
-  [Value m, Value n] -> handle ("Invalid_" ++ nm ++ "_ArgType", [m, n]) []
-  [_,_]              -> handle ("Invalid_" ++ nm ++ "Add_ArgRequest",[]) []
-  _                  -> handle ("Invalid_" ++ nm ++ "_Arity", []) []
-
-primNumAdd, primNumMinus, primNumMult :: PRIMITIVE
-primNumAdd   = primNumBin "primNumAdd" (+)
-primNumMinus = primNumBin "primNumMinus" (-)
-primNumMult  = primNumBin "primNumMult" (*)
-
----------------------------------------------------------------------------
--- STRING
-
-primStringConcat :: PRIMITIVE
-primStringConcat cs = go cs Nothing [] where
-
-  go :: [Computation] -> Maybe Keyword -> [Text] -> Shonkier Computation
-  go cs mk ts = case cs of
-    []                 -> let txt = T.concat $ reverse ts
-                          in use (VString (fromMaybe "" mk) txt)
-    (CString k t : cs) -> go cs (mk <|> pure k) (t:ts)
-    (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
-    (CAtom {}    : cs) -> go cs mk ts
-    (Value v     : cs) -> handle ("Invalid_StringConcat_ArgType", [v]) []
-    _                  -> handle ("Invalid_StringConcat_ArgRequest",[]) []
 
 ---------------------------------------------------------------------------
 -- FROMVALUE

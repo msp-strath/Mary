@@ -80,13 +80,18 @@ library
                      , Mary.Find
                      , Shonkier
                      , Shonkier.Examples
+                     , Shonkier.Import
                      , Shonkier.Parser
                      , Shonkier.Parser.Examples
                      , Shonkier.Pretty
                      , Shonkier.Pretty.Examples
+                     , Shonkier.Primitives
+                     , Shonkier.Scope
                      , Shonkier.Semantics
                      , Shonkier.ShonkierJS
                      , Shonkier.Syntax
+                     , Shonkier.Value
+                     , Utils.List
 
   -- LANGUAGE extensions used by modules in this package.
 --  other-extensions:
@@ -96,6 +101,7 @@ library
 
     -- LANGUAGE extensions used by modules in this package.
   default-extensions:  DeriveTraversable
+                     , GeneralizedNewtypeDeriving
                      , LambdaCase
                      , OverloadedStrings
                      , PatternSynonyms

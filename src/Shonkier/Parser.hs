@@ -9,7 +9,17 @@ import qualified Data.Text as T
 
 import Shonkier.Syntax
 
-program :: Parser Program
+module_ :: Parser RawModule
+module_ = (,) <$> many (import_ <* skipSpace) <*> program
+
+import_ :: Parser FilePath
+import_ = do
+  string "import"
+  skipSpace
+  String _ fp <- stringlit
+  pure (T.unpack fp)
+
+program :: Parser RawProgram
 program = id <$ skipSpace
             <*> many ((,) <$> identifier <*> (Left <$> decl <|> Right <$>defn) <* skipSpace)
              <* endOfInput
@@ -17,7 +27,7 @@ program = id <$ skipSpace
 decl :: Parser [[String]]
 decl = tupleOf (sep skipSpace atom) <* char ':'
 
-defn :: Parser Clause
+defn :: Parser RawClause
 defn = (,) <$> tupleOf pcomputation
            <* arrow <* skipSpace <*> term
 
@@ -27,7 +37,7 @@ punc c = () <$ skipSpace <* char c <* skipSpace
 sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
-term :: Parser Term
+term :: Parser RawTerm
 term = weeTerm >>= moreTerm
 
 atom :: Parser String
@@ -79,24 +89,21 @@ listOf p nil = (,) <$ char '['
 tupleOf :: Parser a -> Parser [a]
 tupleOf p = id <$ punc '(' <*> sep (punc ',') p <* punc ')'
 
-weeTerm :: Parser Term
-weeTerm =
-  Atom <$> atom
-  <|>
-  Lit <$> literal
-  <|>
-  Var <$> identifier
-  <|>
-  uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
-  <|>
-  Fun [] <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
+weeTerm :: Parser RawTerm
+weeTerm = choice
+  [ Atom <$> atom
+  , Lit <$> literal
+  , Var <$> identifier
+  , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
+  , Fun [] <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
+  ]
 
-moreTerm :: Term -> Parser Term
+moreTerm :: RawTerm -> Parser RawTerm
 moreTerm t = (App t <$> tupleOf term >>= moreTerm)
            <|> pure t
 
 
-clause :: Parser Clause
+clause :: Parser RawClause
 clause = (,) <$> sep (punc ',') pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
   <|> (,) [] <$> term
@@ -126,12 +133,16 @@ pvalue = choice
   , uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
   ]
 
-getMeAProgram :: Text -> Program
-getMeAProgram txt = case parseOnly program txt of
+getMeA :: Parser a -> Text -> a
+getMeA p txt = case parseOnly p txt of
   Left err -> error err
   Right t  -> t
 
-getMeATerm :: Text -> Term
-getMeATerm txt = case parseOnly (term <* endOfInput) txt of
-  Left err -> error err
-  Right t  -> t
+getMeAModule :: Text -> RawModule
+getMeAModule = getMeA module_
+
+getMeAProgram :: Text -> RawProgram
+getMeAProgram = getMeA program
+
+getMeATerm :: Text -> RawTerm
+getMeATerm = getMeA (term <* endOfInput)

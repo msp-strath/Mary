@@ -8,8 +8,9 @@ import Data.List
 import Data.Char
 import Data.Ratio
 import Data.Map (foldMapWithKey)
+
 import Shonkier.Syntax
-import Shonkier.Semantics
+import Shonkier.Value
 
 class JSAtom a where
   jsAtom :: a -> Text
@@ -26,13 +27,19 @@ instance JS Text where
 instance JS a => JS [a] where
   js as = ["["] ++ Data.List.intercalate [","] (fmap js as) ++ ["]"]
 
-instance JSAtom a => JS (Clause' a) where
+instance JS ScopedVariable where
+  js = \case
+    LocalVar v     -> [jsAtom v]
+    GlobalVar fp v -> ["GVar(", jsAtom fp, ",", jsAtom v, ")"]
+    _              -> ["null"]
+
+instance (JS v, JSAtom a) => JS (Clause' v a) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
 
-instance JSAtom a => JS (Term' a) where
+instance (JS v, JSAtom a) => JS (Term' v a) where
   js (Atom a)    = ["Atom(", jsAtom a, ")"]
   js (Lit l)     = ["Lit("] ++ js l ++ [")"]
-  js (Var x)     = ["\"",pack x,"\""]
+  js (Var x)     = js x
   js (Cell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js (App f as)  = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
   js (Fun hs cs) = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
@@ -61,25 +68,28 @@ instance JSAtom a => JS (PValue' a) where
   js (PCell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js PWild        = ["PWild"]
 
-jsGlobalEnv :: Program -> [Text]
-jsGlobalEnv ls =
+jsGlobalEnv :: GlobalEnv -> [Text]
+jsGlobalEnv gl =
   "var globalEnv = {};\n" :
-  ((`foldMapWithKey` mkGlobalEnv ls) $ \ f -> \case
+  ((`foldMapWithKey` gl) $ \ x loc ->
+    ((T.concat [ "globalEnv[", jsAtom x, "] = {};\n"]) :) $
+    flip foldMapWithKey loc $ \ fp -> \case
     VFun [] _ hs cs -> pure $ T.concat $
-      ["globalEnv[", jsAtom f, "] = VFun(null,{},"]
+      ["globalEnv[", jsAtom x, "][", jsAtom fp ,"] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
       ++ [");\n"]
     VPrim g hs ->  pure $ T.concat $
-      ["globalEnv[", jsAtom f, "] = VPrim(", jsAtom g , ","]
+      ["globalEnv[", jsAtom x, "][", jsAtom fp, "] = VPrim(", jsAtom g , ","]
       ++ js (fmap (fmap jsAtom) hs)
       ++ [");\n"]
     _ -> [])
 
-jsMain :: Text
-jsMain = T.concat
+jsMain :: FilePath -> Text
+jsMain fp = T.concat
   [ "console.log("
   , "render("
-  , "shonkier(globalEnv,App(\"main\", []))"
+  , "shonkier(globalEnv,App("
+  , "GVar(\"", T.pack fp, "\",\"main\"), []))"
   , "));"
   ]

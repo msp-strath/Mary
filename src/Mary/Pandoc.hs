@@ -4,31 +4,42 @@ import Control.Monad.Writer (Writer, runWriter, tell)
 import Control.Newtype
 
 import Data.Attoparsec.Text
+import Data.Foldable
 import Data.Maybe
 import Data.Monoid
+import qualified Data.Set as Set
 import Data.Text (Text)
 
 import Text.Pandoc.Builder
 import Text.Pandoc.Walk
 
 import Shonkier.Parser
+import Shonkier.Value
+import Shonkier.Import
 import Shonkier.Semantics
 import Shonkier.ShonkierJS
 
 process :: Pandoc -> IO Pandoc
-process doc0 = return doc3 where
-  (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
-  ps = concat [p | ds <- defns, let Right p = parseOnly program ds]
-  env = mkGlobalEnv ps
-  doc2 = walk (evalMaryInline env) . walk (evalMaryBlock env) $ doc1
+process doc0 = do
+  let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
+  let rm@(is, ps)  = fold [ (is, p)
+                          | ds <- defns
+                          , let Right (is, p) = parseOnly module_ ds
+                          ]
+  (mod, env) <- loadToplevelModule "." rm
+  let doc2 = walk (evalMaryInline env)
+           . walk (evalMaryBlock env)
+           $ doc1
+  pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
+       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
+       $ doc2
+
+  where
 
   h1 :: Block -> Maybe Inlines
   h1 (Header 1 _ is) = Just (fromList is)
   h1 _ = Nothing
 
-  doc3 = setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
-       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv ps)
-       $ doc2
 
 snarfMaryDef :: Block -> Writer [Text] Block
 snarfMaryDef c@(CodeBlock (_, cs, _) p)
@@ -38,20 +49,20 @@ snarfMaryDef c@(CodeBlock (_, cs, _) p)
     else Null <$ tell [p]
 snarfMaryDef b = return b
 
-evalMaryBlock :: Env -> Block -> Block
+evalMaryBlock :: GlobalEnv -> Block -> Block
 evalMaryBlock env (CodeBlock (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Null
-    Right t -> case shonkier env t of
+    Right t -> case rawShonkier Set.empty env t of
       Value v -> fromValue v
       _ -> Null
 evalMaryBlock _ b = b
 
-evalMaryInline :: Env -> Inline -> Inline
+evalMaryInline :: GlobalEnv -> Inline -> Inline
 evalMaryInline env (Code (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Space
-    Right t -> case shonkier env t of
+    Right t -> case rawShonkier Set.empty env t of
       Value v -> fromValue v
       _ -> Space
 evalMaryInline _ b = b

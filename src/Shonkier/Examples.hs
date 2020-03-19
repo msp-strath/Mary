@@ -1,13 +1,14 @@
 module Shonkier.Examples where
 
+{-
 import Data.Map (singleton)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 
 import Shonkier.Syntax
 import Shonkier.Semantics
 
-appendEnv :: Env
-appendEnv = singleton "append" $ VFun [] appendEnv []
+appendEnv :: GlobalEnv
+appendEnv = singleton "append" $ singleton "." $ VFun mempty [] mempty []
     [ ( PValue <$> [ PCell (PBind "x") (PBind "xs")
                    , PBind "ys"
                    ]
@@ -33,8 +34,9 @@ appendTest :: Computation
 appendTest = shonkier appendEnv onetwothreefour
 
 
-readerEnv :: Env
-readerEnv = singleton "runReader" $ VFun [] readerEnv [[],["ask"]]
+readerEnv :: GlobalEnv
+readerEnv = singleton "runReader" $ singleton "." $
+  VFun mempty [] mempty [[],["ask"]]
      [ ( PValue <$> [PBind "_", PBind "val"]
        , Var "val"
        )
@@ -56,8 +58,9 @@ askTest :: Computation
 askTest = shonkier (appendEnv <> readerEnv) onetwoSquared
 
 
-stateEnv :: Env
-stateEnv = singleton "runState" $ VFun [] stateEnv [[],["get", "put"]]
+stateEnv :: GlobalEnv
+stateEnv = singleton "runState" $ singleton "." $
+  VFun mempty [] mempty [[],["get", "put"]]
   [ ( PValue <$> [PBind "_", PBind "val"]
     , Var "val"
     )
@@ -73,8 +76,8 @@ stateEnv = singleton "runState" $ VFun [] stateEnv [[],["get", "put"]]
     )
   ]
 
-mapEnv :: Env
-mapEnv = singleton "map" $ VFun [] mapEnv []
+mapEnv :: GlobalEnv
+mapEnv = singleton "map" $ singleton "." $ VFun mempty [] mempty []
   [ ( PValue <$> [ PBind "f", PAtom "" ]
     , Atom ""
     )
@@ -136,3 +139,4 @@ numAdd = mkPrim "primNumAdd"
 
 three :: Computation
 three = numAdd (Num <$> [1, 2])
+-}

@@ -1,5 +1,6 @@
 module Shonkier.Pretty.Examples where
 
+{-
 import Shonkier.Examples
 import Shonkier.Pretty ()
 
@@ -17,3 +18,4 @@ test = TIO.putStr
      , askTest
      , stateTest
      ]
+-}
