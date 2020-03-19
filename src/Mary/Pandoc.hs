@@ -43,14 +43,14 @@ process doc0 = do
 
 snarfMaryDef :: Block -> Writer [Text] Block
 snarfMaryDef c@(CodeBlock (_, cs, _) p)
-  | elem "mary-def" cs
+  | "mary-def" `elem` cs
   = if "keep" `elem` cs
     then c <$ tell [p]
     else Null <$ tell [p]
 snarfMaryDef b = return b
 
 evalMaryBlock :: [Import] -> GlobalEnv -> Block -> Block
-evalMaryBlock is env (CodeBlock (_, cs, _) e) | elem "mary" cs =
+evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Null
     Right t -> case rawShonkier is env t of
@@ -59,7 +59,7 @@ evalMaryBlock is env (CodeBlock (_, cs, _) e) | elem "mary" cs =
 evalMaryBlock _ _ b = b
 
 evalMaryInline :: [Import] -> GlobalEnv -> Inline -> Inline
-evalMaryInline is env (Code (_, cs, _) e) | elem "mary" cs =
+evalMaryInline is env (Code (_, cs, _) e) | "mary" `elem` cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Space
     Right t -> case rawShonkier is env t of
