@@ -7,8 +7,6 @@ import Text.Pandoc.JSON (toJSONFilter)
 
 import Options.Applicative
 
-import System.Environment
-
 import Shonkier
 
 import Mary.Pandoc

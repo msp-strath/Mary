@@ -10,4 +10,6 @@ maryTests = do
   let name      = "Mary"
   let extension = ".mary"
   let goldenExt = ".gold"
-  ioTests TestConfig{..} (servePage testConfig) []
+  ioTests TestConfig{..} (servePage testConfig)
+    -- excluded tests
+    ["./examples/links.mary"] -- test pipeline does not get page metavalue
