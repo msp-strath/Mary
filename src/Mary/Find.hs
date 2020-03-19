@@ -58,8 +58,7 @@ maryFind user sitesRoot page = do
             -- serve the metadata
             TIO.putStrLn "---"
             TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
-            TIO.putStr (decodeUtf8 (Y.encode (object ["sitesRoot" .= T.pack sitesRoot])))
-            TIO.putStr (decodeUtf8 (Y.encode (object ["page" .= T.pack page])))
+            -- TIO.putStr (decodeUtf8 (Y.encode (object ["sitesRoot" .= T.pack sitesRoot])))
             outputMeta postData
             outputMeta getData
             TIO.putStrLn "..."
