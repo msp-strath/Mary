@@ -59,8 +59,8 @@ elseif (filter_has_var(INPUT_GET, "pub")) {
   else {
       // We are good, ship the file!
       $mime_type = mime_content_type($target);
-      //header('Content-Type: '.$mime_type);
-      //readfile($target);
+      header('Content-Type: '.$mime_type);
+      readfile($target);
   }
 }
 else {
