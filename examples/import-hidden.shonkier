@@ -1,0 +1,5 @@
+import "examples/length.shonkier"
+import "examples/list2.shonkier"
+
+id(x) -> x
+main() -> length(map(id,[1 2 3]))
