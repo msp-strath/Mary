@@ -1,0 +1,19 @@
+import "examples/list.shonkier" as List
+import "examples/list2.shonkier" as List2
+import "examples/append.shonkier" as List
+import "examples/tails.shonkier"
+
+dup(x) -> [x x]
+
+reverse(xs) -> reverseAcc([],xs)
+reverseAcc(acc,[]) -> acc
+reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
+
+main() -> [ List.append( List2.map(dup,onetwo())
+                       , List.map(dup,threefour())
+                       )
+
+            append( threefour()
+                  , dup("hello")
+                  )
+          ]

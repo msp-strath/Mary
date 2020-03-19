@@ -6,7 +6,6 @@ import Control.Monad.State
 
 import Data.Maybe (fromMaybe)
 import Data.Map (singleton, (!?), keysSet)
-import Data.Set (Set)
 
 import Data.Bwd
 import Shonkier.Syntax
@@ -66,7 +65,7 @@ execShonkier m gl s = snd $ runShonkier m gl s
 shonkier :: GlobalEnv -> Term -> Computation
 shonkier rho t = evalShonkier (eval (mempty, t)) rho Nil
 
-rawShonkier :: Set FilePath -> GlobalEnv -> RawTerm -> Computation
+rawShonkier :: [Import] -> GlobalEnv -> RawTerm -> Computation
 rawShonkier is gl t =
   let scope = fmap keysSet gl
       term  = checkRaw "." is scope t
@@ -94,11 +93,14 @@ globalLookup fp x = do
 eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
   Var x     -> case x of
-    LocalVar x     -> use (fromMaybe (error "The IMPOSSIBLE happened!") $ rho !? x)
+    -- successes
+    LocalVar x     -> use (fromMaybe theIMPOSSIBLE $ rho !? x)
     GlobalVar fp x -> do v <- globalLookup fp x
-                         use (fromMaybe (error "The IMPOSSIBLE happened!") v)
-    AmbiguousVar{} -> handle ("AmbiguousName", []) []
-    OutOfScope{}   -> handle ("OutOfScope", []) []
+                         use (fromMaybe theIMPOSSIBLE v)
+    -- error cases
+    AmbiguousVar{}     -> handle ("AmbiguousName", []) []
+    OutOfScope{}       -> handle ("OutOfScope", []) []
+    InvalidNamespace{} -> handle ("InvalidNamespace", []) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
@@ -107,6 +109,8 @@ eval (rho, t) = case t of
   App f as  -> do push (AppL rho as)
                   eval (rho, f)
   Fun es cs -> use (VFun [] rho es cs)
+
+  where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
 
 use :: Value -> Shonkier Computation
 use v = pop >>= \case

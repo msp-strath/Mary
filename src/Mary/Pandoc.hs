@@ -7,7 +7,6 @@ import Data.Attoparsec.Text
 import Data.Foldable
 import Data.Maybe
 import Data.Monoid
-import qualified Data.Set as Set
 import Data.Text (Text)
 
 import Text.Pandoc.Builder
@@ -16,6 +15,7 @@ import Text.Pandoc.Walk
 import Shonkier.Parser
 import Shonkier.Value
 import Shonkier.Import
+import Shonkier.Syntax
 import Shonkier.Semantics
 import Shonkier.ShonkierJS
 
@@ -27,8 +27,8 @@ process doc0 = do
                           , let Right (is, p) = parseOnly module_ ds
                           ]
   (mod, env) <- loadToplevelModule "." rm
-  let doc2 = walk (evalMaryInline env)
-           . walk (evalMaryBlock env)
+  let doc2 = walk (evalMaryInline is env)
+           . walk (evalMaryBlock is env)
            $ doc1
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
@@ -49,23 +49,23 @@ snarfMaryDef c@(CodeBlock (_, cs, _) p)
     else Null <$ tell [p]
 snarfMaryDef b = return b
 
-evalMaryBlock :: GlobalEnv -> Block -> Block
-evalMaryBlock env (CodeBlock (_, cs, _) e) | elem "mary" cs =
+evalMaryBlock :: [Import] -> GlobalEnv -> Block -> Block
+evalMaryBlock is env (CodeBlock (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Null
-    Right t -> case rawShonkier Set.empty env t of
+    Right t -> case rawShonkier is env t of
       Value v -> fromValue v
       _ -> Null
-evalMaryBlock _ b = b
+evalMaryBlock _ _ b = b
 
-evalMaryInline :: GlobalEnv -> Inline -> Inline
-evalMaryInline env (Code (_, cs, _) e) | elem "mary" cs =
+evalMaryInline :: [Import] -> GlobalEnv -> Inline -> Inline
+evalMaryInline is env (Code (_, cs, _) e) | elem "mary" cs =
   case parseOnly (term <* endOfInput) e of
     Left _ -> Space
-    Right t -> case rawShonkier Set.empty env t of
+    Right t -> case rawShonkier is env t of
       Value v -> fromValue v
       _ -> Space
-evalMaryInline _ b = b
+evalMaryInline _ _ b = b
 
 listy :: (FromValue a) => ([a] -> b) -> Value -> b
 listy = (. fromValue)

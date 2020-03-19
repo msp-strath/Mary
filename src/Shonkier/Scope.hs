@@ -20,9 +20,18 @@ import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 
 import Shonkier.Syntax
 
+type Namespaces = Map Namespace (Set FilePath)
+
+declareNamespaces :: [Import] -> Namespaces
+declareNamespaces = foldr cons Map.empty where
+  cons (fp, mns) r = case mns of
+    Nothing -> r
+    Just nm -> Map.insertWith Set.union nm (Set.singleton fp) r
+
 data ScopeState = ScopeState
   { currentFile :: FilePath
   , imports     :: Set FilePath
+  , namespaces  :: Namespaces
   , globalScope :: GlobalScope
   }
 
@@ -46,10 +55,11 @@ evalScopeM :: ScopeM a -> ScopeState -> a
 evalScopeM = evalState . getScopeM
 
 checkRaw :: ScopeCheck t u
-         => FilePath -> Set FilePath -> GlobalScope -> t -> u
+         => FilePath -> [Import] -> GlobalScope -> t -> u
 checkRaw fp is gl p =
-  let imported  = Set.union (Set.fromList [".", fp]) is
-      initState = ScopeState fp imported gl
+  let imported  = Set.fromList $ [".", fp] ++ map fst is
+      nmspaces  = declareNamespaces is
+      initState = ScopeState fp imported nmspaces gl
   in evalScopeM (scopeCheck Set.empty p) initState
 
 instance ScopeCheck RawProgram Program where
@@ -62,18 +72,29 @@ instance ScopeCheck RawProgram Program where
       (nm, Left decl) -> pure (nm, Left decl)
       (nm, Right cl)  -> (nm,) . Right <$> scopeCheck local cl
 
+instance ScopeCheck RawVariable ScopedVariable where
+  scopeCheck local (mns, v) = case mns of
+    Nothing | Set.member v local -> pure $ LocalVar v
+    Just nm -> get >>= \ st -> case namespaces st Map.!? nm of
+      Nothing  -> pure $ InvalidNamespace nm v
+      Just fps -> checkGlobal fps v
+    _ -> get >>= \ st -> checkGlobal (imports st) v
+
+    where
+
+    checkGlobal :: Set FilePath -> Variable -> ScopeM ScopedVariable
+    checkGlobal scp v = do
+      candidates <- gets (\ st -> globalScope st Map.!? v)
+      pure $ case Set.toList . Set.intersection scp <$> candidates of
+        Just [fp]      -> GlobalVar fp v
+        Just fps@(_:_) -> AmbiguousVar fps v
+        _              -> OutOfScope v
+
 instance ScopeCheck RawTerm Term where
   scopeCheck local = \case
     Atom a -> pure (Atom a)
     Lit l  -> pure (Lit l)
-    Var v | Set.member v local -> pure (Var $ LocalVar v)
-          | otherwise -> get >>= \ st -> pure $ Var $
-              case Set.toList . Set.intersection (imports st) <$> globalScope st Map.!? v of
-                Just [fp]      -> GlobalVar fp v
-                Just fps@(_:_) -> AmbiguousVar fps v
-                -- for some strange reason we seem to be able to generate
-                -- a (Just [])!...
-                _              -> OutOfScope v
+    Var v  -> Var <$> scopeCheck local v
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Fun hs cs -> Fun hs <$> mapM (scopeCheck local) cs

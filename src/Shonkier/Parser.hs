@@ -12,12 +12,16 @@ import Shonkier.Syntax
 module_ :: Parser RawModule
 module_ = (,) <$> many (import_ <* skipSpace) <*> program
 
-import_ :: Parser FilePath
+import_ :: Parser Import
 import_ = do
-  string "import"
+  () <$ string "import"
   skipSpace
   String _ fp <- stringlit
-  pure (T.unpack fp)
+  skipSpace
+  alias <- choice [ Just <$ string "as" <* skipSpace <*> identifier
+                  , pure Nothing
+                  ]
+  pure (T.unpack fp, alias)
 
 program :: Parser RawProgram
 program = id <$ skipSpace
@@ -89,11 +93,20 @@ listOf p nil = (,) <$ char '['
 tupleOf :: Parser a -> Parser [a]
 tupleOf p = id <$ punc '(' <*> sep (punc ',') p <* punc ')'
 
+variable :: Parser RawVariable
+variable = do
+  start <- identifier
+  next  <- choice [ Just <$ char '.' <*> identifier
+                  , pure Nothing ]
+  pure $ case next of
+    Nothing  -> (Nothing, start)
+    Just end -> (Just start, end)
+
 weeTerm :: Parser RawTerm
 weeTerm = choice
   [ Atom <$> atom
   , Lit <$> literal
-  , Var <$> identifier
+  , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
   , Fun [] <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
   ]

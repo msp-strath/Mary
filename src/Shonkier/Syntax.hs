@@ -4,12 +4,16 @@ import Data.Text
 
 type Keyword   = String
 type Primitive = String
+type Namespace = String
 
-type Variable  = String
+type Variable     = String
+type RawVariable  = (Maybe Namespace, Variable)
+
 data ScopedVariable
   = LocalVar Variable
   | GlobalVar FilePath Variable
   | AmbiguousVar [FilePath] Variable
+  | InvalidNamespace Namespace Variable
   | OutOfScope Variable
   deriving (Show)
 
@@ -27,23 +31,23 @@ data Term' v a
   | Fun [[a]] [Clause' v a]
   deriving (Show)
 
-type RawTerm = Term' Variable String
+type RawTerm = Term' RawVariable String
 type Term    = Term' ScopedVariable String
 
 pattern TString k str = Lit (String k str)
 pattern TNum n        = Lit (Num n)
 
-type Imports      = [FilePath]
+type Import = (FilePath, Maybe Namespace)
 type Program' v a = [(String, Either [[String]] (Clause' v a))]
-type Module'  v a = (Imports, Program' v a)
+type Module'  v a = ([Import], Program' v a)
 
-type RawProgram = Program' Variable String
+type RawProgram = Program' RawVariable String
 type Program    = Program' ScopedVariable String
-type RawModule  = Module' Variable String
+type RawModule  = Module' RawVariable String
 type Module     = Module' ScopedVariable String
 
 type Clause' v a = ([PComputation' a], Term' v a)
-type RawClause = Clause' Variable String
+type RawClause = Clause' RawVariable String
 type Clause    = Clause' ScopedVariable String
 
 data PValue' a

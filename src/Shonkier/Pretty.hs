@@ -99,10 +99,11 @@ instance Pretty Literal where
 
 instance Pretty ScopedVariable where
   pretty = \case
-    LocalVar x       -> pretty x
-    GlobalVar _ x    -> pretty x
-    AmbiguousVar _ x -> pretty x
-    OutOfScope x     -> pretty x
+    LocalVar x           -> pretty x
+    GlobalVar _ x        -> pretty x
+    AmbiguousVar _ x     -> pretty x
+    OutOfScope x         -> pretty x
+    InvalidNamespace _ x -> pretty x
 
 instance Pretty Term where
   pretty t = case listView termCoalg t of
