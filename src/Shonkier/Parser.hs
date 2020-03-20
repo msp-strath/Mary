@@ -10,10 +10,9 @@ import Data.Ratio
 import Data.Text(Text)
 import qualified Data.Text as T
 
-import Debug.Trace
-
 import Shonkier.Syntax
 
+-- We can insert comments anywhere we may insert space
 skipSpace :: Parser ()
 skipSpace = comments
 
@@ -40,11 +39,12 @@ data Comment = Line | Nested deriving (Eq, Show)
 
 comments :: Parser ()
 comments = do
+  -- we may have many space-separated comments
   void $ many $ do
     Atto.skipSpace
     choice [ () <$ char '/' <* choice
-               [ () <$ char '/' <* trace "entering comments: found //" (scan ([Line], init) delim)
-               , () <$ char '*' <* trace "entering comments: found /*" (scan ([Nested], init) delim)
+               [ char '/' <* scan ([Line], init) delim
+               , char '*' <* scan ([Nested], init) delim
                ]
            ]
   Atto.skipSpace
@@ -55,30 +55,53 @@ comments = do
 
     -- eating a character
     eats c (s, t, u) = let (p, q, r) = init in (eat p c s, eat q c t, eat r c u)
+
+    -- @eat reset c state@ tries to eat the character @c@ from the @state@.
+    -- If it cannot, we had a mismatch so we need to restart matching with @reset@.
     eat reset@(e : es) c (d : ds)
+      -- success
       | c == d    = ds
-      | c == e    = trace "magic!" es -- The string "**/" is a valid end of comment!
+      -- surprise: we failed but could make progress along @reset@!
+      -- See e.g. that the string "**/" is a valid end of comment despite
+      -- "**" not being one. We fail finding the end-of-comment delimiter
+      -- on the second '*' but still make enough progress to succeed after
+      -- only reading one additional '/'.
+      -- We can afford to only have this check because all of our delimiters
+      -- have length 2. Otherwise we would need a more complex DFA to perform
+      -- this kind of backtracking.
+      | c == e    = es
+      -- catchall: hard fail, start from the very beginning
       | otherwise = reset
+      -- If the @state@ is empty we should have been done already.
+      -- None of the potential @reset@ are empty so this last case
+      -- can never happen.
     eat _ _ _ = error "The IMPOSSIBLE happened while parsing a comment!"
 
-    mayExit ([],_) = trace "exiting comment" Nothing
-    mayExit state  = Just state
+    -- @delim (stk, state) c@ checks whether eating @c@ in the state @state@
+    -- is enough to have closed all of the opened delimiters stored in the
+    -- stack @stk@.
+    -- The state, a triple of strings, is obscure enough that I have declared
+    -- pattern synonyms to clarify what the different configuations mean. They
+    -- are below because we may only declare pattern synonyms at the top-level.
 
-    -- once the stack is empty, we're done!
-    delim ([], _)                    c    = trace "exiting comment" Nothing
-    -- dealing with line comments: eat everything up until the end of line
-    delim (Line:ctx, _)              '\n' = trace ("found end of //") $ Just (ctx, init)
-    delim (ctx@(Line:_), st)         c    = Just (ctx, eats c st)
-    delim (ctx, ([], _, _))          c    =
-      trace ("found // eating " ++ [c]) $ Just (Line : ctx, eats c init)
-    -- dealing with nested comments
-    delim (ctx, (_, [], _))          c    =
-      trace ("found /* ctx: " ++ show ctx) $ Just (Nested : ctx, eats c init)
-    delim (Nested : ctx, (_, _, [])) c    =
-      trace ("found */ ctx: " ++ show ctx) $ mayExit (ctx, eats c init)
+    -- if the stack has just been emptied, we're done!
+    delim ([], _)                     c    = Nothing
+    -- line comments: eat everything up until the end of line
+    delim (Line : stk, _)             '\n' = Just (stk, init)
+    delim (stk@(Line : _), st)        c    = Just (stk, eats c st)
+    delim (stk, NewLine{})            c    = Just (Line : stk, eats c init)
+    -- nested comments: succeed only once you've closed the last one
+    delim (stk, NewNested{})          c    = Just (Nested : stk, eats c init)
+    delim ([Nested], EndNested{})     c    = Nothing
+    delim (Nested : stk, EndNested{}) c    = Just (stk, eats c init)
     -- default: haven't seen anything interesting so keep munching
-    delim (ctx, st)                  c    =
-      trace ("eating " ++ [c] ++ " ctx: " ++ show ctx) $ Just (ctx, eats c st)
+    delim (stk, st)                   c    = Just (stk, eats c st)
+
+-- ghc only wants invertible patterns...
+pattern NewLine   b c = ([], b, c)
+pattern NewNested a c = (a, [], c)
+pattern EndNested a b = (a, b, [])
+
 
 decl :: Parser [[String]]
 decl = tupleOf (sep skipSpace atom) <* char ':'

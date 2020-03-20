@@ -1,13 +1,27 @@
 import "examples/list.shonkier" // getting map, fold, ...
   as /* Keyword **/ List
 
-main(/* Anywhere */)/*so can */
+// Now the real work begins
+
+myList() -> [1 2 1/3 /* That's right, numerals are rationals! */]
+myFun(x) -> primNumMult(x,3)
+
+/* Note that you can.
+  /* Nest comments.
+     If you wan to.
+
+  */
+
+  /*
+  And that is totally fine.
+  Just don't forget to close them all at the end!
+*/*/
+
+main(/* Anywhere space may be */)/*so can */
   -> // a comment
   /* Isn't that great?
   */ map(/* myFun is the function */ myFun
-        , myList // and myList is the list
+        , myList() // and myList is the list
         )
 
 // /* This comment is not closed but it's commented out so WHO CARES?
-
-
