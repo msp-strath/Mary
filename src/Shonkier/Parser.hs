@@ -57,7 +57,7 @@ comments = do
     eats c (s, t, u) = let (p, q, r) = init in (eat p c s, eat q c t, eat r c u)
     eat reset@(e : es) c (d : ds)
       | c == d    = ds
-      | c == e    = es -- The string "**/" is a valid end of comment!
+      | c == e    = trace "magic!" es -- The string "**/" is a valid end of comment!
       | otherwise = reset
     eat _ _ _ = error "The IMPOSSIBLE happened while parsing a comment!"
 
@@ -75,7 +75,7 @@ comments = do
     delim (ctx, (_, [], _))          c    =
       trace ("found /* ctx: " ++ show ctx) $ Just (Nested : ctx, eats c init)
     delim (Nested : ctx, (_, _, [])) c    =
-      trace ("found */ ctx: " ++ show ctx) $ mayExit ([], eats c init)
+      trace ("found */ ctx: " ++ show ctx) $ mayExit (ctx, eats c init)
     -- default: haven't seen anything interesting so keep munching
     delim (ctx, st)                  c    =
       trace ("eating " ++ [c] ++ " ctx: " ++ show ctx) $ Just (ctx, eats c st)

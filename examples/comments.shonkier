@@ -1,5 +1,5 @@
 import "examples/list.shonkier" // getting map, fold, ...
-  as /* Keyword */ List
+  as /* Keyword **/ List
 
 main(/* Anywhere */)/*so can */
   -> // a comment
