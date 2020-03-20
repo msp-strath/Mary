@@ -39,13 +39,13 @@ data Comment = Line | Nested deriving (Eq, Show)
 
 comments :: Parser ()
 comments = do
+  Atto.skipSpace
   -- we may have many space-separated comments
   void $ many $ do
-    Atto.skipSpace
     () <$ char '/' <* choice [ char '/' <* match Line
                              , char '*' <* match Nested
                              ]
-  Atto.skipSpace
+    Atto.skipSpace
   where
 
     -- kickstarting the process: scanning the file until we have closed
