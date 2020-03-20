@@ -8,7 +8,7 @@ myFun(x) -> primNumMult(x,3)
 
 /* Note that you can.
   /* Nest comments.
-     If you wan to.
+     If you want to.
 
   */
 
