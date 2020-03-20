@@ -1,0 +1,13 @@
+import "examples/list.shonkier" // getting map, fold, ...
+  as /* Keyword */ List
+
+main(/* Anywhere */)/*so can */
+  -> // a comment
+  /* Isn't that great?
+  */ map(/* myFun is the function */ myFun
+        , myList // and myList is the list
+        )
+
+// /* This comment is not closed but it's commented out so WHO CARES?
+
+

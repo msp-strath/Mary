@@ -20,7 +20,9 @@ onShonkierModule action filename = do
   (mod@(is, ps), gl) <- importToplevelModule filename
   case [ m | ("main", Right m) <- ps ] of
     [([],body)] -> action mod gl body
-    _ -> error "not exactly one main function"
+    _ -> do
+      print mod
+      error "not exactly one main function"
 
 interpretShonkier :: FilePath -> IO ()
 interpretShonkier = onShonkierModule $ \ _ gl body ->

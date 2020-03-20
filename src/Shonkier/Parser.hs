@@ -1,13 +1,21 @@
 module Shonkier.Parser where
 
 import Control.Applicative
-import Data.Attoparsec.Text
+
+import Data.Attoparsec.Text hiding (skipSpace)
+import qualified Data.Attoparsec.Text as Atto
 import Data.Char
+import Data.Functor (void)
 import Data.Ratio
 import Data.Text(Text)
 import qualified Data.Text as T
 
+import Debug.Trace
+
 import Shonkier.Syntax
+
+skipSpace :: Parser ()
+skipSpace = comments
 
 module_ :: Parser RawModule
 module_ = (,) <$> many (import_ <* skipSpace) <*> program
@@ -27,6 +35,50 @@ program :: Parser RawProgram
 program = id <$ skipSpace
             <*> many ((,) <$> identifier <*> (Left <$> decl <|> Right <$>defn) <* skipSpace)
              <* endOfInput
+
+data Comment = Line | Nested deriving (Eq, Show)
+
+comments :: Parser ()
+comments = do
+  void $ many $ do
+    Atto.skipSpace
+    choice [ () <$ char '/' <* choice
+               [ () <$ char '/' <* trace "entering comments: found //" (scan ([Line], init) delim)
+               , () <$ char '*' <* trace "entering comments: found /*" (scan ([Nested], init) delim)
+               ]
+           ]
+  Atto.skipSpace
+  where
+
+    -- delimiters
+    init = ("//", "/*", "*/")
+
+    -- eating a character
+    eats c (s, t, u) = let (p, q, r) = init in (eat p c s, eat q c t, eat r c u)
+    eat reset@(e : es) c (d : ds)
+      | c == d    = ds
+      | c == e    = es -- The string "**/" is a valid end of comment!
+      | otherwise = reset
+    eat _ _ _ = error "The IMPOSSIBLE happened while parsing a comment!"
+
+    mayExit ([],_) = trace "exiting comment" Nothing
+    mayExit state  = Just state
+
+    -- once the stack is empty, we're done!
+    delim ([], _)                    c    = trace "exiting comment" Nothing
+    -- dealing with line comments: eat everything up until the end of line
+    delim (Line:ctx, _)              '\n' = trace ("found end of //") $ Just (ctx, init)
+    delim (ctx@(Line:_), st)         c    = Just (ctx, eats c st)
+    delim (ctx, ([], _, _))          c    =
+      trace ("found // eating " ++ [c]) $ Just (Line : ctx, eats c init)
+    -- dealing with nested comments
+    delim (ctx, (_, [], _))          c    =
+      trace ("found /* ctx: " ++ show ctx) $ Just (Nested : ctx, eats c init)
+    delim (Nested : ctx, (_, _, [])) c    =
+      trace ("found */ ctx: " ++ show ctx) $ mayExit ([], eats c init)
+    -- default: haven't seen anything interesting so keep munching
+    delim (ctx, st)                  c    =
+      trace ("eating " ++ [c] ++ " ctx: " ++ show ctx) $ Just (ctx, eats c st)
 
 decl :: Parser [[String]]
 decl = tupleOf (sep skipSpace atom) <* char ':'
