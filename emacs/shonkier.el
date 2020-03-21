@@ -32,7 +32,7 @@
     (,"'[[:alnum:]]+"               . font-lock-constant-face)
     (,shonkier-numeric-regexp       . (1 font-lock-constant-face))
     (,shonkier-function-def-regexp  . (1 font-lock-function-name-face))
-;;    (,shonkier-strings-regexp       0 font-lock-string-face t)
+    (,shonkier-strings-regexp       0 font-lock-string-face t)
     ))
 
 ;; syntax table
@@ -40,10 +40,13 @@
 (setq shonkier-syntax-table
   (let ((st (make-syntax-table)))
 
-  ;; multiple lines
+  ;; single line & nesting multiple lines
   (modify-syntax-entry ?/ ". 124b" st)
   (modify-syntax-entry ?* ". 23n" st)
   (modify-syntax-entry ?\n "> b" st)
+
+  ;; strings are hihghlighted separately
+  (modify-syntax-entry ?\" "." st)
 
   st))
 

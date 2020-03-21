@@ -11,27 +11,6 @@ All the
 id(x) -> x
 half() ->0.5
 
-main() -> map(id,[foo"1"foo [2.0|1.0] 1/425])
+main() -> map(id,[foo" "fo"foo [2.0|1.0] 1/425])
 
-// TODO: proper string highlighting
-// At the moment foo"1"fo"foo detects a string literal "1"
-// followed by an open string literal "foo... spanning until
-// the end of the file.
-
-// As you can see in the emacs/shonkier.el, I have a regexp for
-// fenced string literals. I have not however found a way to
-// highlight these & shut up the default syntax-table notion of
-// a string literal.
-
-// (,shonkier-strings-regexp       0 font-lock-string-face t)
-// is a brutal solution that performs the right highlighting on
-// top of emacs' broken attempt. But that also means that emacs
-// is still happily highlighting the file to very end after reading
-// foo"1"fo"foo.
-
-// (setq font-lock-keywords-only t) unfortunately also disables
-// the neat *nested* comments highlighting so we would need to
-// reimplement that. A pain.
-
-// syntax-propertize-rules seems pretty hard to use. I may have
-// another go at a later point in the future.
+// TODO: nothing left to do!
