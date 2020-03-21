@@ -1,0 +1,6 @@
+;; this should be inserted in your .emacs
+;; be careful to replace PATH/TO/ with the path...
+
+;; shonkier
+(autoload 'shonkier-mode "PATH/TO/emacs/shonkier.el" nil t)
+(add-to-list 'auto-mode-alist '("\\.shonkier\\'" . shonkier-mode))
