@@ -135,14 +135,14 @@ literal = stringlit <|> numlit
 
 stringlit :: Parser Literal
 stringlit = do
-  k <- option "" identifier
-  let end = '"':k
+  fence <- option "" identifier <* char '"'
+  let end = '"':fence
   let delim []       _ = Nothing
       delim (d : ds) c
         | c == d    = Just ds
+        | c == '"'  = Just fence
         | otherwise = Just end
-  String k <$  char '"'
-           <*> (T.dropEnd (length end) <$> scan end delim)
+  String fence . T.dropEnd (length end) <$> scan end delim
 
 data NumExtension
   = Dot   String
