@@ -9,7 +9,7 @@ All the
 // /* Bells and whistles
 
 id(x) -> x
-half() ->0.5
+half  () ->0.5
 
 main() -> map(id,[foo" "fo"foo [2.0|1.0] 1/425])
 

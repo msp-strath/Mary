@@ -12,7 +12,7 @@
 (setq shonkier-operators-regexp (regexp-opt shonkier-operators))
 (setq shonkier-warnings-regexp (regexp-opt shonkier-warnings))
 (setq shonkier-numeric-regexp   "[[:space:](,|>[]\\([[:digit:]]+\\([\./][[:digit:]]+\\)?\\)")
-(setq shonkier-function-def-regexp "^\\([[:alpha:]][[:alnum:]]+\\)(")
+(setq shonkier-function-def-regexp "^\\([[:alpha:]][[:alnum:]]+\\)[[:space:]]*(")
 (setq shonkier-strings-regexp      "\\(\\([[:alpha:]][[:alnum:]]*\\)?\\)\".*?\"\\1")
 
 ;; clear memory
