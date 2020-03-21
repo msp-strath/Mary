@@ -459,9 +459,9 @@ function renderList(a,b) {
         switch (tl.tag) {
         case "Atom":
             if (tl.atom === "") { tl = null; continue; };
-            output(render(Value(tl))); tl = null; continue;
+            output("|"); output(render(Value(tl))); tl = null; continue;
         case "Cell": hd = tl.fst; tl = tl.snd; continue;
-        default: output(" "); output(render(Value(tl))); tl = null; continue;
+        default: output("|"); output(render(Value(tl))); tl = null; continue;
         };
     };
     output("]");
