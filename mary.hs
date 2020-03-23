@@ -13,11 +13,15 @@ import Mary.Pandoc
 import Mary.ServePage
 import Mary.Find
 
+import Paths_mary
+
 main :: IO ()
 main = customExecParser (prefs showHelpOnEmpty) opts >>= \case
   Pandoc              -> toJSONFilter process
   Shonkier filename   -> interpretShonkier filename
-  Shonkierjs filename -> compileShonkier filename >>= TIO.putStrLn
+  Shonkierjs filename -> do
+    shonkierjs <- getDataFileName "src/data-dir/Shonkier.js"
+    compileShonkier shonkierjs filename >>= TIO.putStrLn
   Page filename       -> servePage testConfig filename >>= TIO.putStrLn
   Find{..}            -> maryFind user sitesRoot page
   where

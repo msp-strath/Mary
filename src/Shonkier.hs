@@ -29,11 +29,11 @@ interpretShonkier = onShonkierModule $ \ _ gl body ->
     Request (r,_) fr -> error $ "unhandled request " ++ r
 
 -- no support for imports here yet!
-compileShonkier :: FilePath -> IO Text
-compileShonkier fp = (`onShonkierModule` fp) $ \ _ env body -> do
+compileShonkier :: FilePath -> FilePath -> IO Text
+compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ env body -> do
   -- Couldn't figure how to import in node so I just concat the
   -- whole interpreter defined 'Shonkier.js' on top
-  interpreter <- TIO.readFile "./src/Shonkier/Shonkier.js"
+  interpreter <- TIO.readFile shonkierjs
   let header txt = T.concat ["\n/***** "
                             , txt
                             , " "

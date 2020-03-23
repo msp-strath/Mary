@@ -52,6 +52,8 @@ build-type:          Simple
 extra-source-files:  README.md
 --                   , ChangeLog.md
 
+data-files:          src/data-dir/Shonkier.js
+
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
@@ -117,6 +119,7 @@ library
 executable mary
   hs-source-dirs:      .
   main-is:             mary.hs
+  other-modules:       Paths_mary
   build-depends:       attoparsec >=0.13 && <0.14
                      , base >=4.9.1.0 && <4.14
                      , mary
