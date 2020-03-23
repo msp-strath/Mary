@@ -1,0 +1,38 @@
+.shonkier-pretty {
+  display: block;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/*
+   We use the same color as the emacs mode.
+   See http://www.raebear.net/computers/emacs-colors/ for a conversion table.
+*/
+
+.shonkier-pretty .shonkier-atom {
+    color: #008b8b;
+}
+
+.shonkier-pretty .shonkier-error {
+    background-color: red;
+}
+
+.shonkier-pretty .shonkier-function {
+    color: #0000ff;
+}
+
+.shonkier-pretty .shonkier-keyword {
+    color: #a020f0;
+}
+
+.shonkier-pretty .shonkier-numeric {
+    color: #008b8b;
+}
+
+.shonkier-pretty .shonkier-primitive {
+    color: #483d8b;
+}
+
+.shonkier-pretty .shonkier-string {
+    color: #8b2252;
+}

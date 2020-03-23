@@ -1,6 +1,7 @@
 module Shonkier.Syntax where
 
 import Data.Text
+import Utils.List
 
 type Keyword   = String
 type Primitive = String
@@ -69,3 +70,19 @@ data PComputation' a
     --   to handle (values are considered trivial comps).
   deriving (Show)
 type PComputation = PComputation' String
+
+---------------------------------------------------------------------------
+-- INSTANCES
+---------------------------------------------------------------------------
+
+instance HasListView (Term' v String) (Term' v String) where
+  coalgebra = \case
+    Atom ""  -> ItsNil
+    Cell a b -> ItsCons a b
+    _        -> ItsNot
+
+instance HasListView PValue PValue where
+  coalgebra = \case
+    PAtom ""  -> ItsNil
+    PCell a b -> ItsCons a b
+    _         -> ItsNot

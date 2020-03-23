@@ -87,6 +87,7 @@ library
                      , Shonkier.Parser.Examples
                      , Shonkier.Pretty
                      , Shonkier.Pretty.Examples
+                     , Shonkier.Pretty.Render.Pandoc
                      , Shonkier.Primitives
                      , Shonkier.Scope
                      , Shonkier.Semantics
@@ -103,12 +104,15 @@ library
 
     -- LANGUAGE extensions used by modules in this package.
   default-extensions:  DeriveTraversable
+                     , FlexibleInstances
                      , GeneralizedNewtypeDeriving
                      , LambdaCase
+                     , MultiParamTypeClasses
                      , OverloadedStrings
                      , PatternSynonyms
                      , RecordWildCards
                      , TupleSections
+                     , TypeSynonymInstances
 
   ghc-options:         -Wincomplete-patterns
                        -Wmissing-signatures

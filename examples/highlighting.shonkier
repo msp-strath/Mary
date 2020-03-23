@@ -9,8 +9,8 @@ All the
 // /* Bells and whistles
 
 id(x) -> x
-half  () ->0.5
+half  () ->primNumMult(0.25,2)
 
-main() -> map(id,[foo" "fo"foo [2.0|1.0] 1/425])
+main() -> map(id,[foo" "fo"foo [2.0|1.0] 1/425 'atom])
 
 // TODO: nothing left to do!
