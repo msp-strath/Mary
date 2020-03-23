@@ -6,6 +6,7 @@ import Control.Monad.State
 
 import Data.Maybe (fromMaybe)
 import Data.Map (singleton, (!?), keysSet)
+import qualified Data.Text as T
 
 import Data.Bwd
 import Shonkier.Syntax
@@ -98,9 +99,9 @@ eval (rho, t) = case t of
     GlobalVar fp x -> do v <- globalLookup fp x
                          use (fromMaybe theIMPOSSIBLE v)
     -- error cases
-    AmbiguousVar{}     -> handle ("AmbiguousVar", []) []
-    OutOfScope{}       -> handle ("OutOfScope", []) []
-    InvalidNamespace{} -> handle ("InvalidNamespace", []) []
+    AmbiguousVar _ x     -> handle ("AmbiguousVar", [vVar x]) []
+    OutOfScope x         -> handle ("OutOfScope", [vVar x]) []
+    InvalidNamespace _ x -> handle ("InvalidNamespace", [vVar x]) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
@@ -111,6 +112,7 @@ eval (rho, t) = case t of
   Fun es cs -> use (VFun [] rho es cs)
 
   where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
+        vVar x = VString "" $ T.pack x
 
 use :: Value -> Shonkier Computation
 use v = pop >>= \case

@@ -45,13 +45,39 @@
   (modify-syntax-entry ?* ". 23n" st)
   (modify-syntax-entry ?\n "> b" st)
 
-  ;; strings are hihghlighted separately
+  ;; strings are highlighted separately
   (modify-syntax-entry ?\" "." st)
 
   st))
 
+(defvar shonkier-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-l"	      'shonkier-interpret)
+    (define-key map "\C-c\C-c"	      'shonkier-compile-js)
+    map)
+  "Keymap for shonkier mode.")
+
+(defun shonkier-interpret ()
+  "Run shonkier interpreter"
+  (interactive)
+  (compile (concat "mary shonkier " buffer-file-name)))
+
+(defun shonkier-compile-js ()
+  "Run shonkier to Javascript compiler"
+  (interactive)
+  (compile (concat "mary shonkierjs " buffer-file-name)))
+
+
+(easy-menu-define shonkier-mode-menu shonkier-mode-map
+  "Menu used when shonkier mode is active."
+  '("Shonkier"
+    ["Interpret"    shonkier-interpret
+     :help "Run shonkier interpreter"]
+    ["Compile to JS"    shonkier-compile-js
+     :help "Run compiler producing Javascript"]))
+
 ;; define the mode
-(define-derived-mode shonkier-mode fundamental-mode
+(define-derived-mode shonkier-mode prog-mode
   "SHONKIER mode"
   ;; handling comments
   :syntax-table shonkier-syntax-table
@@ -59,6 +85,8 @@
   ;;  (setq font-lock-keywords-only t)
   (setq font-lock-defaults '((shonkier-font-lock-keywords)))
   (setq mode-name "shonkier")
+  ;; add menu
+  (easy-menu-add shonkier-mode-menu)
   ;; clear memory
   (setq shonkier-keywords-regexp nil)
   (setq shonkier-operators-regexp nil)
