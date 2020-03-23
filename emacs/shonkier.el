@@ -52,8 +52,8 @@
 
 (defvar shonkier-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c"	      'shonkier-interpret)
-    (define-key map "\C-c\C-j"	      'shonkier-compile-js)
+    (define-key map "\C-c\C-l"	      'shonkier-interpret)
+    (define-key map "\C-c\C-c"	      'shonkier-compile-js)
     map)
   "Keymap for shonkier mode.")
 
