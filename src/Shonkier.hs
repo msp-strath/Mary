@@ -4,10 +4,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
-import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc (line)
 import Data.Text.Prettyprint.Doc.Render.Text
 
-import Shonkier.Pretty ()
+import Shonkier.Pretty
 import Shonkier.Value
 import Shonkier.Import
 import Shonkier.Semantics

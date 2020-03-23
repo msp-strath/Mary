@@ -5,6 +5,7 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Recursively building content</title>
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/msp-strath/Mary/master/src/data-dir/shonkier.css" />
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
@@ -47,13 +48,15 @@ Abcd
 </ul>
 </div>
 <p>It was generated using the following code:</p>
-<pre class="mary-def keep"><code>map(f, [])     -&gt; []
-map(f, [x|xs]) -&gt; [f(x)|map(f, xs)]
-
-enum(xs@[_|_]) -&gt; [[&#39;Plain primStringConcat(xs)] [&#39;BulletList|map(enum,xs)]]
-enum(xs)       -&gt; [[&#39;Plain xs]]
-
-test() -&gt; [&#39;Div &quot;Enums&quot; [] []|enum([&quot;A&quot; [[&quot;b&quot; &quot;c&quot;] &quot;d&quot;]])]</code></pre>
+<div class="shonkier-pretty">
+<span class="shonkier-function">map</span>(f, []) -&gt; []<br />
+<span class="shonkier-function">map</span>(f, [x|xs]) -&gt; [f(x)|map(f, xs)]<br />
+<br />
+<span class="shonkier-function">enum</span>(xs@[_|_]) -&gt; [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
+<span class="shonkier-function">enum</span>(xs) -&gt; [[<span class="shonkier-atom">'Plain</span> xs]]<br />
+<br />
+<span class="shonkier-function">test</span>() -&gt; [<span class="shonkier-atom">'Div</span> <span class="shonkier-string">"Enums"</span> [] []|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
+</div>
 </form>
 </body>
 </html>

@@ -14,6 +14,7 @@ $if(keywords)$
   <meta name="keywords" content="$for(keywords)$$keywords$$sep$, $endfor$" />
 $endif$
   <title>$if(title-prefix)$$title-prefix$ – $endif$$pagetitle$</title>
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/msp-strath/Mary/master/src/data-dir/shonkier.css" />
 $for(css)$
   <link rel="stylesheet" href="$css$" />
 $endfor$
