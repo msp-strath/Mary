@@ -1,9 +1,9 @@
 module Shonkier where
 
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-
 import Data.Text.Prettyprint.Doc (line, layoutPretty, defaultLayoutOptions)
 import Data.Text.Prettyprint.Doc.Render.Text
 
