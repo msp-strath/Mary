@@ -4,7 +4,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
-import Data.Text.Prettyprint.Doc (line)
+import Data.Text.Prettyprint.Doc (line, layoutPretty, defaultLayoutOptions)
 import Data.Text.Prettyprint.Doc.Render.Text
 
 import Shonkier.Pretty
