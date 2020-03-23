@@ -1,13 +1,13 @@
 catchInvalidNamespace('InvalidNamespace):
-catchInvalidNamespace({ 'InvalidNamespace() -> _ }, k) -> k()
+catchInvalidNamespace({ 'InvalidNamespace(_) -> _ }, k) -> k()
 catchInvalidNamespace(v,_) -> v
 
 catchAmbiguousVar('AmbiguousVar):
-catchAmbiguousVar({ 'AmbiguousVar() -> _ }, k) -> k()
+catchAmbiguousVar({ 'AmbiguousVar(_) -> _ }, k) -> k()
 catchAmbiguousVar(v,_) -> v
 
 catchOutOfScope('OutOfScope):
-catchOutOfScope({ 'OutOfScope() -> _ }, k) -> k()
+catchOutOfScope({ 'OutOfScope(_) -> _ }, k) -> k()
 catchOutOfScope(v,_) -> v
 
 catchNotFuny('NotFuny):

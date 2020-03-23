@@ -64,7 +64,8 @@ importModule :: FilePath -> ImportT IO (Maybe Module)
 importModule fp = do
   cached <- gets (Set.member fp . visited)
   exists <- liftIO $ doesFileExist fp
-  if cached || not exists
+  when (not exists) $ error $ "import does not exist: " ++ fp
+  if cached
     then pure Nothing
     else Just <$> forceImportModule fp
 

@@ -26,7 +26,9 @@ interpretShonkier :: FilePath -> IO ()
 interpretShonkier = onShonkierModule $ \ _ gl body ->
   case shonkier gl body of
     Value v -> putDoc $ pretty v <> line
-    Request (r,_) fr -> error $ "unhandled request " ++ r
+    r@Request{} -> do
+      let r' = renderStrict $ layoutPretty defaultLayoutOptions $ pretty r
+      error $ "unhandled request " ++ T.unpack r'
 
 -- no support for imports here yet!
 compileShonkier :: FilePath -> FilePath -> IO Text

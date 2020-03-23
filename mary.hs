@@ -1,5 +1,7 @@
 module Main where
 
+import Control.Exception as E
+
 import Data.Semigroup ((<>))
 import Data.Text.IO as TIO
 
@@ -16,7 +18,7 @@ import Mary.Find
 import Paths_mary
 
 main :: IO ()
-main = customExecParser (prefs showHelpOnEmpty) opts >>= \case
+main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
   Pandoc              -> toJSONFilter process
   Shonkier filename   -> interpretShonkier filename
   Shonkierjs filename -> do
@@ -25,9 +27,11 @@ main = customExecParser (prefs showHelpOnEmpty) opts >>= \case
   Page filename       -> servePage testConfig filename >>= TIO.putStrLn
   Find{..}            -> maryFind user sitesRoot page
   where
+    pp = prefs showHelpOnEmpty
     opts = info (optsParser <**> helper)
-      ( fullDesc
-     <> header "Mary - a content delivery and assessment engine")
+      ( fullDesc <> header "Mary - a content delivery and assessment engine")
+    h :: SomeException -> IO ()
+    h e = Prelude.putStrLn $ "mary ERROR " ++ displayException e
 
 data Options
   = Pandoc
