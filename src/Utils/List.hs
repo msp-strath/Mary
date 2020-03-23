@@ -19,5 +19,5 @@ class HasListView a la where
   listView :: la -> ([a], Maybe la)
   listView seed = case coalgebra seed of
     ItsNil       -> ([], Nothing)
-    ItsCons x xs -> (x :) *** id $ listView xs
+    ItsCons x xs -> first (x :) $ listView xs
     ItsNot       -> ([], Just seed)
