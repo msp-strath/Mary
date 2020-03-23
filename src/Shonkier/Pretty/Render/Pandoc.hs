@@ -18,7 +18,7 @@ renderTree = \case
   STEmpty           -> mempty
   STChar c          -> pure $ Str (T.singleton c)
   STText _ t        -> pure $ Str t
-  STLine i          -> pure $ LineBreak
+  STLine i          -> pure LineBreak
   STAnn ann content -> pure $ Span ("", [renderAnn ann], []) $ renderTree content
   STConcat contents -> foldMap renderTree contents
 
@@ -31,5 +31,3 @@ renderAnn ann = "shonkier-" <> case ann of
   AnnNumeric   -> "numeric"
   AnnPrimitive -> "primitive"
   AnnString    -> "string"
-
-
