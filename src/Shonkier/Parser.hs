@@ -189,9 +189,11 @@ weeTerm = choice
   ]
 
 moreTerm :: RawTerm -> Parser RawTerm
-moreTerm t = (App t <$> tupleOf term >>= moreTerm)
-           <|> pure t
-
+moreTerm t = choice
+  [ App t <$> tupleOf term >>= moreTerm
+  , Semi t <$ punc ';' <*> term
+  , pure t
+  ]
 
 clause :: Parser RawClause
 clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace

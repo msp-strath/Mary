@@ -4,14 +4,14 @@
 
 ;; define several class of keywords
 (setq shonkier-keywords  '("import" "as"))
-(setq shonkier-operators '("->" "@"))
+(setq shonkier-operators '("->" "@" ";"))
 (setq shonkier-warnings  '("TODO" "FIXME"))
 
 ;; create the regex string for each class of keywords
 (setq shonkier-keywords-regexp  (regexp-opt shonkier-keywords  'words))
 (setq shonkier-operators-regexp (regexp-opt shonkier-operators))
 (setq shonkier-warnings-regexp (regexp-opt shonkier-warnings))
-(setq shonkier-numeric-regexp   "[[:space:](,|>[]\\([[:digit:]]+\\([\./][[:digit:]]+\\)?\\)")
+(setq shonkier-numeric-regexp   "[[:space:](,|>[{;/]\\([[:digit:]]+\\([\./][[:digit:]]+\\)?\\)")
 (setq shonkier-function-def-regexp "^\\([[:alpha:]][[:alnum:]]+\\)[[:space:]]*(")
 (setq shonkier-strings-regexp      "\\(\\([[:alpha:]][[:alnum:]]*\\)?\\)\".*?\"\\1")
 

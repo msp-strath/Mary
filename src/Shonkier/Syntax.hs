@@ -29,6 +29,7 @@ data Term' v a
   | Var v
   | Cell (Term' v a) (Term' v a)
   | App (Term' v a) [Term' v a]
+  | Semi (Term' v a) (Term' v a)
   | Fun [[a]] [Clause' v a]
   deriving (Show)
 
