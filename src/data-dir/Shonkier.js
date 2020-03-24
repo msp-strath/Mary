@@ -27,6 +27,9 @@ function Cell(x,y) { // Cell x y
 function App(f, as) {       // App f as, where as is an array
     return {tag: "App", fun: f, args: as};
 };
+function Semi(l, r) { // Semi l r
+    return {tag: "Semi", left: l, right: r};
+};
 function Fun(hs, cs) { // Fun hs cs, both arrays
     return {tag: "Fun", handles: hs, clauses: cs};
 };
@@ -193,6 +196,9 @@ function AppL(rho,ts) {
 function AppR(f,cz,rho,i,hs,ts) { // carefully engineered pun with Apply
     return {tag: 3, fun: f, done: cz, env: rho, now: i, handles: hs, args: ts};
 };
+function SemiL(rho,r) {
+    return {tag: 4, env: rho, right: r};
+};
 
 // State
 // pop states, ie those which pop ctx until done
@@ -324,6 +330,9 @@ function shonkier(glob,t) {
                               ,fr.now+1 // move yer finger
                               ,fr.handles,fr.args);
                 continue;
+            case 4: // SemiL
+                state = Eval(fr.env, fr.right);
+                continue;
             };
             state = Handle("BadFrame",[],null);
             continue;
@@ -376,6 +385,10 @@ function shonkier(glob,t) {
             case "App":
                 push(AppL(state.env,t.args));
                 state = Eval(state.env,t.fun);
+                continue;
+            case "Semi":
+                push(SemiL(state.env,t.right));
+                state = Eval(state.env,t.left);
                 continue;
             case "Fun":
                 state = Use(VFun(null,state.env,t.handles,t.clauses));

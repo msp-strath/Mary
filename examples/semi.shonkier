@@ -1,0 +1,9 @@
+catchLeft('left):
+catchLeft({ 'left() -> _ }, k) -> k()
+catchLeft(v, _) -> v
+
+main() -> [ catchLeft('left(); 'right(),{1})
+            "world"; "hello"
+            'nested; 1.0; "world"
+            catchLeft(1; 'left(), {"!"})
+          ]

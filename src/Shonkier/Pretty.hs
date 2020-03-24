@@ -11,7 +11,7 @@ import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList)
+import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
 import qualified Data.Text.Prettyprint.Doc as P
 
 import Shonkier.Syntax
@@ -71,6 +71,9 @@ arrow = annotate AnnOperator "->"
 
 arobase :: Doc
 arobase = annotate AnnOperator "@"
+
+semi :: Doc
+semi = annotate AnnOperator P.semi
 
 {-
 Lisp conventions for ppList:
@@ -141,6 +144,7 @@ instance Pretty v => Pretty (Term' v String) where
       Var v      -> pretty v
       Cell a b   -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts   -> ppApp (pretty f) ts
+      Semi l r   -> pretty l <> semi <+> pretty r
       Fun hs cls -> ppFun hs cls
     it -> ppList it
 
