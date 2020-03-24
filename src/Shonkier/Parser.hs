@@ -185,16 +185,18 @@ weeTerm = choice
   , Lit <$> literal
   , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
-  , Fun [] <$ char '{' <* skipSpace <*> sep (punc '|') clause <* skipSpace <* char '}'
+  , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
   ]
 
 moreTerm :: RawTerm -> Parser RawTerm
-moreTerm t = (App t <$> tupleOf term >>= moreTerm)
-           <|> pure t
-
+moreTerm t = choice
+  [ App t <$> tupleOf term >>= moreTerm
+  , Semi t <$ punc ';' <*> term
+  , pure t
+  ]
 
 clause :: Parser RawClause
-clause = (,) <$> sep (punc ',') pcomputation <* skipSpace <* arrow <* skipSpace
+clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
   <|> (,) [] <$> term
 

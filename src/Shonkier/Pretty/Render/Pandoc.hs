@@ -29,5 +29,6 @@ renderAnn ann = "shonkier-" <> case ann of
   AnnFunction  -> "function"
   AnnKeyword   -> "keyword"
   AnnNumeric   -> "numeric"
+  AnnOperator  -> "operator"
   AnnPrimitive -> "primitive"
   AnnString    -> "string"

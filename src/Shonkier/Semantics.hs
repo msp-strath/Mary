@@ -109,6 +109,8 @@ eval (rho, t) = case t of
                   eval (rho, a)
   App f as  -> do push (AppL rho as)
                   eval (rho, f)
+  Semi l r  -> do push (SemiL rho r)
+                  eval (rho, l)
   Fun es cs -> use (VFun [] rho es cs)
 
   where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
@@ -143,6 +145,7 @@ use v = pop >>= \case
         _  -> handle ("ThunksAreNullary", [v]) []
       _ -> handle ("NoFun",[v]) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
+    SemiL rho r -> eval (rho, r)
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]

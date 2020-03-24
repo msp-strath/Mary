@@ -11,7 +11,7 @@ import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList)
+import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
 import qualified Data.Text.Prettyprint.Doc as P
 
 import Shonkier.Syntax
@@ -24,6 +24,7 @@ data Annotation
   | AnnFunction
   | AnnKeyword
   | AnnNumeric
+  | AnnOperator
   | AnnPrimitive
   | AnnString
 
@@ -65,6 +66,15 @@ ppAtom str = annotate AnnAtom $ case str of
   [] -> "[]"
   a  -> squote <> pretty a
 
+arrow :: Doc
+arrow = annotate AnnOperator "->"
+
+arobase :: Doc
+arobase = annotate AnnOperator "@"
+
+semi :: Doc
+semi = annotate AnnOperator P.semi
+
 {-
 Lisp conventions for ppList:
 [xs]           |-> [xs]
@@ -85,10 +95,13 @@ ppApp :: Pretty a => Doc -> [a] -> Doc
 ppApp f ts = f <> tupled (pretty <$> ts)
 
 ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc
-ppFun hs cls = encloseSep lbrace rbrace semi $ pretty <$> cls
+ppFun hs [cl] = enclose lbrace rbrace $ pretty cl
+ppFun hs cls  = hang 0 $ enclose lbrace rbrace
+              $ (hang 0 $ pretty cls) <> line
 
 ppClause :: Pretty v => Clause' String v -> Doc
-ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
+ppClause ([], t) = pretty t
+ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
 
 ppStringLit :: String -> T.Text -> Doc
 ppStringLit k str = annotate AnnString $
@@ -131,11 +144,14 @@ instance Pretty v => Pretty (Term' String v) where
       Var v      -> pretty v
       Cell a b   -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts   -> ppApp (pretty f) ts
+      Semi l r   -> pretty l <> semi <+> pretty r
       Fun hs cls -> ppFun hs cls
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where
   pretty = ppClause
+
+  prettyList = vcat . map pretty
 
 instance Pretty PValue where
   pretty p = case listView p of
@@ -143,7 +159,7 @@ instance Pretty PValue where
       PAtom a   -> ppAtom a
       PLit l    -> pretty l
       PBind v   -> pretty v
-      PAs v p   -> pretty v <> "@" <> pretty p
+      PAs v p   -> pretty v <> arobase <> pretty p
       PWild     -> "_"
       PCell a b -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
     it -> ppList it
@@ -151,7 +167,7 @@ instance Pretty PValue where
 instance Pretty PComputation where
   pretty = \case
     PValue p           -> pretty p
-    PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, "->", pretty v]
+    PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, arrow, pretty v]
     PThunk v           -> braces $ pretty v
 
 instance Pretty Value where
@@ -178,8 +194,8 @@ instance Pretty v => Pretty (String, Either [[String]] (Clause' String v)) where
 
   pretty (fun, decl) =
     (annotate AnnFunction (pretty fun) <>) $ case decl of
-      Left hs  -> tupled $ map (hsep . map pretty) hs
-      Right cl -> pretty cl
+      Left hs       -> tupled $ map (hsep . map pretty) hs
+      Right (ps, t) -> tupled (pretty <$> ps) <+> arrow <+> pretty t
 
 instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty

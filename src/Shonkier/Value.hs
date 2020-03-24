@@ -89,6 +89,7 @@ data Frame' a v
          -- ^ focus: [a] = requests we are willing to handle
          [([a], Term' a v)]
          -- ^ each arg comes with requests we are willing to handle
+  | SemiL (LocalEnv' a v) (Term' a v)
   deriving (Show, Functor)
 
 type Frame = Frame' String ScopedVariable

@@ -12,13 +12,13 @@ import Data.Foldable
 mapT :: RawTerm
 mapT = getMeATerm
    "{ f, []     -> []                   \
-  \ | f, [x|xs] -> [f(x)|map(f, xs)]   \
+  \   f, [x|xs] -> [f(x)|map(f, xs)]    \
   \ }"
 
 runReaderT :: RawTerm
 runReaderT = getMeATerm
    "{ r, v              -> v                    \
-  \ | r, {'ask() -> k}  -> runReaderT(r, k(r))  \
+  \   r, {'ask() -> k}  -> runReaderT(r, k(r))  \
   \ }"
 
 appendP :: Program
