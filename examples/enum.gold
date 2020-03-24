@@ -49,13 +49,13 @@ Abcd
 </div>
 <p>It was generated using the following code:</p>
 <div class="shonkier-pretty">
-<span class="shonkier-function">map</span>(f, []) -&gt; []<br />
-<span class="shonkier-function">map</span>(f, [x|xs]) -&gt; [f(x)|map(f, xs)]<br />
+<span class="shonkier-function">map</span>(f, []) <span class="shonkier-operator">-&gt;</span> []<br />
+<span class="shonkier-function">map</span>(f, [x|xs]) <span class="shonkier-operator">-&gt;</span> [f(x)|map(f, xs)]<br />
 <br />
-<span class="shonkier-function">enum</span>(xs@[_|_]) -&gt; [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
-<span class="shonkier-function">enum</span>(xs) -&gt; [[<span class="shonkier-atom">'Plain</span> xs]]<br />
+<span class="shonkier-function">enum</span>(xs<span class="shonkier-operator">@</span>[_|_]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
+<span class="shonkier-function">enum</span>(xs) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> xs]]<br />
 <br />
-<span class="shonkier-function">test</span>() -&gt; [<span class="shonkier-atom">'Div</span> <span class="shonkier-string">"Enums"</span> [] []|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
+<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> <span class="shonkier-string">"Enums"</span> [] []|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
 </div>
 </form>
 </body>

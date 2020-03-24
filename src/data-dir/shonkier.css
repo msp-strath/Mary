@@ -29,6 +29,10 @@
     color: #008b8b;
 }
 
+.shonkier-pretty .shonkier-operator {
+    color: #483d8b;
+}
+
 .shonkier-pretty .shonkier-primitive {
     color: #483d8b;
 }

@@ -194,7 +194,7 @@ moreTerm t = (App t <$> tupleOf term >>= moreTerm)
 
 
 clause :: Parser RawClause
-clause = (,) <$> sep (punc ',') pcomputation <* skipSpace <* arrow <* skipSpace
+clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
   <|> (,) [] <$> term
 

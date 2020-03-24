@@ -1,0 +1,9 @@
+main () ->
+  [ {[] -> 'true [_|_] -> 'false}([])
+    {[] -> 'true [_|_] -> 'false}(['boo])
+    {[] -> 'true [_|_] -> 'false}
+    { 'true [x|xs] -> xs
+      'false [x|xs] -> [x]
+      _      []     -> []
+    }
+  ]

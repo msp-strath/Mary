@@ -24,6 +24,7 @@ data Annotation
   | AnnFunction
   | AnnKeyword
   | AnnNumeric
+  | AnnOperator
   | AnnPrimitive
   | AnnString
 
@@ -65,6 +66,12 @@ ppAtom str = annotate AnnAtom $ case str of
   [] -> "[]"
   a  -> squote <> pretty a
 
+arrow :: Doc
+arrow = annotate AnnOperator "->"
+
+arobase :: Doc
+arobase = annotate AnnOperator "@"
+
 {-
 Lisp conventions for ppList:
 [xs]           |-> [xs]
@@ -84,12 +91,14 @@ ppList (as, m) = encloseSep lbracket closing space $ pretty <$> as
 ppApp :: Pretty a => Doc -> [a] -> Doc
 ppApp f ts = f <> tupled (pretty <$> ts)
 
-ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc
-ppFun hs cls = encloseSep lbrace rbrace space $ pretty <$> cls
+ppFun :: (Pretty a, Pretty b) => [[a]] -> b -> Doc
+ppFun hs cls =
+  hang 0 $ enclose lbrace rbrace
+         $ (hang 0 $ pretty cls) <> line
 
 ppClause :: Pretty v => Clause' v String -> Doc
 ppClause ([], t) = pretty t
-ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
+ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
 
 ppStringLit :: String -> T.Text -> Doc
 ppStringLit k str = annotate AnnString $
@@ -138,13 +147,15 @@ instance Pretty v => Pretty (Term' v String) where
 instance Pretty v => Pretty (Clause' v String) where
   pretty = ppClause
 
+  prettyList = vcat . map pretty
+
 instance Pretty PValue where
   pretty p = case listView p of
     ([], Just _) -> case p of
       PAtom a   -> ppAtom a
       PLit l    -> pretty l
       PBind v   -> pretty v
-      PAs v p   -> pretty v <> "@" <> pretty p
+      PAs v p   -> pretty v <> arobase <> pretty p
       PWild     -> "_"
       PCell a b -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
     it -> ppList it
@@ -152,7 +163,7 @@ instance Pretty PValue where
 instance Pretty PComputation where
   pretty = \case
     PValue p           -> pretty p
-    PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, "->", pretty v]
+    PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, arrow, pretty v]
     PThunk v           -> braces $ pretty v
 
 instance Pretty Value where
@@ -179,8 +190,8 @@ instance Pretty v => Pretty (String, Either [[String]] (Clause' v String)) where
 
   pretty (fun, decl) =
     (annotate AnnFunction (pretty fun) <>) $ case decl of
-      Left hs  -> tupled $ map (hsep . map pretty) hs
-      Right cl -> pretty cl
+      Left hs       -> tupled $ map (hsep . map pretty) hs
+      Right (ps, t) -> tupled (pretty <$> ps) <+> arrow <+> pretty t
 
 instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty
