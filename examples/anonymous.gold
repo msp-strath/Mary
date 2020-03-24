@@ -6,4 +6,6 @@
  {'true [x|xs] -> xs
   'false [x|xs] -> [x]
   _ [] -> []
- }]
+ }
+ {'atom}
+ {y -> x}]

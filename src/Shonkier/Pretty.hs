@@ -91,10 +91,10 @@ ppList (as, m) = encloseSep lbracket closing space $ pretty <$> as
 ppApp :: Pretty a => Doc -> [a] -> Doc
 ppApp f ts = f <> tupled (pretty <$> ts)
 
-ppFun :: (Pretty a, Pretty b) => [[a]] -> b -> Doc
-ppFun hs cls =
-  hang 0 $ enclose lbrace rbrace
-         $ (hang 0 $ pretty cls) <> line
+ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc
+ppFun hs [cl] = enclose lbrace rbrace $ pretty cl
+ppFun hs cls  = hang 0 $ enclose lbrace rbrace
+              $ (hang 0 $ pretty cls) <> line
 
 ppClause :: Pretty v => Clause' v String -> Doc
 ppClause ([], t) = pretty t

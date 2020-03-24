@@ -6,4 +6,6 @@ main () ->
       'false [x|xs] -> [x]
       _      []     -> []
     }
+    {'atom}
+    { x -> { y -> x }}('hi)
   ]
