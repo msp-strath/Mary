@@ -30,6 +30,9 @@ function App(f, as) {       // App f as, where as is an array
 function Semi(l, r) { // Semi l r
     return {tag: "Semi", left: l, right: r};
 };
+function Let(p, e, t) { // Let p e t
+    return {tag: "Let", pat: p, scrutinee: e, body: t};
+};
 function Fun(hs, cs) { // Fun hs cs, both arrays
     return {tag: "Fun", handles: hs, clauses: cs};
 };
@@ -199,6 +202,9 @@ function AppR(f,cz,rho,i,hs,ts) { // carefully engineered pun with Apply
 function SemiL(rho,r) {
     return {tag: 4, env: rho, right: r};
 };
+function LetL(p,rho,t) {
+    return {tag: 5, pat: p, env:rho, body:t};
+};
 
 // State
 // pop states, ie those which pop ctx until done
@@ -333,6 +339,13 @@ function shonkier(glob,t) {
             case 4: // SemiL
                 state = Eval(fr.env, fr.right);
                 continue;
+            case 5: // LetL
+                if (vmatch(fr.env,fr.pat,state.val)) {
+                    state = Eval(fr.env, fr.body);
+                    continue;
+                };
+                state = Handle("LetMismatch",[state.val],null);
+                continue;
             };
             state = Handle("BadFrame",[],null);
             continue;
@@ -389,6 +402,10 @@ function shonkier(glob,t) {
             case "Semi":
                 push(SemiL(state.env,t.right));
                 state = Eval(state.env,t.left);
+                continue;
+            case "Let":
+                push(LetL(t.pat,state.env,t.body));
+                state = Eval(state.env,t.scrutinee);
                 continue;
             case "Fun":
                 state = Use(VFun(null,state.env,t.handles,t.clauses));

@@ -90,6 +90,7 @@ data Frame' a
          [([a], Term' ScopedVariable a)]
          -- ^ each arg comes with requests we are willing to handle
   | SemiL (LocalEnv' a) (Term' ScopedVariable a)
+  | LetL (PValue' a) (LocalEnv' a) (Term' ScopedVariable a)
   deriving (Show)
 
 type Frame = Frame' String

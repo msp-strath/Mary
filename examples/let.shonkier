@@ -1,0 +1,7 @@
+import "examples/catch.shonkier"
+
+dup(x) -> [x|x]
+
+main() -> [ let [x|y] = dup(2.5) in primNumAdd(x,y)
+            catchLetMismatch(let [] = dup('1) in 'exit(), {"success!"})
+          ]

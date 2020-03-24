@@ -30,6 +30,7 @@ data Term' v a
   | Cell (Term' v a) (Term' v a)
   | App (Term' v a) [Term' v a]
   | Semi (Term' v a) (Term' v a)
+  | Let (PValue' a) (Term' v a) (Term' v a)
   | Fun [[a]] [Clause' v a]
   deriving (Show)
 

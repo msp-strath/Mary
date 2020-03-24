@@ -3,8 +3,8 @@
 ;; https://github.com/bobatkey/sott/blob/master/emacs/sott.el
 
 ;; define several class of keywords
-(setq shonkier-keywords  '("import" "as"))
-(setq shonkier-operators '("->" "@" ";"))
+(setq shonkier-keywords  '("import" "as" "let" "in"))
+(setq shonkier-operators '("->" "@" ";" "="))
 (setq shonkier-warnings  '("TODO" "FIXME"))
 
 ;; create the regex string for each class of keywords

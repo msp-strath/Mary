@@ -111,6 +111,8 @@ eval (rho, t) = case t of
                   eval (rho, f)
   Semi l r  -> do push (SemiL rho r)
                   eval (rho, l)
+  Let p e t -> do push (LetL p rho t)
+                  eval (rho, e)
   Fun es cs -> use (VFun [] rho es cs)
 
   where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
@@ -146,6 +148,9 @@ use v = pop >>= \case
       _ -> handle ("NoFun",[v]) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
+    LetL p rho t -> case vmatch p v of
+      Nothing   -> handle ("LetMismatch", [v]) []
+      Just rho' -> eval (merge rho rho', t)
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]

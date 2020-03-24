@@ -14,4 +14,8 @@ catchNotFuny('NotFuny):
 catchNotFuny({ 'NotFuny() -> _ }, k) -> k()
 catchNotFuny(v,_) -> v
 
+catchLetMismatch('LetMismatch):
+catchLetMismatch({ 'LetMismatch(_) -> _ }, k) -> k()
+catchLetMismatch(v,_) -> v
+
 main() -> []

@@ -11,22 +11,15 @@ import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
+import Data.Text.Prettyprint.Doc
+  hiding ( Doc, Pretty, pretty, prettyList
+         , semi, equals
+         )
 import qualified Data.Text.Prettyprint.Doc as P
 
 import Shonkier.Syntax
 import Shonkier.Value
 import Utils.List
-
-data Annotation
-  = AnnAtom
-  | AnnError
-  | AnnFunction
-  | AnnKeyword
-  | AnnNumeric
-  | AnnOperator
-  | AnnPrimitive
-  | AnnString
 
 type Doc = P.Doc Annotation
 
@@ -39,6 +32,10 @@ class Pretty t where
 
   default prettyList :: Pretty t => [t] -> Doc
   prettyList = list . map pretty
+
+---------------------------------------------------------------------------
+-- Basic instances
+---------------------------------------------------------------------------
 
 instance Pretty Integer
 instance Pretty Text
@@ -61,19 +58,50 @@ instance Pretty Rational where
                       <> if n `mod` 4 == 1 then ".25" else ".75"
        | otherwise -> pretty n <+> "/" <+> pretty d
 
+---------------------------------------------------------------------------
+-- Annotations
+---------------------------------------------------------------------------
+
+data Annotation
+  = AnnAtom
+  | AnnError
+  | AnnFunction
+  | AnnKeyword
+  | AnnNumeric
+  | AnnOperator
+  | AnnPrimitive
+  | AnnString
+
+keyword :: Doc -> Doc
+keyword = annotate AnnKeyword
+
+operator :: Doc -> Doc
+operator = annotate AnnOperator
+
+---------------------------------------------------------------------------
+-- Symbols
+---------------------------------------------------------------------------
+
+arrow :: Doc
+arrow = operator "->"
+
+arobase :: Doc
+arobase = operator "@"
+
+semi :: Doc
+semi = operator P.semi
+
+equals :: Doc
+equals = operator P.equals
+
+---------------------------------------------------------------------------
+-- Combinators
+---------------------------------------------------------------------------
+
 ppAtom :: String -> Doc
 ppAtom str = annotate AnnAtom $ case str of
   [] -> "[]"
   a  -> squote <> pretty a
-
-arrow :: Doc
-arrow = annotate AnnOperator "->"
-
-arobase :: Doc
-arobase = annotate AnnOperator "@"
-
-semi :: Doc
-semi = annotate AnnOperator P.semi
 
 {-
 Lisp conventions for ppList:
@@ -120,6 +148,10 @@ ppStringLit k str = annotate AnnString $
     [] -> (-1)
     ds -> read ds
 
+---------------------------------------------------------------------------
+-- Instances for Shonkier
+---------------------------------------------------------------------------
+
 instance Pretty Literal where
   pretty = \case
     String k str -> ppStringLit k str
@@ -145,6 +177,10 @@ instance Pretty v => Pretty (Term' v String) where
       Cell a b   -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts   -> ppApp (pretty f) ts
       Semi l r   -> pretty l <> semi <+> pretty r
+      Let p e t  -> hang 0 $ keyword "let" <+> pretty p <+> equals
+                             <+> pretty e
+                             <+> keyword "in" <> line
+                             <> pretty t
       Fun hs cls -> ppFun hs cls
     it -> ppList it
 
@@ -201,8 +237,8 @@ instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty
 
   pretty (fp, mns) =
-    annotate AnnKeyword "import" <+> pretty fp
-    <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
+    keyword "import" <+> pretty fp
+    <+> keyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
 instance Pretty v => Pretty (Module' v String) where
   pretty (is, p) = pretty is <> pretty p

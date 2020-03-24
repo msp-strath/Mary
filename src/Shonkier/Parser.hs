@@ -1,6 +1,7 @@
 module Shonkier.Parser where
 
 import Control.Applicative
+import Control.Monad
 
 import Data.Attoparsec.Text hiding (skipSpace)
 import qualified Data.Attoparsec.Text as Atto
@@ -11,6 +12,9 @@ import Data.Text(Text)
 import qualified Data.Text as T
 
 import Shonkier.Syntax
+
+reservedKeywords :: [String]
+reservedKeywords = [ "let", "in" ]
 
 -- We can insert comments anywhere we may insert space
 skipSpace :: Parser ()
@@ -119,13 +123,21 @@ sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
 term :: Parser RawTerm
-term = weeTerm >>= moreTerm
+term = choice
+  [ Let <$ string "let" <* skipSpace <*> pvalue <* punc '='
+        <*> term <* skipSpace <* string "in" <* skipSpace
+        <*> term
+  , weeTerm >>= moreTerm
+  ]
 
 atom :: Parser String
 atom = id <$ char '\'' <*> some (satisfy isAlphaNum)
 
 identifier :: Parser String
-identifier = (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)
+identifier = do
+  nm <- (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)
+  guard (nm `notElem` reservedKeywords)
+  pure nm
 
 arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
@@ -163,8 +175,8 @@ numlit = do
 
 listOf :: Parser a -> a -> Parser ([a], a)
 listOf p nil = (,) <$ char '['
-      <*> many (skipSpace *> p) <* skipSpace
-      <*> (id <$ char '|' <* skipSpace <*> p <|> pure nil)
+      <*> many (skipSpace *> p)
+      <*> (id <$ punc '|' <*> p <|> pure nil)
       <* skipSpace <* char ']'
 
 tupleOf :: Parser a -> Parser [a]
@@ -185,7 +197,9 @@ weeTerm = choice
   , Lit <$> literal
   , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
-  , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
+  , Fun [] <$ char '{' <* skipSpace
+           <*> sep skipSpace clause
+           <* skipSpace <* char '}'
   ]
 
 moreTerm :: RawTerm -> Parser RawTerm

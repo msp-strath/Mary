@@ -92,13 +92,18 @@ instance ScopeCheck RawVariable ScopedVariable where
 
 instance ScopeCheck RawTerm Term where
   scopeCheck local = \case
-    Atom a -> pure (Atom a)
-    Lit l  -> pure (Lit l)
-    Var v  -> Var <$> scopeCheck local v
+    Atom a    -> pure (Atom a)
+    Lit l     -> pure (Lit l)
+    Var v     -> Var <$> scopeCheck local v
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Semi l r  -> Semi <$> scopeCheck local l <*> scopeCheck local r
     Fun hs cs -> Fun hs <$> mapM (scopeCheck local) cs
+    Let p e t -> do
+      e'     <- scopeCheck local e
+      locals <- scopeCheck local p
+      t'     <- scopeCheck (local <> locals) t
+      pure $ Let p e' t'
 
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
