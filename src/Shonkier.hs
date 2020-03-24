@@ -1,13 +1,13 @@
 module Shonkier where
 
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-
-import Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc (line, layoutPretty, defaultLayoutOptions)
 import Data.Text.Prettyprint.Doc.Render.Text
 
-import Shonkier.Pretty ()
+import Shonkier.Pretty
 import Shonkier.Value
 import Shonkier.Import
 import Shonkier.Semantics
@@ -26,14 +26,16 @@ interpretShonkier :: FilePath -> IO ()
 interpretShonkier = onShonkierModule $ \ _ gl body ->
   case shonkier gl body of
     Value v -> putDoc $ pretty v <> line
-    Request (r,_) fr -> error $ "unhandled request " ++ r
+    r@Request{} -> do
+      let r' = renderStrict $ layoutPretty defaultLayoutOptions $ pretty r
+      error $ "unhandled request " ++ T.unpack r'
 
 -- no support for imports here yet!
-compileShonkier :: FilePath -> IO Text
-compileShonkier fp = (`onShonkierModule` fp) $ \ _ env body -> do
+compileShonkier :: FilePath -> FilePath -> IO Text
+compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ env body -> do
   -- Couldn't figure how to import in node so I just concat the
   -- whole interpreter defined 'Shonkier.js' on top
-  interpreter <- TIO.readFile "./src/Shonkier/Shonkier.js"
+  interpreter <- TIO.readFile shonkierjs
   let header txt = T.concat ["\n/***** "
                             , txt
                             , " "

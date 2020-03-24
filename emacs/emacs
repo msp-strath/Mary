@@ -1,0 +1,17 @@
+;; This should be inserted in your .emacs.
+;; Be careful to replace PATH/TO/ with the path...
+
+;; shonkier
+(autoload 'shonkier-mode "PATH/TO/emacs/shonkier.el" nil t)
+(add-to-list 'auto-mode-alist '("\\.shonkier\\'" . shonkier-mode))
+
+;; To enable shonkier highlighting of mary code blocks in markdown
+;; files, also add the following to your .emacs. You might need to
+;; first install markdown-mode; see https://github.com/jrblevin/markdown-mode
+;; for details on how to do that.
+
+(require 'markdown-mode)
+(setq markdown-fontify-code-blocks-natively t)
+(add-to-list 'markdown-code-lang-modes '("mary-def" . shonkier-mode))
+(add-to-list 'markdown-code-lang-modes '("mary" . shonkier-mode))
+(add-to-list 'auto-mode-alist '("\\.mary\\'" . markdown-mode))

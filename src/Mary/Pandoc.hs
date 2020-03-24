@@ -16,12 +16,14 @@ import Text.Pandoc.Walk
 
 import System.FilePath
 
-import Shonkier.Parser
-import Shonkier.Value
 import Shonkier.Import
-import Shonkier.Syntax
+import Shonkier.Parser
+import Shonkier.Pretty
+import Shonkier.Pretty.Render.Pandoc
 import Shonkier.Semantics
 import Shonkier.ShonkierJS
+import Shonkier.Syntax
+import Shonkier.Value
 
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
@@ -53,9 +55,10 @@ process doc0@(Pandoc meta docs) = do
 snarfMaryDef :: Block -> Writer [Text] Block
 snarfMaryDef c@(CodeBlock (_, cs, _) p)
   | "mary-def" `elem` cs
-  = if "keep" `elem` cs
-    then c <$ tell [p]
-    else Null <$ tell [p]
+  = if "keep" `notElem` cs then Null <$ tell [p]
+    else do
+      let block = render (pretty $ getMeAModule p)
+      block <$ tell [p]
 snarfMaryDef b = return b
 
 evalMaryBlock :: [Import] -> GlobalEnv -> Block -> Block

@@ -8,6 +8,7 @@ import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 
 import Data.Bwd
 import Shonkier.Syntax
+import Utils.List
 
 ---------------------------------------------------------------------------
 -- ENVIRONMENTS
@@ -104,3 +105,13 @@ newtype Shonkier a = Shonkier
   deriving ( Functor, Applicative, Monad
            , MonadState Context, MonadReader GlobalEnv
            )
+
+---------------------------------------------------------------------------
+-- INSTANCES
+---------------------------------------------------------------------------
+
+instance HasListView Value Value where
+  coalgebra = \case
+    VAtom ""  -> ItsNil
+    VCell a b -> ItsCons a b
+    _         -> ItsNot
