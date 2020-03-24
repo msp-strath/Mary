@@ -21,7 +21,7 @@ lmatch (String _ str) (String _ str') = guard (str == str')
 lmatch (Num q)        (Num q')        = guard (q == q')
 lmatch _ _ = Nothing
 
-vmatch :: Eq a => PValue' a -> Value' a -> Maybe (LocalEnv' a)
+vmatch :: Eq a => PValue' a -> Value' a v -> Maybe (LocalEnv' a v)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
 vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
@@ -48,8 +48,8 @@ mayZipWith f (a : as) (b : bs) =
   (:) <$> f a b <*> mayZipWith f as bs
 mayZipWith _ _ _ = Nothing
 
-matches :: (a -> b -> Maybe (LocalEnv' c))
-        -> [a] -> [b] -> Maybe (LocalEnv' c)
+matches :: (a -> b -> Maybe (LocalEnv' c d))
+        -> [a] -> [b] -> Maybe (LocalEnv' c d)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 -- Evaluation contexts

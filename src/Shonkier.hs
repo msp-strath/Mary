@@ -43,4 +43,4 @@ compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ env body -> do
                             , "*/\n\n"]
   pure $ T.concat $ [interpreter, header "Global env"]
                   ++ jsGlobalEnv env
-                  ++ [header "Main", jsMain fp]
+                  ++ [header "Main"] ++ jsRun body

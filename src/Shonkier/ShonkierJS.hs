@@ -41,10 +41,10 @@ instance JS ScopedVariable where
       exception at x = js (App (Atom at) [vVar x] :: Term)
       vVar x = Lit $ String "" $ T.pack x
 
-instance (JS v, JSAtom a) => JS (Clause' v a) where
+instance (JS v, JSAtom a) => JS (Clause' a v) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
 
-instance (JS v, JSAtom a) => JS (Term' v a) where
+instance (JS v, JSAtom a) => JS (Term' a v) where
   js (Atom a)    = ["Atom(", jsAtom a, ")"]
   js (Lit l)     = ["Lit("] ++ js l ++ [")"]
   js (Var x)     = js x
@@ -93,11 +93,5 @@ jsGlobalEnv gl =
       ++ [");\n"]
     _ -> [])
 
-jsMain :: FilePath -> Text
-jsMain fp = T.concat
-  [ "console.log("
-  , "render("
-  , "shonkier(globalEnv,App("
-  , "GVar(\"", T.pack fp, "\",\"main\"), []))"
-  , "));"
-  ]
+jsRun :: Term -> [Text]
+jsRun t = [ "console.log(render(shonkier(globalEnv,"] ++ js t ++ [")));"]

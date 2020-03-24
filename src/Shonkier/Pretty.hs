@@ -87,7 +87,7 @@ ppApp f ts = f <> tupled (pretty <$> ts)
 ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc
 ppFun hs cls = encloseSep lbrace rbrace semi $ pretty <$> cls
 
-ppClause :: Pretty v => Clause' v String -> Doc
+ppClause :: Pretty v => Clause' String v -> Doc
 ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
 
 ppStringLit :: String -> T.Text -> Doc
@@ -123,7 +123,7 @@ instance Pretty ScopedVariable where
     OutOfScope x         -> annotate AnnError $ pretty x
     InvalidNamespace _ x -> annotate AnnError $ pretty x
 
-instance Pretty v => Pretty (Term' v String) where
+instance Pretty v => Pretty (Term' String v) where
   pretty t = case listView t of
     ([], Just _) -> case t of
       Atom a     -> ppAtom a
@@ -134,7 +134,7 @@ instance Pretty v => Pretty (Term' v String) where
       Fun hs cls -> ppFun hs cls
     it -> ppList it
 
-instance Pretty v => Pretty (Clause' v String) where
+instance Pretty v => Pretty (Clause' String v) where
   pretty = ppClause
 
 instance Pretty PValue where
@@ -170,7 +170,7 @@ instance Pretty Computation where
     Value v             -> pretty v
     Request (a, vs) frs -> ppApp (ppAtom a) vs
 
-instance Pretty v => Pretty (String, Either [[String]] (Clause' v String)) where
+instance Pretty v => Pretty (String, Either [[String]] (Clause' String v)) where
   prettyList = vcat
              . intersperse ""
              . map (vcat . map pretty)
@@ -188,5 +188,5 @@ instance Pretty (FilePath, Maybe Namespace) where
     annotate AnnKeyword "import" <+> pretty fp
     <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
-instance Pretty v => Pretty (Module' v String) where
+instance Pretty v => Pretty (Module' String v) where
   pretty (is, p) = pretty is <> pretty p
