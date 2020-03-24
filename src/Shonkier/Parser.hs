@@ -200,6 +200,7 @@ weeTerm = choice
   , Fun [] <$ char '{' <* skipSpace
            <*> sep skipSpace clause
            <* skipSpace <* char '}'
+  , id <$ char '(' <* skipSpace <*> term <* skipSpace <* char ')'
   ]
 
 moreTerm :: RawTerm -> Parser RawTerm

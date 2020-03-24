@@ -4,5 +4,6 @@ dup(x) -> [x|x]
 
 main() -> [ let [x|y] = dup(2.5) in primNumAdd(x,y)
             let [x|y] = dup(3) in x; y
+            catchOutOfScope((let [x|y] = dup(1) in x); y, {"victory!"})
             catchLetMismatch(let [] = dup('1) in 'exit(), {"success!"})
           ]
