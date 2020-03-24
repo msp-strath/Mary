@@ -62,9 +62,10 @@ ppApp :: Pretty a => Doc ann -> [a] -> Doc ann
 ppApp f ts = f <> tupled (pretty <$> ts)
 
 ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc ann
-ppFun hs cls = encloseSep lbrace rbrace semi $ pretty <$> cls
+ppFun hs cls = encloseSep lbrace rbrace space $ pretty <$> cls
 
 ppClause :: Clause -> Doc ann
+ppClause ([], t) = pretty t
 ppClause (ps, t) = tupled (pretty <$> ps) <+> "->" <+> pretty t
 
 ppStringLit :: String -> T.Text -> Doc ann
