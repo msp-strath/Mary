@@ -103,7 +103,7 @@ instance ScopeCheck RawTerm Term where
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
     locals <- mapM (scopeCheck local) ps
-    let new = fold locals
+    let new = fold (local : locals)
     (ps,) <$> scopeCheck new t
 
 instance ScopeCheck PComputation LocalScope where
