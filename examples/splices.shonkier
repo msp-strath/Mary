@@ -1,0 +1,6 @@
+import "list.shonkier"
+
+test(foo"foo`"`[x|xs]`"`foofoo`ys`foo"foo) -> [ys [x] xs]
+test(foo"hifoo`[x y |zs]`foogoo"foo) -> [y x |zs]
+
+main() -> map(test, ["ihfooworld" "hio\/goo"])

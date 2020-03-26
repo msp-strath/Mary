@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiWayIf #-}
+
 module Shonkier.Parser where
 
 import Control.Applicative
@@ -158,18 +160,18 @@ spliceOf p = do
           | otherwise    = Just [ ds | (d : ds) <- startSpl : es, c == d ]
     let delim (a, b) c = (,) <$> nextEndStr a c <*> nextStartSpl b c
     txt <- scan (endStr, []) delim
-    let txt' = T.dropEnd (1+ length fence) txt
-    case T.last txt of
-      '`' -> do
-        a     <- p
-        string (T.pack $ '`':fence)
-        mrest <- choice [ Just <$> munchSplice fence
-                        , pure Nothing
-                        ]
-        pure $ case mrest of
-          Just (lit, rest) -> (txt', (a, lit):rest)
-          Nothing          -> (txt', [(a, "")])
-      _ -> pure (txt', [])
+    if | Just txt' <- T.stripSuffix (T.pack startSpl) txt -> do
+          a     <- p
+          string (T.pack $ '`':fence)
+          mrest <- choice [ Just <$> munchSplice fence
+                          , pure Nothing
+                          ]
+          pure $ case mrest of
+            Just (lit, rest) -> (txt', (a, lit):rest)
+            Nothing          -> (txt', [(a, "")])
+       | Just txt' <- T.stripSuffix (T.pack endStr) txt ->
+         pure (txt', [])
+       | otherwise -> choice []
 
 data NumExtension
   = Dot   String
