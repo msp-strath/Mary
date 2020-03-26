@@ -3,6 +3,7 @@ module Shonkier.Semantics where
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Applicative
 
 import Data.Maybe (fromMaybe)
 import Data.Map (singleton, (!?), keysSet)
@@ -19,7 +20,7 @@ import Shonkier.Primitives (prim)
 lmatch :: Literal -> Literal -> Maybe ()
 -- lmatch (String _ str) (String _ str') = guard (str == str')
 lmatch (Num q)        (Num q')        = guard (q == q')
-lmatch _ _ = Nothing
+-- lmatch _ _ = Nothing
 
 vmatch :: Eq a => PValue' a -> Value' a v -> Maybe (LocalEnv' a v)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
@@ -28,6 +29,8 @@ vmatch (PBind x)   v           = pure (singleton x v)
 vmatch (PAs x p)   v           = merge (singleton x v) <$> vmatch p v
 vmatch PWild       v           = pure mempty
 vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
+vmatch (PString _ sps u) (VString _ t) | Just p <- T.stripSuffix u t =
+  smatch sps p
 vmatch _ _ = Nothing
 
 cmatch :: PComputation -> Computation -> Maybe LocalEnv
@@ -42,6 +45,50 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
+smatch :: Eq a => [(T.Text, PValue' a)] -> T.Text -> Maybe (LocalEnv' a v)
+smatch [] t = mempty <$ guard (T.null t)
+smatch ((d, p) : dps) t = do
+  t <- T.stripPrefix d t
+  let d' = case dps of { [] -> ToEnd ; (d, _) : _ -> ToDelim d }
+  (_, rho, t) <- tmatch p d' t
+  merge rho <$> smatch dps t
+
+data MaPo -- lazy patterns match differently depending on their position
+  = Head            -- in a head position, they match one character
+  | ToEnd           -- in an undelimited tail position, they match the whole text
+  | ToDelim T.Text  -- in a delimited tail position, they match until the delimiter
+
+tmatch :: Eq a
+       => PValue' a   -- pattern in tail position
+       -> MaPo        -- match position
+       -> T.Text      -- text
+       -> Maybe ( Bwd T.Text     -- segments consumed, in case of as-pattern
+                , LocalEnv' a v  -- matching environment
+                , T.Text         -- rest of text
+                )
+tmatch p d t0 = case p of
+  PAs x p   -> do
+    (tz, rho, t1) <- tmatch p d t0
+    let v = VString "" (T.concat (tz <>> []))
+    return (tz, merge (singleton x v) rho, t1)
+  PCell p q -> do
+    (tz1, rho1, t1) <- tmatch p Head t0
+    (tz2, rho2, t2) <- tmatch q d t1
+    return (tz1 <> tz2, merge rho1 rho2, t2)
+  PAtom a -> Nothing  -- forced upon us by the polymorphism, but reasonable
+  PLit _  -> Nothing
+  -- otherwise, it's a lazy string pattern, and we need the MaPo logic...
+  _ -> do
+    (l, r) <- case d of  -- ...to figure out how to cut up the text
+      Head -> do
+        (c, t1) <- T.uncons t0
+        return (T.cons c "", t1)
+      ToEnd -> return (t0, "")
+      ToDelim d | T.null d  -> return ("", t0)
+                | otherwise -> return (T.breakOn d t0)
+    rho <- vmatch p (VString "" l)
+    return (Nil :< l, rho, r)
+          
 mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
 mayZipWith f []       []       = pure []
 mayZipWith f (a : as) (b : bs) =
@@ -112,6 +159,11 @@ eval (rho, t) = case t of
   Semi l r  -> do push (SemiL rho r)
                   eval (rho, l)
   Fun es cs -> use (VFun [] rho es cs)
+  String k sts u -> case sts of
+    []           -> use (VString k u)
+    (s, t) : sts -> do
+      push (StringLR (VString k s) rho sts u)
+      eval (rho, t)
 
   where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
         vVar x = VString "" $ T.pack x
@@ -146,6 +198,11 @@ use v = pop >>= \case
       _ -> handle ("NoFun",[v]) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
+    StringLR p rho sts u -> case sts of
+      [] -> glom (VCell p (VCell v (VString "" u)))
+      ((s, t) : sts) -> do
+        push (StringLR (VCell p (VCell v (VString "" s))) rho sts u)
+        eval (rho, t)
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
@@ -189,6 +246,21 @@ call rho []                cs = do
 call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> eval (merge rho sig, rhs)
+
+
+---------------------------------------------------------------------------
+-- GLOMMING TEXT FROM VALUES
+---------------------------------------------------------------------------
+
+glom :: Value -> Shonkier Computation
+glom v = go Nothing Nil [v] where
+  go mk tz vs = case vs of
+    [] ->
+      use (VString (fromMaybe "" mk) (T.concat $ (tz <>> [])))
+    VCell a b   : vs -> go mk tz (a : b : vs)
+    VAtom _     : vs -> go mk tz vs
+    VString k t : vs -> go (mk <|> pure k) (tz :< t) vs
+    v           : _  -> handle ("Invalid_StringConcat_ArgType", [v]) []
 
 
 ---------------------------------------------------------------------------

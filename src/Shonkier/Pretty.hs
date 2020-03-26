@@ -174,6 +174,7 @@ instance Pretty Value where
     ([], Just _) -> case v of
       VAtom a          -> ppAtom a
       VLit l           -> pretty l
+      VString k t      -> ppStringLit k t
       VPrim f _        -> pretty f
       VCell a b        -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       VFun _ _ hs cls  -> ppFun hs cls

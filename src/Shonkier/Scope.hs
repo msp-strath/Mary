@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleInstances          #-}
 
 module Shonkier.Scope
-       ( GlobalScope
+     {-  ( GlobalScope
        , checkRaw
-       ) where
+       ) -} where
 
 import Control.Monad
 import Control.Monad.State
@@ -98,7 +98,11 @@ instance ScopeCheck RawTerm Term where
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Semi l r  -> Semi <$> scopeCheck local l <*> scopeCheck local r
-    Fun hs cs -> Fun hs <$> mapM (scopeCheck local) cs
+    Fun hs cs -> Fun hs <$> traverse (scopeCheck local) cs
+    String k sts u ->
+      String k
+        <$> traverse (traverse (scopeCheck local)) sts
+        <*> pure u
 
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
@@ -121,3 +125,5 @@ instance ScopeCheck PValue LocalScope where
     PWild{}   -> pure Set.empty
     PAs x p   -> Set.insert x <$> scopeCheck local p
     PCell p q -> (<>) <$> scopeCheck local p <*> scopeCheck local q
+    PString _ sps _ ->
+      foldMap snd <$> traverse (traverse (scopeCheck local)) sps
