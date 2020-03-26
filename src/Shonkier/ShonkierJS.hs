@@ -39,7 +39,7 @@ instance JS ScopedVariable where
     where
       exception :: String -> Variable -> [Text]
       exception at x = js (App (Atom at) [vVar x] :: Term)
-      vVar x = Lit $ String "" $ T.pack x
+      vVar x = String "" [] (T.pack x)
 
 instance (JS v, JSAtom a) => JS (Clause' a v) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
@@ -56,11 +56,12 @@ instance (JS v, JSAtom a) => JS (Term' a v) where
                 ++ [")"]
 
 instance JS Literal where
+  {-
   js (String _ txt) = ["\""] ++ (unpack txt >>= ch) ++ ["\""] where
     ch c | c < ' ' = ["\\", pack [chr (64 + ord c)]]
     ch '"' = ["\\\""]
     ch '\\' = ["\\\\"]
-    ch c = [pack [c]]
+    ch c = [pack [c]]-}
   js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
 
 instance JSAtom a => JS (PComputation' a) where

@@ -122,7 +122,6 @@ ppStringLit k str = annotate AnnString $
 
 instance Pretty Literal where
   pretty = \case
-    String k str -> ppStringLit k str
     Num r        -> annotate AnnNumeric $ pretty r
 
 instance Pretty RawVariable where

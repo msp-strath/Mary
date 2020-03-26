@@ -1,6 +1,7 @@
 module Shonkier.Parser where
 
 import Control.Applicative
+import Control.Arrow (first)
 
 import Data.Attoparsec.Text hiding (skipSpace)
 import qualified Data.Attoparsec.Text as Atto
@@ -23,7 +24,7 @@ import_ :: Parser Import
 import_ = do
   () <$ string "import"
   skipSpace
-  String _ fp <- stringlit
+  (_, [], fp) <- spliceOf (choice [])
   skipSpace
   alias <- choice [ Just <$ string "as" <* skipSpace <*> identifier
                   , pure Nothing
@@ -131,18 +132,44 @@ arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
 
 literal :: Parser Literal
-literal = stringlit <|> numlit
+literal = numlit
 
-stringlit :: Parser Literal
-stringlit = do
+spliceOf :: Parser a -> Parser (Keyword, [(Text, a)], Text)
+spliceOf p = do
   fence <- option "" identifier <* char '"'
-  let end = '"':fence
-  let delim []       _ = Nothing
-      delim (d : ds) c
-        | c == d    = Just ds
-        | c == '"'  = Just fence
-        | otherwise = Just end
-  String fence . T.dropEnd (length end) <$> scan end delim
+  (txt, atxts) <- munchSplice fence
+  let (ps, end) = rotate txt atxts
+  pure (fence, ps, end)
+
+  where
+  rotate txt []                 = ([], txt)
+  rotate txt ((a, txt') : rest) = first ((txt, a):) $ rotate txt' rest
+
+  munchSplice fence = do
+    let endStr     = '"':fence
+    let startSpl   = fence ++ "`"
+    let nextEndStr []       c = Nothing
+        nextEndStr (d : ds) c
+          | c == d    = Just ds
+          | c == '"'  = Just fence
+          | otherwise = Just endStr
+    let nextStartSpl es c
+          | [] `elem` es = Nothing
+          | otherwise    = Just [ ds | (d : ds) <- (startSpl : es), c == d ]
+    let delim (a, b) c = (,) <$> nextEndStr a c <*> nextStartSpl b c
+    txt <- scan (endStr, []) delim
+    let txt' = T.dropEnd (1+ length fence) txt
+    case T.last txt of
+      '`' -> do
+        a     <- p
+        string (T.pack $ '`':fence)
+        mrest <- choice [ Just <$> munchSplice fence
+                        , pure Nothing
+                        ]
+        pure $ case mrest of
+          Just (lit, rest) -> (txt', (a, lit):rest)
+          Nothing          -> (txt', [(a, "")])
+      _ -> pure (txt', [])
 
 data NumExtension
   = Dot   String
@@ -183,6 +210,7 @@ weeTerm :: Parser RawTerm
 weeTerm = choice
   [ Atom <$> atom
   , Lit <$> literal
+  , (\ (k, t, es) -> String k t es) <$> spliceOf term
   , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
   , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
@@ -219,6 +247,7 @@ pvar = do
 pvalue :: Parser PValue
 pvalue = choice
   [ PLit <$> literal
+  , (\ (kw, ps, lit) -> PString kw ps lit) <$> spliceOf pvalue
   , PAtom <$> atom
   , pvar
   , PWild <$ char '_'

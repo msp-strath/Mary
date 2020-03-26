@@ -17,7 +17,7 @@ import Shonkier.Primitives (prim)
 -- environments
 
 lmatch :: Literal -> Literal -> Maybe ()
-lmatch (String _ str) (String _ str') = guard (str == str')
+-- lmatch (String _ str) (String _ str') = guard (str == str')
 lmatch (Num q)        (Num q')        = guard (q == q')
 lmatch _ _ = Nothing
 
