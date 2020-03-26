@@ -61,22 +61,29 @@ snarfMaryDef c@(CodeBlock (_, cs, _) p)
       block <$ tell [p]
 snarfMaryDef b = return b
 
-evalMaryBlock :: [Import] -> GlobalEnv -> Block -> Block
-evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
+evalMary :: FromValue b => [Import] -> GlobalEnv -> Text -> b -> b
+evalMary is env e abort =
   case parseOnly (term <* endOfInput) e of
-    Left _ -> Null
+    Left _ -> abort
     Right t -> case rawShonkier is env t of
       Value v -> fromValue v
-      _ -> Null
+      _ -> abort
+
+makeInputForm :: [(Text,Text)] -> Text -> Text
+makeInputForm as e = T.intercalate " " $ -- TODO: default values
+  [ "<input"] ++ [ T.concat [k, "=", v] | (k, v) <- ("name",name):as ] ++ [">"]
+  where name = e -- TODO: validate/parse
+
+evalMaryBlock :: [Import] -> GlobalEnv -> Block -> Block
+evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs
+  = evalMary is env e Null
 evalMaryBlock _ _ b = b
 
 evalMaryInline :: [Import] -> GlobalEnv -> Text -> Inline -> Inline
 evalMaryInline is env page (Code (_, cs, _) e) | "mary" `elem` cs =
-  case parseOnly (term <* endOfInput) e of
-    Left _ -> Space
-    Right t -> case rawShonkier is env t of
-      Value v -> fromValue v
-      _ -> Space
+  evalMary is env e Space
+evalMaryInline is env page (Code (_, cs, as) e) | "input" `elem` cs =
+  RawInline (Format "html") (makeInputForm as e)
 evalMaryInline _ _ page (Link attrs is target) =
   Link attrs is (makeAbsolute page target)
 evalMaryInline _ _ page (Image attrs is target) =
@@ -202,7 +209,7 @@ instance FromValue Inline where
     -- TODO: Cite
     "Code"        -> takes2 Code
     "SoftBreak"   -> const SoftBreak
-    "LineBreak"   -> const SoftBreak
+    "LineBreak"   -> const LineBreak
     -- TODO: Math
     "RawInline"   -> takes2 RawInline
     "Link"        -> takes3 Link
