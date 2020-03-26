@@ -21,3 +21,11 @@ class HasListView a la where
     ItsNil       -> ([], Nothing)
     ItsCons x xs -> first (x :) $ listView xs
     ItsNot       -> ([], Just seed)
+
+longestCommonPrefix :: Eq a => [[a]] -> [a]
+longestCommonPrefix [] = []
+longestCommonPrefix lists = foldr1 commonPrefix lists
+  where
+    commonPrefix :: Eq a => [a] -> [a] -> [a]
+    commonPrefix (x:xs) (y:ys) | x == y = x : commonPrefix xs ys
+    commonPrefix _ _ = []

@@ -1,0 +1,4 @@
+import "examples/list.shonkier"
+import "list.shonkier" // it's okay to import the same file again
+
+main() -> map({x -> primNumAdd(x,1)},[1 2 3])

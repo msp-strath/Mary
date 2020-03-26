@@ -14,31 +14,31 @@ import Utils.List
 -- ENVIRONMENTS
 ---------------------------------------------------------------------------
 
-type GlobalEnv' a = Map Variable (Map FilePath (Value' a))
-type GlobalEnv = GlobalEnv' String
+type GlobalEnv' a v = Map Variable (Map FilePath (Value' a v))
+type GlobalEnv = GlobalEnv' String ScopedVariable
 
-type LocalEnv' a = Map Variable (Value' a)
-type LocalEnv = LocalEnv' String
+type LocalEnv' a v = Map Variable (Value' a v)
+type LocalEnv = LocalEnv' String ScopedVariable
 
-merge :: LocalEnv' a -> LocalEnv' a -> LocalEnv' a
+merge :: LocalEnv' a v -> LocalEnv' a v -> LocalEnv' a v
 merge = flip (<>)
 
 ---------------------------------------------------------------------------
 -- VALUES
 ---------------------------------------------------------------------------
 
-data Value' a
+data Value' a v
   = VAtom a
   | VLit Literal
   | VPrim Primitive [[a]]
-  | VCell (Value' a) (Value' a)
-  | VFun [Frame' a] (LocalEnv' a) [[a]] [Clause' ScopedVariable a]
+  | VCell (Value' a v) (Value' a v)
+  | VFun [Frame' a v] (LocalEnv' a v) [[a]] [Clause' a v]
   -- ^ Env is the one the function was created in
   --   Frames ??
-  | VThunk (Computation' a)
-  deriving (Show)
+  | VThunk (Computation' a v)
+  deriving (Show, Functor)
 
-type Value = Value' String
+type Value = Value' String ScopedVariable
 
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
@@ -52,50 +52,50 @@ pattern CAtom a       = Value (VAtom a)
 -- COMPUTATIONS
 ---------------------------------------------------------------------------
 
-type Request' a = (a, [Value' a])
-type Request = Request' String
+type Request' a v = (a, [Value' a v])
+type Request = Request' String ScopedVariable
 
-data Computation' a
-  = Value (Value' a)
-  | Request (Request' a) [Frame' a]
+data Computation' a v
+  = Value (Value' a v)
+  | Request (Request' a v) [Frame' a v]
   -- ^ Invoking an effect & none of the
   -- frames present know how to interpret it
-  deriving (Show)
+  deriving (Show, Functor)
 
-type Computation = Computation' String
+type Computation = Computation' String ScopedVariable
 
 ---------------------------------------------------------------------------
 -- EVALUATION CONTEXTS
 ---------------------------------------------------------------------------
 
-data Funy' a
+data Funy' a v
   = FAtom a
   | FPrim Primitive
-  | FFun [Frame' a] (LocalEnv' a) [Clause' ScopedVariable a]
-  deriving (Show)
-type Funy = Funy' String
+  | FFun [Frame' a v] (LocalEnv' a v) [Clause' a v]
+  deriving (Show, Functor)
+type Funy = Funy' String ScopedVariable
 
 -- The argument of type (LocalEnv' a) indicates the
 -- cursor position
-data Frame' a
-  = CellL (LocalEnv' a) (Term' ScopedVariable a)
-  | CellR (Value' a) (LocalEnv' a)
-  | AppL (LocalEnv' a) [Term' ScopedVariable a]
-  | AppR (Funy' a)
-         (Bwd (Computation' a))
+data Frame' a v
+  = CellL (LocalEnv' a v) (Term' a v)
+  | CellR (Value' a v) (LocalEnv' a v)
+  | AppL (LocalEnv' a v) [Term' a v]
+  | AppR (Funy' a v)
+         (Bwd (Computation' a v))
          -- ^ already evaluated arguments (some requests we are
          --   willing to handle may still need to be dealt with)
-         ([a], LocalEnv' a)
+         ([a], LocalEnv' a v)
          -- ^ focus: [a] = requests we are willing to handle
-         [([a], Term' ScopedVariable a)]
+         [([a], Term' a v)]
          -- ^ each arg comes with requests we are willing to handle
-  | SemiL (LocalEnv' a) (Term' ScopedVariable a)
-  deriving (Show)
+  | SemiL (LocalEnv' a v) (Term' a v)
+  deriving (Show, Functor)
 
-type Frame = Frame' String
+type Frame = Frame' String ScopedVariable
 
-type Context' a = Bwd (Frame' a)
-type Context = Context' String
+type Context' a v = Bwd (Frame' a v)
+type Context = Context' String ScopedVariable
 
 ---------------------------------------------------------------------------
 -- EVALUATION MONAD

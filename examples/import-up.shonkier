@@ -1,0 +1,3 @@
+import "subdir/import-down.shonkier" as M
+
+main() -> M.main()

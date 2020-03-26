@@ -23,34 +23,34 @@ data Literal
   | Num Rational
   deriving (Show)
 
-data Term' v a
+data Term' a v
   = Atom a
   | Lit Literal
   | Var v
-  | Cell (Term' v a) (Term' v a)
-  | App (Term' v a) [Term' v a]
-  | Semi (Term' v a) (Term' v a)
-  | Fun [[a]] [Clause' v a]
-  deriving (Show)
+  | Cell (Term' a v) (Term' a v)
+  | App (Term' a v) [Term' a v]
+  | Semi (Term' a v) (Term' a v)
+  | Fun [[a]] [Clause' a v]
+  deriving (Show, Functor)
 
-type RawTerm = Term' RawVariable String
-type Term    = Term' ScopedVariable String
+type RawTerm = Term' String RawVariable
+type Term    = Term' String ScopedVariable
 
 pattern TString k str = Lit (String k str)
 pattern TNum n        = Lit (Num n)
 
 type Import = (FilePath, Maybe Namespace)
-type Program' v a = [(String, Either [[String]] (Clause' v a))]
-type Module'  v a = ([Import], Program' v a)
+type Program' a v = [(String, Either [[String]] (Clause' a v))]
+type Module'  a v = ([Import], Program' a v)
 
-type RawProgram = Program' RawVariable String
-type Program    = Program' ScopedVariable String
-type RawModule  = Module' RawVariable String
-type Module     = Module' ScopedVariable String
+type RawProgram = Program' String RawVariable
+type Program    = Program' String ScopedVariable
+type RawModule  = Module' String RawVariable
+type Module     = Module' String ScopedVariable
 
-type Clause' v a = ([PComputation' a], Term' v a)
-type RawClause = Clause' RawVariable String
-type Clause    = Clause' ScopedVariable String
+type Clause' a v = ([PComputation' a], Term' a v)
+type RawClause = Clause' String RawVariable
+type Clause    = Clause' String ScopedVariable
 
 data PValue' a
   = PAtom a
@@ -76,7 +76,7 @@ type PComputation = PComputation' String
 -- INSTANCES
 ---------------------------------------------------------------------------
 
-instance HasListView (Term' v String) (Term' v String) where
+instance HasListView (Term' String v) (Term' String v) where
   coalgebra = \case
     Atom ""  -> ItsNil
     Cell a b -> ItsCons a b
