@@ -155,7 +155,7 @@ spliceOf p = do
           | otherwise = Just endStr
     let nextStartSpl es c
           | [] `elem` es = Nothing
-          | otherwise    = Just [ ds | (d : ds) <- (startSpl : es), c == d ]
+          | otherwise    = Just [ ds | (d : ds) <- startSpl : es, c == d ]
     let delim (a, b) c = (,) <$> nextEndStr a c <*> nextStartSpl b c
     txt <- scan (endStr, []) delim
     let txt' = T.dropEnd (1+ length fence) txt
