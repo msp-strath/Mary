@@ -1,6 +1,6 @@
 module Data.Bwd where
 
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
+import Data.Semigroup (Semigroup, (<>)) -- needed for ghc versions <= 8.2.2
 
 data Bwd a
   = Nil
