@@ -3,4 +3,6 @@ import "list.shonkier"
 test("`"`[x|xs]`"`foo`ys`") -> [ys [x] xs]
 test(foo"hifoo`[x y |zs]`foogoo"foo) -> primStringConcat([y x |zs])
 
-main() -> map(test, ["ihfooworld" "hio\/goo"])
+main() -> [ map(test, ["ihfooworld" "hio\/goo"])
+            { "he`[x|xs]`llo" -> xs }
+          ]

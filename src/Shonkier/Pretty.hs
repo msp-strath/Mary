@@ -103,19 +103,32 @@ ppClause :: Pretty v => Clause' String v -> Doc
 ppClause ([], t) = pretty t
 ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
 
-ppStringLit :: String -> T.Text -> Doc
+ppSplice :: Pretty a => Keyword -> [(Text, a)] -> Text -> Doc
+ppSplice k tas u =
+  let key  = mkKeyword k (T.concat (u : map fst tas)) in
+  let open = key <> "`"; close = "`" <> key in
+  enclose (key <> dquote) (dquote <> key) $
+    foldMap (\ (t, a) -> pretty t <> open <> pretty a <> close) tas <> pretty u
+
+ppStringLit :: Keyword -> Text -> Doc
 ppStringLit k str = annotate AnnString $
-  enclose (key <> dquote) (dquote <> key) (pretty str) where
+  let key = mkKeyword k str in
+  enclose (key <> dquote) (dquote <> key) (pretty str)
+
+mkKeyword :: Keyword -> Text -> Doc
+mkKeyword k str = pretty $ case maximum ((-2):occ) of
+  (-2) -> k
+  n    -> k ++ show (n + 1)
+
+  where
 
   tk = T.pack ('"' : k)
 
-  key   = pretty $ case maximum ((-2):occ) of
-    (-2) -> k
-    n    -> k ++ show (n + 1)
   occ   = [ d | tl <- T.tails str
               , suff <- toList $ T.stripPrefix tk tl
               , let d = mread . T.unpack $ T.takeWhile isDigit suff
               ]
+
   mread = \case
     [] -> (-1)
     ds -> read ds
@@ -138,13 +151,14 @@ instance Pretty ScopedVariable where
 instance Pretty v => Pretty (Term' String v) where
   pretty t = case listView t of
     ([], Just _) -> case t of
-      Atom a     -> ppAtom a
-      Lit l      -> pretty l
-      Var v      -> pretty v
-      Cell a b   -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      App f ts   -> ppApp (pretty f) ts
-      Semi l r   -> pretty l <> semi <+> pretty r
-      Fun hs cls -> ppFun hs cls
+      Atom a        -> ppAtom a
+      Lit l         -> pretty l
+      String k ps t -> ppSplice k ps t
+      Var v         -> pretty v
+      Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      App f ts      -> ppApp (pretty f) ts
+      Semi l r      -> pretty l <> semi <+> pretty r
+      Fun hs cls    -> ppFun hs cls
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where
@@ -155,12 +169,13 @@ instance Pretty v => Pretty (Clause' String v) where
 instance Pretty PValue where
   pretty p = case listView p of
     ([], Just _) -> case p of
-      PAtom a   -> ppAtom a
-      PLit l    -> pretty l
-      PBind v   -> pretty v
-      PAs v p   -> pretty v <> arobase <> pretty p
-      PWild     -> "_"
-      PCell a b -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      PAtom a        -> ppAtom a
+      PLit l         -> pretty l
+      PString k ps t -> ppSplice k ps t
+      PBind v        -> pretty v
+      PAs v p        -> pretty v <> arobase <> pretty p
+      PWild          -> "_"
+      PCell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
     it -> ppList it
 
 instance Pretty PComputation where
