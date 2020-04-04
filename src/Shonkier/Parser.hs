@@ -216,6 +216,7 @@ weeTerm = choice
   , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
   , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
+  , id <$ char '(' <* skipSpace <*> term <* skipSpace <* char ')'
   ]
 
 moreTerm :: RawTerm -> Parser RawTerm

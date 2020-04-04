@@ -100,6 +100,16 @@ matches :: (a -> b -> Maybe (LocalEnv' c d))
         -> [a] -> [b] -> Maybe (LocalEnv' c d)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
+
+-- Explicit environments
+
+explicit :: (a -> Variable) -> Value' a v -> LocalEnv' a v
+explicit ava (VCell (VAtom x) v) = singleton (ava x) v
+explicit ava (VCell e1 e2)       = merge (explicit ava e2) (explicit ava e1)
+explicit _   _                   = mempty
+
+
+
 -- Evaluation contexts
 
 runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
@@ -146,9 +156,14 @@ eval (rho, t) = case t of
     LocalVar x     -> use (fromMaybe theIMPOSSIBLE $ rho !? x)
     GlobalVar fp x -> do v <- globalLookup fp x
                          use (fromMaybe theIMPOSSIBLE v)
+
+    -- dynamic
+    OutOfScope x         -> case rho!? x of
+      Just v  -> use v
+      Nothing -> handle ("OutOfScope", [vVar x]) []
+
     -- error cases
     AmbiguousVar _ x     -> handle ("AmbiguousVar", [vVar x]) []
-    OutOfScope x         -> handle ("OutOfScope", [vVar x]) []
     InvalidNamespace _ x -> handle ("InvalidNamespace", [vVar x]) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
@@ -179,6 +194,12 @@ use v = pop >>= \case
     CellR u rho -> use (VCell u v)
     -- we better be making a request or using a function
     AppL rho as -> case v of
+      VNil               -> case as of
+        [t] -> eval (rho, t)
+        _   -> handle ("EnvironmentsAreUnary", []) []
+      VCell _ _          -> case as of
+        [t] -> eval (merge rho (explicit id v), t)
+        _   -> handle ("EnvironmentsAreUnary", []) []
       VAtom f            ->
         -- Here we are enforcing the invariant:
         -- Atomic functions i.e. requests only ever offer
