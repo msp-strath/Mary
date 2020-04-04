@@ -217,7 +217,7 @@ function smatch(rho, p, v) {
         case "Next" :
             var jv = v.indexOf(m.delim,iv);
             if (iv > jv) { return null; }
-            return (v.slice(iv, iv=jv));            
+            return (v.slice(iv, iv=jv));
             break;
         };
         return null;
@@ -244,7 +244,7 @@ function smatch(rho, p, v) {
         var m = {};
         if (!skip(p.prefix)) { return false; }
         if (stringy(p.tail)) { m = {tag: "Terminal", delim: p.tail}; }
-            else { m = {tag: "Next", delim = p.tail.prefix}; };
+        else { m = {tag: "Next", delim: p.tail.prefix}; };
         if (!stringy(tmatch(rho, p.splice, m))) { return false; }
         p = p.tail;
     };
