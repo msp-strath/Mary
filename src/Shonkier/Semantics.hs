@@ -76,7 +76,7 @@ tmatch p d t0 = case p of
     (tz1, rho1, t1) <- tmatch p Head t0
     (tz2, rho2, t2) <- tmatch q d t1
     return (tz1 <> tz2, merge rho1 rho2, t2)
-  PAtom a -> Nothing  -- forced upon us by the polymorphism, but reasonable
+  PAtom a -> return (Nil, mempty, t0)
   PLit _  -> Nothing
   -- otherwise, it's a lazy string pattern, and we need the MaPo logic...
   _ -> do

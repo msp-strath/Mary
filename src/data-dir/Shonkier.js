@@ -223,19 +223,22 @@ function smatch(rho, p, v) {
         return null;
     };
     function tmatch(rho, p, m) {
-        if (p.tag == "As") {
+        switch (p.tag) {
+        case "As":
             var s = tmatch(rho, p.pat, m);
             if (stringy(s)) { rho[p.var] = Lit(s) };
             return s;
-        };
-        if (p.tag == "Cell") {
+        case "Cell":
             var a = tmatch(rho, p.fst, {tag: "Head"});
             if (!stringy(a)) { return null; };
             var b = tmatch(rho, p.snd, m);
             if (!stringy(b)) { return null; };
             return a.concat(b);
+        case "Atom":
+            return "";
+        case "Lit":
+            return null;
         };
-        if (p.tag == "Atom" || p.tag == "Lit") { return null; };
         var s = mfind(m);
         if (stringy(s) && vmatch(rho,p,Lit(s))) { return s; };
         return null;
