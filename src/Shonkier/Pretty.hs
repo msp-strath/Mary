@@ -105,31 +105,46 @@ ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
 
 ppSplice :: Pretty a => Keyword -> [(Text, a)] -> Text -> Doc
 ppSplice k tas u =
-  let key  = mkKeyword k (T.concat (u : map fst tas)) in
+  let key  = mkKeyword k (u : map fst tas) in
   let open = key <> "`"; close = "`" <> key in
   enclose (key <> dquote) (dquote <> key) $
     foldMap (\ (t, a) -> pretty t <> open <> pretty a <> close) tas <> pretty u
 
 ppStringLit :: Keyword -> Text -> Doc
 ppStringLit k str = annotate AnnString $
-  let key = mkKeyword k str in
+  let key = mkKeyword k [str] in
   enclose (key <> dquote) (dquote <> key) (pretty str)
 
-mkKeyword :: Keyword -> Text -> Doc
-mkKeyword k str = pretty $ case maximum ((-2):occ) of
+mkKeyword :: Keyword -> [Text] -> Doc
+mkKeyword [] ts
+    -- if we're forced to vary the empty keyword, we need to kick off with an alpha
+  | any (T.any (`elem` ['"', '`'])) ts = mkKeyword "quo" ts
+  | otherwise = mempty
+mkKeyword k ts = pretty $ case maximum (maximum ((-2):occ) : qso) of
   (-2) -> k
   n    -> k ++ show (n + 1)
 
   where
 
-  tk = T.pack ('"' : k)
+  haystack = ts >>= T.tails
 
-  occ   = [ d | tl <- T.tails str
-              , suff <- toList $ T.stripPrefix tk tl
-              , let d = mread . T.unpack $ T.takeWhile isDigit suff
+  kt  = T.pack k
+  uqk = T.pack ('"' : k)
+  usk = T.pack ('`' : k)
+
+  occ   = [ d | tl <- haystack
+              , suff <- [T.stripPrefix uqk tl, T.stripPrefix usk tl] >>= toList
+              , let d = mread $ T.takeWhile isDigit suff
               ]
 
-  mread = \case
+  qso   = [ mread d
+          | tl <- haystack
+          , suff <- toList $ T.stripPrefix kt tl
+          , let (d, r) = T.span isDigit suff
+          , case T.uncons r of { Just ('`', _) -> True ; _ -> False }
+          ]
+
+  mread t = case T.unpack t of
     [] -> (-1)
     ds -> read ds
 
