@@ -244,7 +244,7 @@ function smatch(rho, p, v) {
         var m = {};
         if (!skip(p.prefix)) { return false; }
         if (stringy(p.tail)) { m = {tag: "Terminal", delim: p.tail}; }
-            else { m = {tag: "Next", delim = p.tail.prefix}; };
+        else { m = {tag: "Next", delim : p.tail.prefix}; };
         if (!stringy(tmatch(rho, p.splice, m))) { return false; }
         p = p.tail;
     };
