@@ -2,10 +2,9 @@
 
 module Shonkier.ShonkierJS where
 
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text, pack)
 import qualified Data.Text as T
 import Data.List
-import Data.Char
 import Data.Ratio
 import Data.Map (foldMapWithKey)
 
@@ -45,23 +44,18 @@ instance (JS v, JSAtom a) => JS (Clause' a v) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
 
 instance (JS v, JSAtom a) => JS (Term' a v) where
-  js (Atom a)    = ["Atom(", jsAtom a, ")"]
-  js (Lit l)     = ["Lit("] ++ js l ++ [")"]
-  js (Var x)     = js x
-  js (Cell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
-  js (App f as)  = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
-  js (Semi l r)  = ["Semi("] ++ js l ++ [","] ++ js r ++ [")"]
-  js (Fun hs cs) = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
-                ++ js cs
-                ++ [")"]
+  js (Atom a)        = ["Atom(", jsAtom a, ")"]
+  js (Lit l)         = ["Lit("] ++ js l ++ [")"]
+  js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
+  js (Var x)         = js x
+  js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
+  js (App f as)      = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
+  js (Semi l r)      = ["Semi("] ++ js l ++ [","] ++ js r ++ [")"]
+  js (Fun hs cs)     = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
+                    ++ js cs
+                    ++ [")"]
 
 instance JS Literal where
-  {-
-  js (String _ txt) = ["\""] ++ (unpack txt >>= ch) ++ ["\""] where
-    ch c | c < ' ' = ["\\", pack [chr (64 + ord c)]]
-    ch '"' = ["\\\""]
-    ch '\\' = ["\\\\"]
-    ch c = [pack [c]]-}
   js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
 
 instance JSAtom a => JS (PComputation' a) where
@@ -71,12 +65,23 @@ instance JSAtom a => JS (PComputation' a) where
   js (PThunk x) = ["\"",pack x,"\""]
 
 instance JSAtom a => JS (PValue' a) where
-  js (PAtom a)    = ["Atom(", jsAtom a, ")"]
-  js (PLit l)     = ["Lit("] ++ js l ++ [")"]
-  js (PBind x)    = ["\"",pack x,"\""]
-  js (PAs x p)    = ["PAs("] ++ ["\"",pack x,"\""] ++ [","] ++ js p ++ [")"]
-  js (PCell s t)  = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
-  js PWild        = ["PWild"]
+  js (PAtom a)        = ["Atom(", jsAtom a, ")"]
+  js (PLit l)         = ["Lit("] ++ js l ++ [")"]
+  js (PString _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
+  js (PBind x)        = ["\"",pack x,"\""]
+  js (PAs x p)        = ["PAs("] ++ ["\"",pack x,"\""] ++ [","] ++ js p ++ [")"]
+  js (PCell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
+  js PWild            = ["PWild"]
+
+jsText :: Text -> [Text]
+jsText t
+  | T.any (`elem` ['"', '\\']) t = [T.pack (show t)]
+  | otherwise = ["\"", t, "\""]
+
+jsStringy :: JS x => [(Text, x)] -> Text -> [Text]
+jsStringy []             u = jsText u
+jsStringy ((t, x) : txs) u =
+  ["Strunk("] ++ jsText t ++ [","] ++ js x ++ [","] ++ jsStringy txs u ++ [")"]
 
 jsGlobalEnv :: GlobalEnv -> [Text]
 jsGlobalEnv gl =
