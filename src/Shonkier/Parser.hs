@@ -35,7 +35,7 @@ import_ = do
 
 program :: Parser RawProgram
 program = id <$ skipSpace
-            <*> many ((,) <$> identifier <*> (Left <$> decl <|> Right <$>defn) <* skipSpace)
+            <*> many ((,) <$> identifier <*> (Left <$> decl <|> Right <$> defn) <* skipSpace)
              <* endOfInput
 
 data Comment = Line | Nested deriving (Eq, Show)
@@ -210,7 +210,8 @@ variable = do
 
 weeTerm :: Parser RawTerm
 weeTerm = choice
-  [ Atom <$> atom
+  [ Match <$> pvalue <* skipSpace <* char '=' <* skipSpace <*> term
+  , Atom <$> atom
   , Lit <$> literal
   , (\ (k, t, es) -> String k t es) <$> spliceOf term
   , Var <$> variable

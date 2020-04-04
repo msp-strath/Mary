@@ -31,6 +31,7 @@ data Term' a v
   | App (Term' a v) [Term' a v]
   | Semi (Term' a v) (Term' a v)
   | Fun [[a]] [Clause' a v]
+  | Match (PValue' a) (Term' a v)
   deriving (Show, Functor)
 
 type RawTerm = Term' String RawVariable

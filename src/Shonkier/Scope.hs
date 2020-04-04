@@ -103,6 +103,7 @@ instance ScopeCheck RawTerm Term where
       String k
         <$> traverse (traverse (scopeCheck local)) sts
         <*> pure u
+    Match p t -> Match p <$> scopeCheck local t  -- for now
 
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do

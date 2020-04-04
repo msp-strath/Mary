@@ -6,7 +6,7 @@ import Control.Monad.State
 import Control.Applicative
 
 import Data.Maybe (fromMaybe)
-import Data.Map (singleton, (!?), keysSet)
+import Data.Map (singleton, (!?), keysSet, toAscList)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import qualified Data.Text as T
 
@@ -103,11 +103,14 @@ matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 -- Explicit environments
 
-explicit :: (a -> Variable) -> Value' a v -> LocalEnv' a v
-explicit ava (VCell (VAtom x) v) = singleton (ava x) v
-explicit ava (VCell e1 e2)       = merge (explicit ava e2) (explicit ava e1)
-explicit _   _                   = mempty
+value2Env :: Value -> LocalEnv
+value2Env (VCell (VAtom x) v) = singleton x v
+value2Env (VCell e1 e2)       = merge (value2Env e2) (value2Env e1)
+value2Env _                   = mempty
 
+env2value :: LocalEnv -> Value
+env2value = foldr (VCell . sing) VNil . toAscList where
+  sing (k, v) = VCell (VAtom k) v
 
 
 -- Evaluation contexts
@@ -180,6 +183,9 @@ eval (rho, t) = case t of
     (s, t) : sts -> do
       push (StringLR (VString k s) rho sts u)
       eval (rho, t)
+  Match p t -> do
+    push (MatchR p)
+    eval (rho, t)
 
   where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
         vVar x = VString "" $ T.pack x
@@ -198,7 +204,7 @@ use v = pop >>= \case
         [t] -> eval (rho, t)
         _   -> handle ("EnvironmentsAreUnary", []) []
       VCell _ _          -> case as of
-        [t] -> eval (merge rho (explicit id v), t)
+        [t] -> eval (merge rho (value2Env v), t)
         _   -> handle ("EnvironmentsAreUnary", []) []
       VAtom f            ->
         -- Here we are enforcing the invariant:
@@ -225,6 +231,9 @@ use v = pop >>= \case
       ((s, t) : sts) -> do
         push (StringLR (VCell p (VCell v (VString "" s))) rho sts u)
         eval (rho, t)
+    MatchR p -> case vmatch p v of
+      Nothing  -> handle ("IncompletePattern", []) []
+      Just sig -> use (env2value sig)
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]

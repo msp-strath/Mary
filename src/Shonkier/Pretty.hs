@@ -11,7 +11,7 @@ import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
+import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi, equals)
 import qualified Data.Text.Prettyprint.Doc as P
 
 import Shonkier.Syntax
@@ -72,6 +72,9 @@ arrow = annotate AnnOperator "->"
 
 arobase :: Doc
 arobase = annotate AnnOperator "@"
+
+equals :: Doc
+equals = annotate AnnOperator "="
 
 semi :: Doc
 semi = annotate AnnOperator P.semi
@@ -175,6 +178,7 @@ instance Pretty v => Pretty (Term' String v) where
       App f ts      -> ppApp (pretty f) ts
       Semi l r      -> pretty l <> semi <+> pretty r
       Fun hs cls    -> ppFun hs cls
+      Match p t     -> parens $ pretty p <+> equals <+> pretty t
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where
