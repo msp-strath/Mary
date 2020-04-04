@@ -25,7 +25,7 @@
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Lit("Enums"),Cell(Atom(""),Cell(Atom(""),App(GVar(".","enum"),[Cell(Lit("A"),Cell(Cell(Cell(Lit("b"),Cell(Lit("c"),Atom(""))),Cell(Lit("d"),Atom(""))),Atom("")))]))))))]);
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Stringy("Enums"),Cell(Atom(""),Cell(Atom(""),App(GVar(".","enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Atom(""))),Cell(Stringy("d"),Atom(""))),Atom("")))]))))))]);
   </script>
 </head>
 <body>
@@ -55,7 +55,7 @@ Abcd
 <span class="shonkier-function">enum</span>(xs<span class="shonkier-operator">@</span>[_|_]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
 <span class="shonkier-function">enum</span>(xs) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> xs]]<br />
 <br />
-<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> <span class="shonkier-string">"Enums"</span> [] []|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
+<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> "Enums" [] []|enum(["A" [["b" "c"] "d"]])]
 </div>
 </form>
 </body>

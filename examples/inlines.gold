@@ -21,9 +21,9 @@
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["testBlock"] = {};
-  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Lit("World"),Atom(""))),Atom(""))))))]);
+  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Atom(""))),Atom(""))))))]);
   globalEnv["testInline"] = {};
-  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Lit("blether"),Atom(""))))]);
+  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Atom(""))))]);
   </script>
 </head>
 <body>
