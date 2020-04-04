@@ -26,6 +26,7 @@ data Annotation
   | AnnNumeric
   | AnnOperator
   | AnnPrimitive
+  | AnnSplice
   | AnnString
 
 type Doc = P.Doc Annotation
@@ -104,11 +105,11 @@ ppClause ([], t) = pretty t
 ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
 
 ppSplice :: Pretty a => Keyword -> [(Text, a)] -> Text -> Doc
-ppSplice k tas u =
+ppSplice k tas u = annotate AnnString $
   let key  = mkKeyword k (u : map fst tas) in
   let open = key <> "`"; close = "`" <> key in
   enclose (key <> dquote) (dquote <> key) $
-    foldMap (\ (t, a) -> pretty t <> open <> pretty a <> close) tas <> pretty u
+    foldMap (\ (t, a) -> pretty t <> annotate AnnSplice (open <> pretty a <> close)) tas <> pretty u
 
 ppStringLit :: Keyword -> Text -> Doc
 ppStringLit k str = annotate AnnString $
