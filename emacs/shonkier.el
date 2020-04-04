@@ -4,7 +4,7 @@
 
 ;; define several class of keywords
 (setq shonkier-keywords  '("import" "as"))
-(setq shonkier-operators '("->" "@" ";"))
+(setq shonkier-operators '("->" "@" ";" "="))
 (setq shonkier-warnings  '("TODO" "FIXME"))
 
 ;; create the regex string for each class of keywords
