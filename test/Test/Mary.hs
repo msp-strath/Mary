@@ -9,7 +9,7 @@ maryTests :: IO TestTree
 maryTests = do
   let name      = "Mary"
   let extension = ".mary"
-  let goldenExt = ".gold"
+  let goldenExt = ".html"
   ioTests TestConfig{..} (servePage testConfig)
     -- excluded tests
     ["./examples/links.mary"] -- test pipeline does not get page metavalue

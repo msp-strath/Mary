@@ -5,12 +5,25 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Embedding Programs as Fenced Code Blocks</title>
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/msp-strath/Mary/master/src/data-dir/shonkier.css" />
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
   <script>
-  var globalEnv = {}; globalEnv["testBlock"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Lit("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Lit("World"),Atom(""))),Atom(""))))))]); globalEnv["testInline"] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Lit("blether"),Atom(""))))]);
+  var globalEnv = {};
+  globalEnv["primNumAdd"] = {};
+  globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
+  globalEnv["primNumMinus"] = {};
+  globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
+  globalEnv["primNumMult"] = {};
+  globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["primStringConcat"] = {};
+  globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["testBlock"] = {};
+  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Atom(""))),Atom(""))))))]);
+  globalEnv["testInline"] = {};
+  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Atom(""))))]);
   </script>
 </head>
 <body>
@@ -23,4 +36,3 @@
 </form>
 </body>
 </html>
-
