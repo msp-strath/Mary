@@ -54,13 +54,16 @@ instance Pretty a => Pretty [a] where
   pretty = prettyList
 
 instance Pretty Rational where
-  pretty p =
+  pretty = pretty . ppRational
+
+ppRational :: Rational -> Text
+ppRational p = T.pack $
     let n = numerator p; d = denominator p in
-    if | d == 1    -> pretty n
-       | d == 2    -> pretty (n `div` 2) <> ".5"
-       | d == 4    -> pretty (n `div` 4)
+    if | d == 1    -> show n
+       | d == 2    -> show (n `div` 2) <> ".5"
+       | d == 4    -> show (n `div` 4)
                       <> if n `mod` 4 == 1 then ".25" else ".75"
-       | otherwise -> pretty n <+> "/" <+> pretty d
+       | otherwise -> show n <> "/" <> show d
 
 ppAtom :: String -> Doc
 ppAtom str = annotate AnnAtom $ case str of
