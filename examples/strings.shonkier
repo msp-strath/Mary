@@ -1,0 +1,20 @@
+splicer(xs,ys) -> "I'm `xs` and this is my friend `ys`."
+matcher("`xs` the `ys`") -> [xs ys]
+matcher(_) -> "matcher no match"
+
+foofoo0("`"`[x|xs]`"`foo`ys`") -> [x xs ys]
+foofoo0(_) -> "foofoo0 no match"
+
+foofoo1("`[x|xs]`foo`ys`") -> [x xs ys]
+foofoo1(_) -> "foofoo1 no match"
+
+csep("`xs`,`ys`") -> [xs | csep(ys)]
+csep(xs) -> [xs]
+
+main() ->
+  [ splicer("Julian", "Sandy")
+    matcher("Vada the lallies!")
+    foofoo0("foofoo")
+    foofoo1("foofoo")
+    csep("Pugh, Pugh, Barney McGrew, Cuthbert, Dibble, and Grubb")
+  ]        

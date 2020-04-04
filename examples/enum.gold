@@ -25,7 +25,7 @@
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Lit("Enums"),Cell(Atom(""),Cell(Atom(""),App(GVar(".","enum"),[Cell(Lit("A"),Cell(Cell(Cell(Lit("b"),Cell(Lit("c"),Atom(""))),Cell(Lit("d"),Atom(""))),Atom("")))]))))))]);
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Stringy("Enums"),Cell(Atom(""),Cell(Atom(""),App(GVar(".","enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Atom(""))),Cell(Stringy("d"),Atom(""))),Atom("")))]))))))]);
   </script>
 </head>
 <body>

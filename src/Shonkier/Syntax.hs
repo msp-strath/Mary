@@ -19,13 +19,13 @@ data ScopedVariable
   deriving (Show)
 
 data Literal
-  = String Keyword Text
-  | Num Rational
+  = Num Rational
   deriving (Show)
 
 data Term' a v
   = Atom a
   | Lit Literal
+  | String Keyword [(Text, Term' a v)] Text
   | Var v
   | Cell (Term' a v) (Term' a v)
   | App (Term' a v) [Term' a v]
@@ -36,7 +36,6 @@ data Term' a v
 type RawTerm = Term' String RawVariable
 type Term    = Term' String ScopedVariable
 
-pattern TString k str = Lit (String k str)
 pattern TNum n        = Lit (Num n)
 
 type Import = (FilePath, Maybe Namespace)
@@ -55,6 +54,7 @@ type Clause    = Clause' String ScopedVariable
 data PValue' a
   = PAtom a
   | PLit Literal
+  | PString Keyword [(Text, PValue' a)] Text
   | PBind Variable
   | PWild
   | PAs Variable (PValue' a)
