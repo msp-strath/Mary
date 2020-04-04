@@ -12,7 +12,7 @@ type RawVariable  = (Maybe Namespace, Variable)
 
 data ScopedVariable
   = LocalVar Variable
-  | GlobalVar FilePath Variable
+  | GlobalVar Bool{-from longname?-} FilePath Variable
   | AmbiguousVar [FilePath] Variable
   | InvalidNamespace Namespace Variable
   | OutOfScope Variable

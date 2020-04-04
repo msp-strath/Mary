@@ -77,16 +77,16 @@ instance ScopeCheck RawVariable ScopedVariable where
     Nothing | Set.member v local -> pure $ LocalVar v
     Just nm -> get >>= \ st -> case namespaces st Map.!? nm of
       Nothing  -> pure $ InvalidNamespace nm v
-      Just fps -> checkGlobal fps v
-    _ -> get >>= \ st -> checkGlobal (imports st) v
+      Just fps -> checkGlobal True fps v
+    _ -> get >>= \ st -> checkGlobal False (imports st) v
 
     where
 
-    checkGlobal :: Set FilePath -> Variable -> ScopeM ScopedVariable
-    checkGlobal scp v = do
+    checkGlobal :: Bool -> Set FilePath -> Variable -> ScopeM ScopedVariable
+    checkGlobal b scp v = do
       candidates <- gets (\ st -> globalScope st Map.!? v)
       pure $ case Set.toList . Set.intersection scp <$> candidates of
-        Just [fp]      -> GlobalVar fp v
+        Just [fp]      -> GlobalVar b fp v
         Just fps@(_:_) -> AmbiguousVar fps v
         _              -> OutOfScope v
 

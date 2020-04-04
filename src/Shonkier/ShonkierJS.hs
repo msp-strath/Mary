@@ -29,7 +29,7 @@ instance JS a => JS [a] where
 instance JS ScopedVariable where
   js = \case
     LocalVar v         -> [jsAtom v]
-    GlobalVar fp v     -> ["GVar(", jsAtom fp, ",", jsAtom v, ")"]
+    GlobalVar _ fp v   -> ["GVar(", jsAtom fp, ",", jsAtom v, ")"]  -- FIXME!
     -- error cases
     AmbiguousVar _ x     -> exception "AmbiguousVar" x
     OutOfScope x         -> exception "OutOfScope" x

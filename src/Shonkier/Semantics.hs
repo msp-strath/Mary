@@ -152,22 +152,28 @@ globalLookup fp x = do
     candidates <- st !? x
     candidates !? fp
 
+dynVar :: ScopedVariable -> Maybe Variable
+dynVar (GlobalVar False _ x) = Just x
+dynVar (LocalVar x)          = Just x
+dynVar (OutOfScope x)        = Just x
+dynVar (AmbiguousVar _ x)    = Just x
+dynVar _                     = Nothing
+
 eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
-  Var x     -> case x of
-    -- successes
-    LocalVar x     -> use (fromMaybe theIMPOSSIBLE $ rho !? x)
-    GlobalVar fp x -> do v <- globalLookup fp x
-                         use (fromMaybe theIMPOSSIBLE v)
+  Var x     -> case dynVar x >>= (rho !?) of
+    Just v  -> use v
+    Nothing -> case x of
+      -- successes
+      LocalVar x       -> theIMPOSSIBLE
+      GlobalVar _ fp x -> do
+        v <- globalLookup fp x
+        use (fromMaybe theIMPOSSIBLE v)
 
-    -- dynamic
-    OutOfScope x         -> case rho!? x of
-      Just v  -> use v
-      Nothing -> handle ("OutOfScope", [vVar x]) []
-
-    -- error cases
-    AmbiguousVar _ x     -> handle ("AmbiguousVar", [vVar x]) []
-    InvalidNamespace _ x -> handle ("InvalidNamespace", [vVar x]) []
+      -- error cases
+      OutOfScope x         -> handle ("OutOfScope", [vVar x]) []
+      AmbiguousVar _ x     -> handle ("AmbiguousVar", [vVar x]) []
+      InvalidNamespace _ x -> handle ("InvalidNamespace", [vVar x]) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)

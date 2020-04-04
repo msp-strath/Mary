@@ -162,7 +162,7 @@ instance Pretty RawVariable where
 instance Pretty ScopedVariable where
   pretty = \case
     LocalVar x           -> pretty x
-    GlobalVar _ x        -> ppGlobalVar x
+    GlobalVar b _ x      -> if b then ppGlobalVar x else pretty x
     AmbiguousVar _ x     -> annotate AnnError $ pretty x
     OutOfScope x         -> annotate AnnError $ pretty x
     InvalidNamespace _ x -> annotate AnnError $ pretty x
