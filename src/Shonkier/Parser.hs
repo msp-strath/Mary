@@ -210,8 +210,8 @@ variable = do
 
 weeTerm :: Parser RawTerm
 weeTerm = choice
-  [ Match <$> pvalue <* skipSpace <* char '=' <* skipSpace <*> term
-  , Atom <$> atom
+  [ {-Match <$> pvalue <* skipSpace <* char '=' <* skipSpace <*> term
+  , -} Atom <$> atom
   , Lit <$> literal
   , (\ (k, t, es) -> String k t es) <$> spliceOf term
   , Var <$> variable
@@ -224,6 +224,9 @@ moreTerm :: RawTerm -> Parser RawTerm
 moreTerm t = choice
   [ App t <$> tupleOf term >>= moreTerm
   , Semi t <$ punc ';' <*> term
+  {- trying this ... -}
+  , flip Match t <$ skipSpace <* char '=' <* char '>' <* skipSpace <*> pvalue >>= moreTerm
+  {- as you were ... -}
   , pure t
   ]
 

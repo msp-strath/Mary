@@ -16,6 +16,13 @@ import Shonkier.Scope
 import Shonkier.Value
 import Shonkier.Primitives (prim)
 
+
+-- how to signal a failure
+
+abort :: Shonkier Computation
+abort = handle ("abort", []) []
+
+
 -- environments
 
 lmatch :: Literal -> Literal -> Maybe ()
@@ -181,7 +188,8 @@ eval (rho, t) = case t of
                   eval (rho, a)
   App f as  -> do push (AppL rho as)
                   eval (rho, f)
-  Semi l r  -> do push (SemiL rho r)
+  Semi l r  -> do -- push (SemiL rho r)
+                  push (AppL rho [r])
                   eval (rho, l)
   Fun es cs -> use (VFun [] rho es cs)
   String k sts u -> case sts of
@@ -212,6 +220,11 @@ use v = pop >>= \case
       VCell _ _          -> case as of
         [t] -> eval (merge rho (value2Env v), t)
         _   -> handle ("EnvironmentsAreUnary", []) []
+      VLit (Num n)
+        | n == 0    -> abort
+        | otherwise -> case as of
+          [t] -> eval (rho, t)
+          _   -> handle ("GuardsAreUnary", []) []
       VAtom f            ->
         -- Here we are enforcing the invariant:
         -- Atomic functions i.e. requests only ever offer
@@ -238,7 +251,7 @@ use v = pop >>= \case
         push (StringLR (VCell p (VCell v (VString "" s))) rho sts u)
         eval (rho, t)
     MatchR p -> case vmatch p v of
-      Nothing  -> handle ("IncompletePattern", []) []
+      Nothing  -> abort
       Just sig -> use (env2value sig)
 
 app :: Funy
@@ -277,9 +290,7 @@ handle r@(a, vs) frs = pop >>= \case
 
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
-call rho []                cs = do
-  st <- get
-  handle ("IncompletePattern", []) []
+call rho []                cs = abort
 call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> eval (merge rho sig, rhs)
