@@ -37,7 +37,7 @@ process doc0@(Pandoc meta docs) = do
   let page = case lookupMeta "page" meta of
         Just (MetaInlines [Str s]) -> s
         Just (MetaString s) -> s
-        _ -> "" -- error $ "Meta data 'page' missing! Meta:" ++ show meta
+        _ -> error $ "Meta data 'page' missing! Meta:" ++ show meta
   let doc2 = walk (evalMaryInline is env page)
            . walk (evalMaryBlock is env)
            $ doc1

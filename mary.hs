@@ -59,7 +59,7 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
     opts = info (optsParser <**> helper)
       ( fullDesc <> header "Mary - a content delivery and assessment engine")
     h :: SomeException -> IO ()
-    h e = SIO.hPutStrLn stderr $ "mary ERROR " ++ displayException e
+    h e = SIO.hPutStrLn stdout $ "mary ERROR " ++ displayException e
 
 data Options
   = Pandoc
