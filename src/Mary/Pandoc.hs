@@ -25,8 +25,11 @@ import Shonkier.ShonkierJS
 import Shonkier.Syntax
 import Shonkier.Value
 
+import System.IO
+
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
+  hPutStrLn stderr "We get this far (doubt it)"
   let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
   let rm@(is, ps)  = fold [ (is, p)
                           | ds <- defns
