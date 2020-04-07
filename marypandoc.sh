@@ -1,2 +1,2 @@
 #! /bin/sh
-mary pandoc
+./mary pandoc
