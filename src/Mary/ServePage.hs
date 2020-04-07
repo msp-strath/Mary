@@ -34,7 +34,7 @@ servePage Config{..} post get file =
     B.hPut hin $ phpify post
     B.hPut hin $ phpify get
     hClose hin
-    withCreateProcess ((proc pandoc ["--data-dir=data", "--standalone", "-f", "markdown", "--filter", "marypandoc", "-t", "html", "--template", "templates/mary.html5"])
+    withCreateProcess ((proc pandoc ["--verbose", "--data-dir=data", "--standalone", "-f", "markdown", "--filter", "marypandoc", "-t", "html", "--template", "templates/mary.html5"])
                      { std_in  = UseHandle hmaryfind
                      , std_out = CreatePipe
                      }) $ \ _ (Just hpandoc) _ _ ->
