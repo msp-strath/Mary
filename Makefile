@@ -8,12 +8,13 @@ SOURCE = $(shell find src -name '*.lhs' -o -name '*.hs')
 # we set the timestamp on the build dir to a long time in the past
 # with 'touch --date "@0"' in case cabal fails.
 CABAL_INSTALL = \
-  cabal install \
+  cabal new-install exe:mary --overwrite-policy=always \
   || { touch --date "@0" dist ; \
        exit 42 ; }
 
 install: $(SOURCE)
 	$(CABAL_INSTALL)
+	cp ~/.cabal/bin/mary .
 
 clean:
 	rm -rf dist TAGS
