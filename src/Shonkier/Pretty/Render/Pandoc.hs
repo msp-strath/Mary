@@ -31,4 +31,5 @@ renderAnn ann = "shonkier-" <> case ann of
   AnnNumeric   -> "numeric"
   AnnOperator  -> "operator"
   AnnPrimitive -> "primitive"
+  AnnSplice    -> "splice"
   AnnString    -> "string"

@@ -22,6 +22,12 @@ function Lit(l) { // Lit l
 function Cell(x,y) { // Cell x y
     return {tag: "Cell", fst: x, snd: y};
 };
+function Stringy(x) { // from String k ts u, we get ts tipped by u
+    return {tag: "String", chunks: x};
+};
+function Strunk(p,c,t) { // one chunk from a String
+    return {prefix: p, splice: c, tail: t};
+};
 
 // Term only
 function App(f, as) {       // App f as, where as is an array
@@ -166,7 +172,11 @@ function vmatches(rho, ps, vs) {
 function vmatch(rho, p, v) {
     if (stringy(p)) { rho[p] = v; return true; };
     if (p.tag == "Wild") { return true; };
-    if (p.tag == "As") { rho[p.var] = v; return (vmatch(rho,p.pat,v)); }
+    if (p.tag == "As") { rho[p.var] = v; return (vmatch(rho,p.pat,v)); };
+    if (p.tag == "String") {
+        if (v.tag != "Lit" || !stringy(v.literal)) { return false; };
+        return smatch(rho, p.chunks, v.literal);
+    };
     if (p.tag == v.tag) {
         switch (p.tag) {
         case "Atom" :
@@ -181,6 +191,67 @@ function vmatch(rho, p, v) {
         };
     };
     return false;
+};
+
+function smatch(rho, p, v) {
+    var iv = 0;
+    function skip (s) {
+        var is = 0;
+        while (is < s.length) {
+            if (iv == v.length || v[iv] != s[is]) { return false; };
+            iv++; is++;
+        };
+        return true;
+    };
+    function mfind(m) { // return the string demanded by the mode, fail is null
+        switch (m.tag) {
+        case "Head" :
+            if (iv == v.length) { return null; }
+            return (v.slice(iv, ++iv));
+            break;
+        case "Terminal" :
+            var jv = v.length - m.delim.length;
+            if (iv > jv) { return null; }
+            return (v.slice(iv, iv=jv));
+            break;
+        case "Next" :
+            var jv = v.indexOf(m.delim,iv);
+            if (iv > jv) { return null; }
+            return (v.slice(iv, iv=jv));
+            break;
+        };
+        return null;
+    };
+    function tmatch(rho, p, m) {
+        switch (p.tag) {
+        case "As":
+            var s = tmatch(rho, p.pat, m);
+            if (stringy(s)) { rho[p.var] = Lit(s) };
+            return s;
+        case "Cell":
+            var a = tmatch(rho, p.fst, {tag: "Head"});
+            if (!stringy(a)) { return null; };
+            var b = tmatch(rho, p.snd, m);
+            if (!stringy(b)) { return null; };
+            return a.concat(b);
+        case "Atom":
+            return "";
+        case "Lit":
+            return null;
+        };
+        var s = mfind(m);
+        if (stringy(s) && vmatch(rho,p,Lit(s))) { return s; };
+        return null;
+    };
+    while (!stringy(p)) {
+        var m = {};
+        if (!skip(p.prefix)) { return false; }
+        if (stringy(p.tail)) { m = {tag: "Terminal", delim: p.tail}; }
+        else { m = {tag: "Next", delim: p.tail.prefix}; };
+        if (!stringy(tmatch(rho, p.splice, m))) { return false; }
+        p = p.tail;
+    };
+    return (skip(p) && iv == v.length);
 };
 
 // Frame
@@ -198,6 +269,9 @@ function AppR(f,cz,rho,i,hs,ts) { // carefully engineered pun with Apply
 };
 function SemiL(rho,r) {
     return {tag: 4, env: rho, right: r};
+};
+function StringLR(v,rho,u) {
+    return {tag: 5, done: v, env: rho, chunks: u};
 };
 
 // State
@@ -220,32 +294,33 @@ function Call(rho,cs,as) {
 };
 
 // Primitives
-function prim(f, vs) {
-    function primStringConcat(vs) {
-        var ts = []; // final string
-        var cs = vs.reverse(); // stack of arguments to go through
 
-        while (hasLength(cs) && cs.length > 0) {
-            var x = cs.pop();
-            if (x.tag == "Value") { x = x.value; };
+// primStringConcat is needed by the interpreter, anyway
+function primStringConcat(vs) {
+    var ts = []; // final string
+    var cs = vs.reverse(); // stack of arguments to go through
 
-            switch (x.tag) {
-            case "Lit":
-                if (stringy(x.literal)) { ts += x.literal; continue; }
-                else return Handle("Invalid_StringConcat_ArgType",[],null);
-            case "Cell":
-                cs.push(x.snd,x.fst); // note push in the right order!
-                continue;
-            case "Atom":
-                continue;
-            default:
-                return Handle("Invalid_StringConcat_ArgType",[],null);
-            };
+    while (hasLength(cs) && cs.length > 0) {
+        var x = cs.pop();
+        if (x.tag == "Value") { x = x.value; };
+
+        switch (x.tag) {
+        case "Lit":
+            if (stringy(x.literal)) { ts += x.literal; continue; }
+            else return Handle("Invalid_StringConcat_ArgType",[],null);
+        case "Cell":
+            cs.push(x.snd,x.fst); // note push in the right order!
+            continue;
+        case "Atom":
+            continue;
+        default:
+            return Handle("Invalid_StringConcat_ArgType",[],null);
         };
-        return Use(Lit(ts));
-
     };
+    return Use(Lit(ts));
+};
 
+function prim(f, vs) {
     function primNumBin(nm,implem,cs) {
         if (hasLength(cs) && cs.length == 2) {
             if (cs[0].tag == "Value" && cs[1].tag == "Value" &&
@@ -279,6 +354,20 @@ function prim(f, vs) {
                           , cs
                          );
     };
+    function primNumToString(cs) {
+        if (hasLength(cs) && cs.length == 1) {
+            if (cs[0].tag == "Value" &&
+                cs[0].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                if (!stringy(x)) {
+                    return Use(Lit(x.toString()));
+                };
+                return Handle("Invalid_primNumToString_ArgType",[],null);
+            };
+            return Handle("Invalid_primNumToString_ArgRequest",[],null);
+        };
+        return Handle("Invalid_primNumToString_Arity",[],null);
+    };
 
     switch (f) {
     case "primStringConcat":
@@ -289,6 +378,8 @@ function prim(f, vs) {
         return primNumMinus(vs);
     case "primNumMult":
         return primNumMult(vs);
+    case "primNumToString":
+        return primNumToString(vs);
     default:
         return Handle("NoPrim",[],null);
     };
@@ -332,6 +423,14 @@ function shonkier(glob,t) {
                 continue;
             case 4: // SemiL
                 state = Eval(fr.env, fr.right);
+                continue;
+            case 5: // StringLR
+                if (stringy(fr.chunks)){
+                    state = primStringConcat([fr.done,state.val,Lit(fr.chunks)]);
+                    continue;
+                };
+                push(StringLR(Cell(fr.done,Cell(state.val,Lit(fr.chunks.prefix))),fr.env,fr.chunks.tail));
+                state = Eval(fr.env,fr.chunks.splice);
                 continue;
             };
             state = Handle("BadFrame",[],null);
@@ -392,6 +491,14 @@ function shonkier(glob,t) {
                 continue;
             case "Fun":
                 state = Use(VFun(null,state.env,t.handles,t.clauses));
+                continue;
+            case "String":
+                if (stringy(t.chunks)) {
+                    state = Use(Lit(t.chunks));
+                    continue;
+                };
+                push(StringLR(Lit(t.chunks.prefix),state.env,t.chunks.tail));
+                state = Eval(state.env,t.chunks.splice);
                 continue;
             };
             break;

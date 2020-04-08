@@ -5,6 +5,7 @@ import Control.Monad.Reader
 
 import Data.Map (Map)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
+import Data.Text (Text)
 
 import Data.Bwd
 import Shonkier.Syntax
@@ -30,6 +31,7 @@ merge = flip (<>)
 data Value' a v
   = VAtom a
   | VLit Literal
+  | VString Keyword Text
   | VPrim Primitive [[a]]
   | VCell (Value' a v) (Value' a v)
   | VFun [Frame' a v] (LocalEnv' a v) [[a]] [Clause' a v]
@@ -42,7 +44,6 @@ type Value = Value' String ScopedVariable
 
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
-pattern VString k str = VLit (String k str)
 pattern CString k str = Value (VString k str)
 pattern VNil          = VAtom ""
 pattern CCell a b     = Value (VCell a b)
@@ -90,6 +91,7 @@ data Frame' a v
          [([a], Term' a v)]
          -- ^ each arg comes with requests we are willing to handle
   | SemiL (LocalEnv' a v) (Term' a v)
+  | StringLR (Value' a v) (LocalEnv' a v) [(Text, Term' a v)] Text
   deriving (Show, Functor)
 
 type Frame = Frame' String ScopedVariable
