@@ -257,23 +257,3 @@ glom v = go Nothing Nil [v] where
     VAtom _     : vs -> go mk tz vs
     VString k t : vs -> go (mk <|> pure k) (tz :< t) vs
     v           : _  -> handle ("Invalid_StringConcat_ArgType", [v]) []
-
-
----------------------------------------------------------------------------
--- FROMVALUE
----------------------------------------------------------------------------
-
-class FromValue t where
-  fromValue :: Value -> t
-
-instance FromValue t => FromValue [t] where
-  fromValue (VCell t ts) = fromValue t : fromValue ts
-  fromValue _ = []
-
-instance (FromValue a, FromValue b) => FromValue (a, b) where
-  fromValue (VCell a b) = (fromValue a, fromValue b)
-  fromValue _ = (fromValue VNil, fromValue VNil)
-
-instance (FromValue a, FromValue b, FromValue c) => FromValue (a, b, c) where
-  fromValue (VCell a (VCell b c)) = (fromValue a, fromValue b, fromValue c)
-  fromValue _ = (fromValue VNil, fromValue VNil, fromValue VNil)
