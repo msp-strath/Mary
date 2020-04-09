@@ -163,12 +163,12 @@ instance Pretty RawVariable where
   pretty (mns, v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
 
 instance Pretty ScopedVariable where
-  pretty = \case
-    LocalVar x           -> pretty x
-    GlobalVar b _ x      -> if b then ppGlobalVar x else pretty x
-    AmbiguousVar _ x     -> annotate AnnError $ pretty x
-    OutOfScope x         -> annotate AnnError $ pretty x
-    InvalidNamespace _ x -> annotate AnnError $ pretty x
+  pretty (sco :.: x) = case sco of
+    LocalVar           -> pretty x
+    GlobalVar b _      -> if b then ppGlobalVar x else pretty x
+    AmbiguousVar _     -> annotate AnnError $ pretty x
+    OutOfScope         -> annotate AnnError $ pretty x
+    InvalidNamespace _ -> annotate AnnError $ pretty x
 
 instance Pretty v => Pretty (Term' String v) where
   pretty t = case listView t of

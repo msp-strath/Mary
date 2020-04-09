@@ -10,12 +10,17 @@ type Namespace = String
 type Variable     = String
 type RawVariable  = (Maybe Namespace, Variable)
 
-data ScopedVariable
-  = LocalVar Variable
-  | GlobalVar Bool{-from longname?-} FilePath Variable
-  | AmbiguousVar [FilePath] Variable
-  | InvalidNamespace Namespace Variable
-  | OutOfScope Variable
+data ScopedVariable = (:.:)
+  { scoping :: Scoping
+  , nameOf  :: Variable
+  } deriving Show
+
+data Scoping
+  = LocalVar
+  | GlobalVar Bool{-from longname?-} FilePath
+  | AmbiguousVar [FilePath]
+  | InvalidNamespace Namespace
+  | OutOfScope
   deriving (Show)
 
 data Literal

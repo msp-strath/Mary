@@ -48,7 +48,7 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   return $ merge rho $ case k of
     Nothing -> mempty
     Just k  -> singleton k $
-      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar "_return"))]
+      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar :.: "_return"))]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
@@ -78,6 +78,7 @@ tmatch p d t0 = case p of
     (tz, rho, t1) <- tmatch p d t0
     let v = VString "" (T.concat (tz <>> []))
     return (tz, merge (singleton x v) rho, t1)
+  PNil    -> return (B0, mempty, t0)
   PCell p q -> do
     (tz1, rho1, t1) <- tmatch p Head t0
     (tz2, rho2, t2) <- tmatch q d t1
@@ -147,27 +148,26 @@ globalLookup fp x = do
     candidates !? fp
 
 dynVar :: ScopedVariable -> Maybe Variable
-dynVar (GlobalVar False _ x) = Just x
-dynVar (LocalVar x)          = Just x
-dynVar (OutOfScope x)        = Just x
-dynVar (AmbiguousVar _ x)    = Just x
-dynVar _                     = Nothing
+dynVar (sco :.: x) = x <$ guard (dyn sco) where
+  dyn (GlobalVar True _)    = False
+  dyn (InvalidNamespace _)  = False
+  dyn _                     = True
 
 eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
-  Var x     -> case dynVar x >>= (rho !?) of
+  Var x@(sco :.: x') -> case dynVar x >>= (rho !?) of
     Just v  -> use v
-    Nothing -> case x of
+    Nothing -> case sco of
       -- successes
-      LocalVar x       -> theIMPOSSIBLE
-      GlobalVar _ fp x -> do
-        v <- globalLookup fp x
+      LocalVar       -> theIMPOSSIBLE
+      GlobalVar _ fp -> do
+        v <- globalLookup fp x'
         use (fromMaybe theIMPOSSIBLE v)
 
       -- error cases
-      OutOfScope x         -> handle ("OutOfScope", [vVar x]) []
-      AmbiguousVar _ x     -> handle ("AmbiguousVar", [vVar x]) []
-      InvalidNamespace _ x -> handle ("InvalidNamespace", [vVar x]) []
+      OutOfScope         -> handle ("OutOfScope", [vVar x']) []
+      AmbiguousVar _     -> handle ("AmbiguousVar", [vVar x']) []
+      InvalidNamespace _ -> handle ("InvalidNamespace", [vVar x']) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
@@ -189,8 +189,9 @@ eval (rho, t) = case t of
     push (MatchR p)
     eval (rho, t)
 
-  where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
-        vVar x = VString "" $ T.pack x
+  where
+    theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
+    vVar x = VString "" $ T.pack x
 
 use :: Value -> Shonkier Computation
 use v = pop >>= \case

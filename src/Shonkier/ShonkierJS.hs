@@ -26,19 +26,17 @@ instance JS Text where
 instance JS a => JS [a] where
   js as = ["["] ++ Data.List.intercalate [","] (fmap js as) ++ ["]"]
 
-instance JS ScopedVariable where
+instance JS Scoping where
   js = \case
-    LocalVar v         -> [jsAtom v]
-    GlobalVar _ fp v   -> ["GVar(", jsAtom fp, ",", jsAtom v, ")"]  -- FIXME!
-    -- error cases
-    AmbiguousVar _ x     -> exception "AmbiguousVar" x
-    OutOfScope x         -> exception "OutOfScope" x
-    InvalidNamespace _ x -> exception "InvalidNamespace" x
+    LocalVar           -> ["LocalVar()"]
+    GlobalVar b fp     -> ["GlobalVar("] ++ js b ++ [",", jsAtom fp, ")"]
+    AmbiguousVar _     -> ["AmbiguousVar()"]
+    OutOfScope         -> ["OutOfScope()"]
+    InvalidNamespace _ -> ["InvalidNamespace()"]
+    
 
-    where
-      exception :: String -> Variable -> [Text]
-      exception at x = js (App (Atom at) [vVar x] :: Term)
-      vVar x = String "" [] (T.pack x)
+instance JS ScopedVariable where
+  js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
 instance (JS v, JSAtom a) => JS (Clause' a v) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
@@ -48,15 +46,22 @@ instance (JS v, JSAtom a) => JS (Term' a v) where
   js (Lit l)         = ["Lit("] ++ js l ++ [")"]
   js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
   js (Var x)         = js x
+  js Nil             = ["Nil()"]
   js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js (App f as)      = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
   js (Semi l r)      = ["Semi("] ++ js l ++ [","] ++ js r ++ [")"]
   js (Fun hs cs)     = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
                     ++ js cs
                     ++ [")"]
+  js (Match p t)     = ["Match("] ++ js p ++ [","] ++ js t ++ [")"]
 
 instance JS Literal where
   js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
+  js (Boolean b) = js b
+
+instance JS Bool where
+  js True  = ["true"]
+  js False = ["false"]
 
 instance JSAtom a => JS (PComputation' a) where
   js (PValue p) = ["Value("] ++ js p ++ [")"]
@@ -70,6 +75,7 @@ instance JSAtom a => JS (PValue' a) where
   js (PString _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
   js (PBind x)        = ["\"",pack x,"\""]
   js (PAs x p)        = ["PAs("] ++ ["\"",pack x,"\""] ++ [","] ++ js p ++ [")"]
+  js PNil             = ["Nil()"]
   js (PCell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js PWild            = ["PWild"]
 

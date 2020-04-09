@@ -74,9 +74,9 @@ instance ScopeCheck RawProgram Program where
 
 instance ScopeCheck RawVariable ScopedVariable where
   scopeCheck local (mns, v) = case mns of
-    Nothing | Set.member v local -> pure $ LocalVar v
+    Nothing | Set.member v local -> pure $ LocalVar :.: v
     Just nm -> get >>= \ st -> case namespaces st Map.!? nm of
-      Nothing  -> pure $ InvalidNamespace nm v
+      Nothing  -> pure $ InvalidNamespace nm :.: v
       Just fps -> checkGlobal True fps v
     _ -> get >>= \ st -> checkGlobal False (imports st) v
 
@@ -86,9 +86,9 @@ instance ScopeCheck RawVariable ScopedVariable where
     checkGlobal b scp v = do
       candidates <- gets (\ st -> globalScope st Map.!? v)
       pure $ case Set.toList . Set.intersection scp <$> candidates of
-        Just [fp]      -> GlobalVar b fp v
-        Just fps@(_:_) -> AmbiguousVar fps v
-        _              -> OutOfScope v
+        Just [fp]      -> GlobalVar b fp :.: v
+        Just fps@(_:_) -> AmbiguousVar fps :.: v
+        _              -> OutOfScope :.: v
 
 instance ScopeCheck RawTerm Term where
   scopeCheck local = \case
