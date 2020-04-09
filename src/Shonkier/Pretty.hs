@@ -11,7 +11,7 @@ import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi, equals)
+import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
 import qualified Data.Text.Prettyprint.Doc as P
 
 import Shonkier.Syntax
@@ -24,6 +24,7 @@ data Annotation
   | AnnFunction
   | AnnKeyword
   | AnnNumeric
+  | AnnBoolean  -- wasn't she married to Henry VIII?
   | AnnOperator
   | AnnPrimitive
   | AnnSplice
@@ -64,7 +65,6 @@ instance Pretty Rational where
 
 ppAtom :: String -> Doc
 ppAtom str = annotate AnnAtom $ case str of
-  [] -> "[]"
   a  -> squote <> pretty a
 
 arrow :: Doc
@@ -73,8 +73,8 @@ arrow = annotate AnnOperator "->"
 arobase :: Doc
 arobase = annotate AnnOperator "@"
 
-equals :: Doc
-equals = annotate AnnOperator "="
+assignment :: Doc
+assignment = annotate AnnOperator ":="
 
 semi :: Doc
 semi = annotate AnnOperator P.semi
@@ -155,6 +155,9 @@ mkKeyword k ts = pretty $ case maximum (maximum ((-2):occ) : qso) of
 instance Pretty Literal where
   pretty = \case
     Num r        -> annotate AnnNumeric $ pretty r
+    Boolean b
+      | b         -> annotate AnnBoolean "'1"
+      | otherwise -> annotate AnnBoolean "'0"
 
 instance Pretty RawVariable where
   pretty (mns, v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
@@ -174,11 +177,12 @@ instance Pretty v => Pretty (Term' String v) where
       Lit l         -> pretty l
       String k ps t -> ppSplice k ps t
       Var v         -> pretty v
+      Nil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts      -> ppApp (pretty f) ts
       Semi l r      -> pretty l <> semi <+> pretty r
       Fun hs cls    -> ppFun hs cls
-      Match p t     -> parens $ pretty p <+> equals <+> pretty t
+      Match p t     -> parens $ pretty p <+> assignment <+> pretty t
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where
@@ -195,6 +199,7 @@ instance Pretty PValue where
       PBind v        -> pretty v
       PAs v p        -> pretty v <> arobase <> pretty p
       PWild          -> "_"
+      PNil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       PCell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
     it -> ppList it
 
@@ -211,6 +216,7 @@ instance Pretty Value where
       VLit l           -> pretty l
       VString k t      -> ppStringLit k t
       VPrim f _        -> pretty f
+      VNil             -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       VCell a b        -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       VFun _ _ hs cls  -> ppFun hs cls
       VThunk c         -> braces $ pretty c

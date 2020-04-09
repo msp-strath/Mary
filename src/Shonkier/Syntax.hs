@@ -20,10 +20,12 @@ data ScopedVariable
 
 data Literal
   = Num Rational
-  deriving (Show)
+  | Boolean Bool
+  deriving (Show, Eq)
 
 data Term' a v
   = Atom a
+  | Nil
   | Lit Literal
   | String Keyword [(Text, Term' a v)] Text
   | Var v
@@ -59,6 +61,7 @@ data PValue' a
   | PBind Variable
   | PWild
   | PAs Variable (PValue' a)
+  | PNil
   | PCell (PValue' a) (PValue' a)
   deriving (Show)
 type PValue = PValue' String
@@ -79,12 +82,12 @@ type PComputation = PComputation' String
 
 instance HasListView (Term' String v) (Term' String v) where
   coalgebra = \case
-    Atom ""  -> ItsNil
+    Nil      -> ItsNil
     Cell a b -> ItsCons a b
     _        -> ItsNot
 
 instance HasListView PValue PValue where
   coalgebra = \case
-    PAtom ""  -> ItsNil
+    PNil      -> ItsNil
     PCell a b -> ItsCons a b
     _         -> ItsNot

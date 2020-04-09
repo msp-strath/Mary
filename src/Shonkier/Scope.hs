@@ -95,6 +95,7 @@ instance ScopeCheck RawTerm Term where
     Atom a -> pure (Atom a)
     Lit l  -> pure (Lit l)
     Var v  -> Var <$> scopeCheck local v
+    Nil    -> pure Nil
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Semi l r  -> Semi <$> scopeCheck local l <*> scopeCheck local r
@@ -122,6 +123,7 @@ instance ScopeCheck PValue LocalScope where
   scopeCheck local = \case
     PAtom{}   -> pure Set.empty
     PLit{}    -> pure Set.empty
+    PNil      -> pure Set.empty
     PBind x   -> pure (Set.singleton x)
     PWild{}   -> pure Set.empty
     PAs x p   -> Set.insert x <$> scopeCheck local p

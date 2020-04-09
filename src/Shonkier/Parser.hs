@@ -4,6 +4,7 @@ module Shonkier.Parser where
 
 import Control.Applicative
 import Control.Arrow (first)
+import Control.Monad
 
 import Data.Attoparsec.Text hiding (skipSpace)
 import qualified Data.Attoparsec.Text as Atto
@@ -121,11 +122,38 @@ punc c = () <$ skipSpace <* char c <* skipSpace
 sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
+data Forbidden
+  = NoProb
+  | NoSemi
+  deriving (Show, Ord, Eq, Enum, Bounded)
+
 term :: Parser RawTerm
-term = weeTerm >>= moreTerm
+term = termBut NoProb
+
+termBut :: Forbidden -> Parser RawTerm
+termBut z = weeTerm >>= moreTerm z
+
+weeTerm :: Parser RawTerm
+weeTerm = choice
+  [ Match <$> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace <*> termBut NoSemi
+  , Atom <$> atom
+  , Lit <$> literal
+  , (\ (k, t, es) -> String k t es) <$> spliceOf term
+  , Var <$> variable
+  , uncurry (flip $ foldr Cell) <$> listOf term Nil
+  , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
+  , id <$ char '(' <* skipSpace <*> term <* skipSpace <* char ')'
+  ]
+
+moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
+moreTerm z t = choice
+  [ App t <$> tupleOf term >>= moreTerm z
+  , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut z
+  , pure t
+  ]
 
 atom :: Parser String
-atom = id <$ char '\'' <*> some (satisfy isAlphaNum)
+atom = id <$ char '\'' <*> identifier
 
 identifier :: Parser String
 identifier = (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)
@@ -134,7 +162,7 @@ arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
 
 literal :: Parser Literal
-literal = numlit
+literal = boolit <|> numlit
 
 spliceOf :: Parser a -> Parser (Keyword, [(Text, a)], Text)
 spliceOf p = do
@@ -173,6 +201,9 @@ spliceOf p = do
          pure (txt', [])
        | otherwise -> choice []
 
+boolit :: Parser Literal
+boolit = Boolean <$ char '\'' <*> (False <$ char '0' <|> True <$ char '1')
+
 data NumExtension
   = Dot   String
   | Slash String
@@ -208,28 +239,6 @@ variable = do
     Nothing  -> (Nothing, start)
     Just end -> (Just start, end)
 
-weeTerm :: Parser RawTerm
-weeTerm = choice
-  [ {-Match <$> pvalue <* skipSpace <* char '=' <* skipSpace <*> term
-  , -} Atom <$> atom
-  , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf term
-  , Var <$> variable
-  , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
-  , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
-  , id <$ char '(' <* skipSpace <*> term <* skipSpace <* char ')'
-  ]
-
-moreTerm :: RawTerm -> Parser RawTerm
-moreTerm t = choice
-  [ App t <$> tupleOf term >>= moreTerm
-  , Semi t <$ punc ';' <*> term
-  {- trying this ... -}
-  , flip Match t <$ skipSpace <* char '=' <* char '>' <* skipSpace <*> pvalue >>= moreTerm
-  {- as you were ... -}
-  , pure t
-  ]
-
 clause :: Parser RawClause
 clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
@@ -258,7 +267,7 @@ pvalue = choice
   , PAtom <$> atom
   , pvar
   , PWild <$ char '_'
-  , uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
+  , uncurry (flip $ foldr PCell) <$> listOf pvalue PNil
   ]
 
 getMeA :: Parser a -> Text -> a

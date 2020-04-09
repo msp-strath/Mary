@@ -6,7 +6,7 @@ import Control.Monad.State
 import Control.Applicative
 
 import Data.Maybe (fromMaybe)
-import Data.Map (singleton, (!?), keysSet, toAscList)
+import Data.Map (singleton, (!?), keysSet)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import qualified Data.Text as T
 
@@ -26,9 +26,7 @@ abort = handle ("abort", []) []
 -- environments
 
 lmatch :: Literal -> Literal -> Maybe ()
--- lmatch (String _ str) (String _ str') = guard (str == str')
-lmatch (Num q)        (Num q')        = guard (q == q')
--- lmatch _ _ = Nothing
+lmatch x y = guard (x == y)
 
 vmatch :: Eq a => PValue' a -> Value' a v -> Maybe (LocalEnv' a v)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
@@ -36,6 +34,7 @@ vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
 vmatch (PAs x p)   v           = merge (singleton x v) <$> vmatch p v
 vmatch PWild       v           = pure mempty
+vmatch PNil        VNil        = pure mempty
 vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
 vmatch (PString _ sps u) (VString _ t) | Just p <- T.stripSuffix u t =
   smatch sps p
@@ -83,7 +82,7 @@ tmatch p d t0 = case p of
     (tz1, rho1, t1) <- tmatch p Head t0
     (tz2, rho2, t2) <- tmatch q d t1
     return (tz1 <> tz2, merge rho1 rho2, t2)
-  PAtom a -> return (Nil, mempty, t0)
+  PAtom a -> return (B0, mempty, t0)
   PLit _  -> Nothing
   -- otherwise, it's a lazy string pattern, and we need the MaPo logic...
   _ -> do
@@ -95,7 +94,7 @@ tmatch p d t0 = case p of
       ToDelim d | T.null d  -> return ("", t0)
                 | otherwise -> return (T.breakOn d t0)
     rho <- vmatch p (VString "" l)
-    return (Nil :< l, rho, r)
+    return (B0 :< l, rho, r)
           
 mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
 mayZipWith f []       []       = pure []
@@ -106,18 +105,6 @@ mayZipWith _ _ _ = Nothing
 matches :: (a -> b -> Maybe (LocalEnv' c d))
         -> [a] -> [b] -> Maybe (LocalEnv' c d)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
-
-
--- Explicit environments
-
-value2Env :: Value -> LocalEnv
-value2Env (VCell (VAtom x) v) = singleton x v
-value2Env (VCell e1 e2)       = merge (value2Env e2) (value2Env e1)
-value2Env _                   = mempty
-
-env2value :: LocalEnv -> Value
-env2value = foldr (VCell . sing) VNil . toAscList where
-  sing (k, v) = VCell (VAtom k) v
 
 
 -- Evaluation contexts
@@ -132,7 +119,7 @@ execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
 shonkier :: GlobalEnv -> Term -> Computation
-shonkier rho t = evalShonkier (eval (mempty, t)) rho Nil
+shonkier rho t = evalShonkier (eval (mempty, t)) rho B0
 
 rawShonkier :: [Import] -> GlobalEnv -> RawTerm -> Computation
 rawShonkier is gl t =
@@ -147,7 +134,7 @@ pop :: Shonkier (Maybe Frame)
 pop = do
   x <- get
   case x of
-    Nil -> return Nothing
+    B0        -> return Nothing
     ctx :< fr -> do
       put ctx
       return (Just fr)
@@ -184,6 +171,7 @@ eval (rho, t) = case t of
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
+  Nil       -> use VNil
   Cell a b  -> do push (CellL rho b)
                   eval (rho, a)
   App f as  -> do push (AppL rho as)
@@ -214,35 +202,31 @@ use v = pop >>= \case
     CellR u rho -> use (VCell u v)
     -- we better be making a request or using a function
     AppL rho as -> case v of
-      VNil               -> case as of
-        [t] -> eval (rho, t)
-        _   -> handle ("EnvironmentsAreUnary", []) []
-      VCell _ _          -> case as of
-        [t] -> eval (merge rho (value2Env v), t)
-        _   -> handle ("EnvironmentsAreUnary", []) []
-      VLit (Num n)
-        | n == 0    -> abort
-        | otherwise -> case as of
-          [t] -> eval (rho, t)
-          _   -> handle ("GuardsAreUnary", []) []
-      VAtom f            ->
+      VLit (Boolean b)
+        | b -> case as of
+            [t] -> eval (rho, t)
+            _   -> handle ("GuardsAreUnary", []) []
+        | otherwise -> abort
+      VAtom f ->
         -- Here we are enforcing the invariant:
         -- Atomic functions i.e. requests only ever offer
         -- to handle the empty list of requests.
         let cs = map ([],) as
-        in app (FAtom f) Nil rho cs
+        in app (FAtom f) B0 rho cs
       VPrim f hs          ->
         let cs = zip (hs ++ repeat []) as
-        in app (FPrim f) Nil rho cs
+        in app (FPrim f) B0 rho cs
       VFun frs sig hs cls ->
         let cs = zip (hs ++ repeat []) as
-        in app (FFun frs sig cls) Nil rho cs
+        in app (FFun frs sig cls) B0 rho cs
       VThunk c -> case as of
         [] -> case c of
           Value v       -> use v
           Request r frs -> handle r frs
         _  -> handle ("ThunksAreNullary", [v]) []
-      _ -> handle ("NoFun",[v]) []
+      v -> case as of
+        [t] -> eval (merge rho (value2Env v), t)
+        _   -> handle ("EnvironmentsAreUnary", []) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
     StringLR p rho sts u -> case sts of
@@ -301,12 +285,13 @@ call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
 ---------------------------------------------------------------------------
 
 glom :: Value -> Shonkier Computation
-glom v = go Nothing Nil [v] where
+glom v = go Nothing B0 [v] where
   go mk tz vs = case vs of
     [] ->
       use (VString (fromMaybe "" mk) (T.concat $ (tz <>> [])))
     VCell a b   : vs -> go mk tz (a : b : vs)
     VAtom _     : vs -> go mk tz vs
+    VNil        : vs -> go mk tz vs
     VString k t : vs -> go (mk <|> pure k) (tz :< t) vs
     v           : _  -> handle ("Invalid_StringConcat_ArgType", [v]) []
 
