@@ -24,13 +24,14 @@ import Shonkier.Semantics
 import Shonkier.ShonkierJS
 import Shonkier.Syntax
 import Shonkier.Value
+import Shonkier.Pandoc()
 
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
   let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
   let rm@(is, ps)  = fold [ (is, p)
                           | ds <- defns
-                          , let Right (is, p) = parseOnly module_ ds
+                          , let (is, p) = maryDefinitionToModule ds
                           ]
   (mod, env) <- loadToplevelModule "." rm
   -- we assume that there is page metadata, put there by mary find
@@ -51,14 +52,28 @@ process doc0@(Pandoc meta docs) = do
   h1 (Header 1 _ is) = Just (fromList is)
   h1 _ = Nothing
 
+data MaryDefinition
+  = Module RawModule
+  | DivTemplate Text Attr [Block]
 
-snarfMaryDef :: Block -> Writer [Text] Block
+maryDefinitionToModule :: MaryDefinition -> RawModule
+maryDefinitionToModule = \case
+  Module mod                -> mod
+  DivTemplate decl attr div ->
+    let funDecl        = (,) <$> identifier <*> tupleOf pcomputation
+        Right (nm, ps) = parseOnly funDecl decl
+    in ([], [(nm, Right (ps, toRawTerm (Div attr div)))])
+
+snarfMaryDef :: Block -> Writer [MaryDefinition] Block
 snarfMaryDef c@(CodeBlock (_, cs, _) p)
   | "mary-def" `elem` cs
-  = if "keep" `notElem` cs then Null <$ tell [p]
-    else do
-      let block = render (pretty $ getMeAModule p)
-      block <$ tell [p]
+  = do let mod = getMeAModule p
+       let out = if "keep" `notElem` cs then Null else render (pretty mod)
+       out <$ tell [Module mod]
+snarfMaryDef c@(Div (a , b, kvs) p)
+  | Just decl <- lookup "mary" kvs
+  = let attr = (a, b, L.filter (("mary" /=) . fst) kvs) in
+    Null <$ tell [DivTemplate decl attr p]
 snarfMaryDef b = return b
 
 evalMaryBlock :: [Import] -> GlobalEnv -> Block -> Block
