@@ -37,6 +37,7 @@ type RawTerm = Term' String RawVariable
 type Term    = Term' String ScopedVariable
 
 pattern TNum n        = Lit (Num n)
+pattern TNil          = Atom ""
 
 type Import = (FilePath, Maybe Namespace)
 type Program' a v = [(String, Either [[String]] (Clause' a v))]
@@ -87,3 +88,10 @@ instance HasListView PValue PValue where
     PAtom ""  -> ItsNil
     PCell a b -> ItsCons a b
     _         -> ItsNot
+
+---------------------------------------------------------------------------
+-- TORAWTERM
+---------------------------------------------------------------------------
+
+class ToRawTerm t where
+  toRawTerm :: t -> RawTerm

@@ -1,0 +1,7 @@
+::: {mary="foo(x)"}
+This is a paragraph which uses `x`{.mary}.
+:::
+
+```{.mary}
+foo("a template")
+```

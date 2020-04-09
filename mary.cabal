@@ -83,6 +83,7 @@ library
                      , Shonkier
                      , Shonkier.Examples
                      , Shonkier.Import
+                     , Shonkier.Pandoc
                      , Shonkier.Parser
                      , Shonkier.Parser.Examples
                      , Shonkier.Pretty
