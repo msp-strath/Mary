@@ -7,6 +7,12 @@ padCat [] hs = hs
 padCat hs [] = hs
 padCat (a : as) (b : bs) = (a ++ b) : padCat as bs
 
+mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
+mayZipWith f []       []       = pure []
+mayZipWith f (a : as) (b : bs) =
+  (:) <$> f a b <*> mayZipWith f as bs
+mayZipWith _ _ _ = Nothing
+
 data ListView a la
   = ItsNil
   | ItsCons a la
