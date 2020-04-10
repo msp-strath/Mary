@@ -125,6 +125,10 @@ evalMaryInline _ _ page (Image attrs is target) =
 evalMaryInline _ _ _ b = b
 
 makeInputForm :: M.Map Text Text -> Bool -> Attr -> Text -> Text
+makeInputForm _ _ (_, _, as) p | ("type", "submit") `elem` as
+  = (T.intercalate " " $
+      ["<input"] ++
+      [ T.concat [k, "=\"", v, "\""] | (k, v) <- ("value", p):as ]) <> ">"
 makeInputForm inputs textarea a@(i, cs, as) p =
   let nameparser = SP.skipSpace *> identifier <* SP.skipSpace in
   case parseOnly nameparser p of

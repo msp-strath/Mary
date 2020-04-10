@@ -9,6 +9,10 @@ This is what I did during my summer holiday:
 ```{.input}
 essay
 ```
+
+`Submit answers and essay`{.input type=submit}
+
+
 ## Using the inputs
 
 ```mary
@@ -18,8 +22,6 @@ greet()
 ```mary
 numberGame('field("number"))
 ```
-
-
 
 ```mary-def
 greet() -> ['Para "Hello " 'field("name") "! You are on page " 'param("page")]
