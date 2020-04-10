@@ -13,7 +13,7 @@
   <script>
   var globalEnv = {};
   globalEnv["foo"] = {};
-  globalEnv["foo"]["."] = VFun(null,{},[],[Clause([Value("x")],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Atom(""),Cell(Atom(""),Atom("")))),Cell(Cell(Atom("Para"),Cell(Stringy("This"),Cell(Atom("Space"),Cell(Stringy("is"),Cell(Atom("Space"),Cell(Stringy("a"),Cell(Atom("Space"),Cell(Stringy("paragraph"),Cell(Atom("Space"),Cell(Stringy("which"),Cell(Atom("Space"),Cell(Stringy("uses"),Cell(Atom("Space"),Cell(Cell(Atom("Span"),Cell(Cell(Stringy(""),Cell(Atom(""),Cell(Atom(""),Atom("")))),Cell("x",Atom("")))),Cell(Stringy("."),Atom("")))))))))))))))),Atom("")))))]);
+  globalEnv["foo"]["."] = VFun(null,{},[],[Clause([Value("x")],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Nil(),Cell(Nil(),Nil()))),Cell(Cell(Atom("Para"),Cell(Stringy("This"),Cell(Atom("Space"),Cell(Stringy("is"),Cell(Atom("Space"),Cell(Stringy("a"),Cell(Atom("Space"),Cell(Stringy("paragraph"),Cell(Atom("Space"),Cell(Stringy("which"),Cell(Atom("Space"),Cell(Stringy("uses"),Cell(Atom("Space"),Cell(Cell(Atom("Span"),Cell(Cell(Stringy(""),Cell(Nil(),Cell(Nil(),Nil()))),Cell(Var(LocalVar(),"x"),Nil()))),Cell(Stringy("."),Nil()))))))))))))))),Nil()))))]);
   globalEnv["primNumAdd"] = {};
   globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
   globalEnv["primNumMinus"] = {};
@@ -25,7 +25,7 @@
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["printList"] = {};
-  globalEnv["printList"]["."] = VFun(null,{},[],[Clause([Value(Cell("x","xs"))],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Atom(""),Cell(Atom(""),Atom("")))),Cell(Cell(Atom("BulletList"),Cell(Cell(Cell(Atom("Plain"),Cell(Cell(Atom("Span"),Cell(Cell(Stringy(""),Cell(Atom(""),Cell(Atom(""),Atom("")))),Cell("x",Atom("")))),Atom(""))),Atom("")),Atom(""))),Cell(Cell(Atom("Div"),Cell(Cell(Cell(Stringy(""),Cell(Cell(Stringy("mary"),Atom("")),Cell(Atom(""),Atom("")))),Cell(Atom(""),Cell(Atom(""),Atom("")))),Cell(App(GVar(".","printList"),["xs"]),Atom("")))),Atom("")))))),Clause([Value(Atom(""))],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Atom(""),Cell(Atom(""),Atom("")))),Atom(""))))]);
+  globalEnv["printList"]["."] = VFun(null,{},[],[Clause([Value(Cell("x","xs"))],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Nil(),Cell(Nil(),Nil()))),Cell(Cell(Atom("BulletList"),Cell(Cell(Cell(Atom("Plain"),Cell(Cell(Atom("Span"),Cell(Cell(Stringy(""),Cell(Nil(),Cell(Nil(),Nil()))),Cell(Var(LocalVar(),"x"),Nil()))),Nil())),Nil()),Nil())),Cell(Cell(Atom("Div"),Cell(Cell(Cell(Stringy(""),Cell(Cell(Stringy("mary"),Nil()),Cell(Nil(),Nil()))),Cell(Nil(),Cell(Nil(),Nil()))),Cell(App(Var(GlobalVar(false,"."),"printList"),[Var(LocalVar(),"xs")]),Nil()))),Nil()))))),Clause([Value(Nil())],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Nil(),Cell(Nil(),Nil()))),Nil())))]);
   </script>
 </head>
 <body>

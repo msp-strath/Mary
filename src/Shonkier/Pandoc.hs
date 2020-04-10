@@ -16,7 +16,7 @@ instance ToRawTerm RawTerm where
   toRawTerm = id
 
 instance ToRawTerm t => ToRawTerm [t] where
-  toRawTerm = foldr (Cell . toRawTerm) TNil
+  toRawTerm = foldr (Cell . toRawTerm) Nil
 
 instance (ToRawTerm a, ToRawTerm b) => ToRawTerm (a, b) where
   toRawTerm (a, b) = toRawTerm [toRawTerm a, toRawTerm b]

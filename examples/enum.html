@@ -13,9 +13,9 @@
   <script>
   var globalEnv = {};
   globalEnv["enum"] = {};
-  globalEnv["enum"]["."] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App(GVar(".","primStringConcat"),["xs"]),Atom(""))),Cell(Cell(Atom("BulletList"),App(GVar(".","map"),[GVar(".","enum"),"xs"])),Atom("")))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]);
+  globalEnv["enum"]["."] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"."),"primStringConcat"),[Var(LocalVar(),"xs")]),Nil())),Cell(Cell(Atom("BulletList"),App(Var(GlobalVar(false,"."),"map"),[Var(GlobalVar(false,"."),"enum"),Var(LocalVar(),"xs")])),Nil()))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell(Var(LocalVar(),"xs"),Nil())),Nil()))]);
   globalEnv["map"] = {};
-  globalEnv["map"]["."] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App(GVar(".","map"),["f","xs"])))]);
+  globalEnv["map"]["."] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"."),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
   globalEnv["primNumAdd"] = {};
   globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
   globalEnv["primNumMinus"] = {};
@@ -27,7 +27,7 @@
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Stringy("Enums"),Cell(Atom(""),Cell(Atom(""),App(GVar(".","enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Atom(""))),Cell(Stringy("d"),Atom(""))),Atom("")))]))))))]);
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Stringy("Enums"),Cell(Nil(),Cell(Nil(),App(Var(GlobalVar(false,"."),"enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Nil())),Cell(Stringy("d"),Nil())),Nil()))]))))))]);
   </script>
 </head>
 <body>
