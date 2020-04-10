@@ -79,7 +79,7 @@ maryDefinitionToModule :: MaryDefinition -> RawModule
 maryDefinitionToModule = \case
   Module mod                -> mod
   DivTemplate decl attr div ->
-    let funDecl        = (,) <$> identifier <*> tupleOf pcomputation
+    let funDecl        = (,) <$> identifier <*> argTuple pcomputation
         Right (nm, ps) = parseOnly funDecl decl
     in ([], [(nm, Right (ps, toRawTerm (Div attr div)))])
 

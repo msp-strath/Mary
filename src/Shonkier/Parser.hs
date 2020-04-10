@@ -110,10 +110,10 @@ pattern EndNested a b = (a, b, [])
 
 
 decl :: Parser [[String]]
-decl = tupleOf (sep skipSpace atom) <* char ':'
+decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> tupleOf pcomputation
+defn = (,) <$> argTuple pcomputation <* skipSpace
            <* arrow <* skipSpace <*> term
 
 punc :: Char -> Parser ()
@@ -127,6 +127,17 @@ data Forbidden
   | NoSemi
   deriving (Show, Ord, Eq, Enum, Bounded)
 
+
+spaceTerm :: Parser RawTerm
+spaceTerm = id <$ skipSpace <*> term <* skipSpace
+
+------------------------------------------------------------------------------
+-- NOTA BENE                                                                --
+--                                                                          --
+-- parsers for terms/patterns must forbid leading/trailing space            --
+--                                                                          --
+------------------------------------------------------------------------------
+
 term :: Parser RawTerm
 term = termBut NoProb
 
@@ -138,16 +149,16 @@ weeTerm = choice
   [ Match <$> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace <*> termBut NoSemi
   , Atom <$> atom
   , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf term
+  , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
   , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
   , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
-  , id <$ char '(' <* skipSpace <*> term <* skipSpace <* char ')'
+  , id <$ char '(' <*> spaceTerm <* char ')'
   ]
 
 moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
 moreTerm z t = choice
-  [ App t <$> tupleOf term >>= moreTerm z
+  [ App t <$> argTuple term >>= moreTerm z
   , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut z
   , pure t
   ]
@@ -223,12 +234,23 @@ numlit = do
 
 listOf :: Parser a -> a -> Parser ([a], a)
 listOf p nil = (,) <$ char '['
-      <*> many (skipSpace *> p) <* skipSpace
+      <*> many (spaceMaybeComma *> p) <* spaceMaybeComma
       <*> (id <$ char '|' <* skipSpace <*> p <|> pure nil)
       <* skipSpace <* char ']'
 
-tupleOf :: Parser a -> Parser [a]
-tupleOf p = id <$ punc '(' <*> sep (punc ',') p <* punc ')'
+------------------------------------------------------------------------------
+-- NOTA BENE                                                                --
+--                                                                          --
+-- no whitespace before or after an argtuple!                               --
+                                                                            --
+argTuple :: Parser a -> Parser [a]                                          --
+argTuple p =                                                                --
+  id <$ char '(' <* skipSpace                                               --
+  <*> sep (punc ',') p                                                      --
+  <* skipSpace <* char ')'                                                  --
+                                                                            --
+--                                                                          --
+------------------------------------------------------------------------------
 
 variable :: Parser RawVariable
 variable = do
@@ -239,8 +261,12 @@ variable = do
     Nothing  -> (Nothing, start)
     Just end -> (Just start, end)
 
+spaceMaybeComma :: Parser ()
+spaceMaybeComma =
+  () <$ skipSpace <* (() <$ char ',' <* skipSpace <|> pure ())
+
 clause :: Parser RawClause
-clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace
+clause = (,) <$> sep spaceMaybeComma pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
   <|> (,) [] <$> term
 
@@ -249,7 +275,7 @@ pcomputation
   =   PValue <$> pvalue
   <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
-       <|> PRequest <$> ((,) <$> atom <*> tupleOf pvalue)
+       <|> PRequest <$> ((,) <$> atom <*> argTuple pvalue) <* skipSpace
            <* arrow <* skipSpace <*> (Just <$> identifier <|> Nothing <$ char '_')
       ) <* skipSpace <* char '}'
 
@@ -282,4 +308,4 @@ getMeAProgram :: Text -> RawProgram
 getMeAProgram = getMeA program
 
 getMeATerm :: Text -> RawTerm
-getMeATerm = getMeA (term <* endOfInput)
+getMeATerm = getMeA (spaceTerm <* endOfInput)
