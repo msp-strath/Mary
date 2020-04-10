@@ -360,13 +360,27 @@ function prim(f, vs) {
                 cs[0].value.tag == "Lit") {
                 var x = cs[0].value.literal;
                 if (!stringy(x)) {
-                    return Use(Lit(x.toString()));
+                    return Use(Lit(x.num.toString())); //FIXME
                 };
                 return Handle("Invalid_primNumToString_ArgType",[],null);
             };
             return Handle("Invalid_primNumToString_ArgRequest",[],null);
         };
         return Handle("Invalid_primNumToString_Arity",[],null);
+    };
+    function primStringToNum(cs) {
+        if (hasLength(cs) && cs.length == 1) {
+            if (cs[0].tag == "Value" &&
+                cs[0].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                if (stringy(x)) {
+                    return Use(Lit(LitNum(parseInt(x),1))); // FIXME
+                };
+                return Handle("Invalid_primStringToNum_ArgType",[],null);
+            };
+            return Handle("Invalid_primStringToNum_ArgRequest",[],null);
+        };
+        return Handle("Invalid_primStringToNum_Arity",[],null);
     };
 
     switch (f) {
@@ -380,6 +394,8 @@ function prim(f, vs) {
         return primNumMult(vs);
     case "primNumToString":
         return primNumToString(vs);
+    case "primStringToNum":
+        return primStringToNum(vs);
     default:
         return Handle("NoPrim",[],null);
     };

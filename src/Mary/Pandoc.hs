@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Mary.Pandoc where
 
-import Control.Applicative
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Control.Newtype
 
 import Data.Attoparsec.Text
 import Data.Foldable
 import Data.List as L
+import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid
@@ -17,8 +17,6 @@ import Text.Pandoc.Builder
 import Text.Pandoc.Walk
 
 import System.FilePath
-
-import System.IO
 
 import Shonkier.Import
 import Shonkier.Parser as SP
@@ -31,27 +29,19 @@ import Shonkier.Value
 
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
-  let (doc1, defns) = runWriter (walkM snarfInterestingThings doc0)
+  let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
   let rm@(is, ps)  = fold [ (is, p)
-                          | MaryDef ds <- defns
+                          | ds <- defns
                           , let Right (is, p) = parseOnly module_ ds
                           ]
   (mod, env) <- loadToplevelModule "." rm
-  let inputVals = M.fromList [ (name, val)
-                             | Input name default_ _ <- defns
-                             , let Just val = case lookupString name of
-                                     Just v  -> Just v
-                                     Nothing ->
-                                      case default_ of
-                                       Nothing -> Nothing
-                                       Just t -> case rawShonkier is env t of
-                                                   Value v -> Just $ fromValue v
-                                                   _ -> Nothing
-                             ]
+
   -- we assume that there is page metadata, put there by mary find
-  let page = getMeta "page"
-  let doc2 = walk (evalMaryInline is (env, inputVals) page)
-           . walk (evalMaryBlock is (env, inputVals))
+  let inputs = metaToInputValues meta
+  let page = flip fromMaybe (getGET inputs "page")
+               $ error $ "Meta data 'page' missing!"
+  let doc2 = walk (evalMaryInline is (env, inputs) page)
+           . walk (evalMaryBlock is (env, inputs))
            $ doc1
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
@@ -62,76 +52,76 @@ process doc0@(Pandoc meta docs) = do
   h1 (Header 1 _ is) = Just (fromList is)
   h1 _ = Nothing
 
-  lookupString :: Text -> Maybe Text
-  lookupString x = case lookupMeta x meta of
-        Just (MetaInlines [Str s]) -> Just s
-        Just (MetaString s)        -> Just s
-        _                          -> Nothing
+metaToInputValues :: Meta -> Map Text Text
+metaToInputValues (Meta m) = M.map extract m where
+  extract (MetaInlines xs) = T.concat $ L.map inlineToString xs
+  extract (MetaString s)        = s
+  extract x                     = error $ "IMPOSSIBLE non-string meta value " ++ show x
 
-  getMeta :: Text -> Text
-  getMeta x = fromMaybe err (lookupString x)
-    where err = error $ "Meta data '" ++ T.unpack x ++ "' missing!"
+  inlineToString (Str s)   = s
+  inlineToString Space     = " "
+  inlineToString SoftBreak = "\n"
+  inlineToString LineBreak = "\n"
+  inlineToString x         =  error $ "IMPOSSIBLE non-string inline " ++ show x
 
-data InterestingThings
-  = MaryDef Text
-  | Input Text (Maybe RawTerm) (Maybe RawTerm) -- name, default value, parser
+getGET :: Map Text Text -> Text -> Maybe Text
+getGET inputs x = M.lookup ("GET_" <> x) inputs
 
-inputFormData :: Parser InterestingThings
-inputFormData = do
-  name <- T.pack <$> identifier
-  default_ <- optional $ (punc '(' *> term <* punc ')')
-  parser <- optional $ (string "<-" *> SP.skipSpace *> term)
-  pure $ Input name default_ parser
+getPOST :: Map Text Text -> Text -> Maybe Text
+getPOST inputs x = M.lookup ("POST_" <> x) inputs
 
-snarfInterestingThings :: Block -> Writer [InterestingThings] Block
-snarfInterestingThings c@(CodeBlock (_, cs, _) p)
+
+snarfMaryDef :: Block -> Writer [Text] Block
+snarfMaryDef c@(CodeBlock (_, cs, _) p)
   | "mary-def" `elem` cs
-  = if "keep" `notElem` cs then Null <$ tell [MaryDef p]
+  = if "keep" `notElem` cs then Null <$ tell [p]
     else do
       let block = render (pretty $ getMeAModule p)
-      block <$ tell [MaryDef p]
-snarfInterestingThings c@(CodeBlock (i, cs, as) p)
-  | "input" `elem` cs
-  = case parseOnly inputFormData p of
-      Right it@(Input name _ _) ->
-        (CodeBlock (i, cs, as) name) <$ tell [it]
-      _                         -> pure c
-snarfInterestingThings b = return b
+      block <$ tell [p]
+snarfMaryDef b = return b
 
-evalMary :: FromValue b => [Import] -> GlobalEnv -> Text -> b -> b
+evalMary :: FromValue b => [Import] -> Env -> Text -> b -> b
 evalMary is env e abort =
   case parseOnly (term <* endOfInput) e of
     Left _ -> abort
     Right t -> case rawShonkier is env t of
       Value v -> fromValue v
-      _ -> abort
+      Request r _ -> fromValue $ VString "" $ T.pack $ show r -- abort
 
-makeInputForm :: Text -> Maybe Text -> [(Text,Text)] -> Text
-makeInputForm name mval as = T.intercalate " " $ -- TODO: default values
-  [ "<input"] ++
-  [ T.concat [k, "=", v] | (k, v) <- ("name",name):as ] ++
-  [ T.concat ["value", "=", v] | let Just v = mval ] ++
-  [">"]
-
-
-type InputValues = M.Map Text Text
-type EvalEnv = (GlobalEnv, InputValues)
-
-evalMaryBlock :: [Import] -> EvalEnv -> Block -> Block
-evalMaryBlock is (env,_) (CodeBlock (_, cs, _) e) | "mary" `elem` cs
+evalMaryBlock :: [Import] -> Env -> Block -> Block
+evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs
   = evalMary is env e Null
+evalMaryBlock is (env, inputs) (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
+    -- we consider codeblocks (compared to inline code) to be
+    -- textareas, unless they explicitly have a type set
+  = let textarea = not ("type" `elem` L.map fst as) in
+    RawBlock (Format "html") (makeInputForm inputs textarea a t)
 evalMaryBlock _ _ b = b
 
-evalMaryInline :: [Import] -> EvalEnv -> Text -> Inline -> Inline
-evalMaryInline is (env,_) page (Code (_, cs, _) e) | "mary" `elem` cs =
+evalMaryInline :: [Import] -> Env -> Text -> Inline -> Inline
+evalMaryInline is env page (Code (_, cs, _) e) | "mary" `elem` cs =
   evalMary is env e Space
-evalMaryInline is (env,inputs) page (Code (_, cs, as) name) | "input" `elem` cs =
-  RawInline (Format "html") (makeInputForm name (M.lookup name inputs) as)
+evalMaryInline is (env,inputs) page (Code a@(_, cs, _) t) | "input" `elem` cs =
+  RawInline (Format "html") (makeInputForm inputs False a t)
 evalMaryInline _ _ page (Link attrs is target) =
   Link attrs is (makeAbsolute page target)
 evalMaryInline _ _ page (Image attrs is target) =
   Image attrs is (makeAbsolute page target)
 evalMaryInline _ _ _ b = b
+
+makeInputForm :: M.Map Text Text -> Bool -> Attr -> Text -> Text
+makeInputForm inputs textarea a@(i, cs, as) p =
+  let nameparser = SP.skipSpace *> identifier <* SP.skipSpace in
+  case parseOnly nameparser p of
+    Left _ -> ""
+    Right n -> let name = T.pack n
+                   mval = getPOST inputs name in (T.intercalate " " $
+      [ if textarea then "<textarea" else "<input"] ++
+      [ T.concat [k, "=\"", v, "\""] |
+        (k, v) <- ("name",name):("id", name):as ]) <>
+      T.concat (if textarea then [">", if isJust mval then fromJust mval
+                                                      else "", "</textarea>"]
+               else [ T.concat [" value=\"", fromJust mval, "\""] | isJust mval] ++  [">"])
 
 makeAbsolute :: Text -> Target -> Target
 makeAbsolute page (url, title) = (absUrl, title)

@@ -1,4 +1,6 @@
 main () -> [ primStringConcat ([ "hello" | space" "space], the"world"the, "!")
              primNumAdd (2.4, 3.6)
              this"a test of "th"this
+             primStringToNum(primNumToString(17))
+             primNumToString(primStringToNum("42"))
            ]

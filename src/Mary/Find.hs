@@ -16,12 +16,12 @@ import System.FilePath
 import System.Directory
 import System.Process
 
-postText :: PHPSessionValue -> Y.Value
-postText (PHPSessionValueArray kvs) = object
-  [ (decodeUtf8 (B.toStrict k) .= decodeUtf8 (B.toStrict v))
+postText :: Text -> PHPSessionValue -> Y.Value
+postText prefix (PHPSessionValueArray kvs) = object
+  [ ((prefix <> "_" <> decodeUtf8 (B.toStrict k)) .= decodeUtf8 (B.toStrict v))
   | (PHPSessionValueString k, PHPSessionValueString v) <- kvs
   ]
-postText _ = Y.Null
+postText _ _ = Y.Null
 
 outputMeta :: Value -> IO ()
 outputMeta d@(Y.Object o) | not (H.null o) = TIO.putStr (decodeUtf8 (Y.encode d))
@@ -36,7 +36,7 @@ maryFind sitesRoot user page = do
   -- the inputs are serialised PHP objects representing post and get data, respectively
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
   let (postData, getData) = case mpost of
-        (p : g : _) -> (postText p, postText g)
+        (p : g : _) -> (postText "POST" p, postText "GET" g)
         _           -> (Y.Null, Y.Null)
   -- now we have made them YAML objects
   case splitDirectories page of
@@ -46,7 +46,7 @@ maryFind sitesRoot user page = do
         then error $ L.concat ["Mary cannot find site ", site, "!"]
       else do
         -- have we been asked to update the site? if so, git pull!
-        case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
+        case parseMaybe (withObject "get data" $ \ x -> x .:? "GET_pull") getData of
           Just (Just (_ :: Text)) -> callProcess (sitesRoot </> "gitpullsite") [site]
           _ -> return ()
         -- now let us serve up (for pandoc) the YAML data, then the markdown page

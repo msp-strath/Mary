@@ -50,6 +50,8 @@
   globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["primStringToNum"] = {};
+  globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
   globalEnv["printTree"] = {};
   globalEnv["printTree"]["."] = VFun(null,{},[],[Clause([Value(Cell(Atom("Plus"),Cell("s",Cell("t",Atom("")))))],Cell(Stringy("['Plus "),Cell(App(GVar(".","printTree"),["s"]),Cell(Stringy(" "),Cell(App(GVar(".","printTree"),["t"]),Cell(Stringy("]"),Atom(""))))))),Clause([Value(Cell(Atom("Mult"),Cell("s",Cell("t",Atom("")))))],Cell(Stringy("['Mult "),Cell(App(GVar(".","printTree"),["s"]),Cell(Stringy(" "),Cell(App(GVar(".","printTree"),["t"]),Cell(Stringy("]"),Atom(""))))))),Clause([Value("n")],App(GVar(".","primNumToString"),["n"]))]);
   globalEnv["reduce"] = {};

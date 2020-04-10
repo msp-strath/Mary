@@ -4,12 +4,16 @@ module Mary.ServePage where
 
 import Control.Arrow
 
-import Data.ByteString.Lazy as B
+import Data.List as L
+
+import qualified Data.ByteString.Lazy as B
 import Data.Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.IO as TIO
 
 import Data.PHPSession
+
+import Network.URI.Encode
 
 import System.Process
 import System.IO
@@ -22,8 +26,8 @@ data Config = Config
   }
 
 servePage :: Config
-          -> [(Text, Text)]  -- POST data
-          -> [(Text, Text)]  -- GET  data
+          -> [(Text, Text)]  -- POST data (URL-encoded)
+          -> [(Text, Text)]  -- GET  data (URL-encoded)
           -> FilePath        -- input file
           -> IO Text
 servePage Config{..} post get file =
@@ -40,6 +44,13 @@ servePage Config{..} post get file =
                      }) $ \ _ (Just hpandoc) _ _ ->
       TIO.hGetContents hpandoc
   where
-    encString = PHPSessionValueString . B.fromStrict . encodeUtf8
+    encString = PHPSessionValueString . B.fromStrict . encodeUtf8 . decodeText
     phpify a = encodePHPSessionValue $ PHPSessionValueArray $
                  fmap (encString *** encString) a
+
+parseRequests :: Text -> [(Text, Text)]
+parseRequests x = L.concatMap pairs $ splitOn "&" x
+  where pairs s = case splitOn "=" s of
+                    [a,b] -> [(a, b)]
+                    [a]   -> [(a, "")]
+                    _     -> []

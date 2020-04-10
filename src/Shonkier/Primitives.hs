@@ -4,6 +4,8 @@ module Shonkier.Primitives where
 
 import Control.Applicative
 
+import Data.Attoparsec.Text (parseOnly)
+
 import Data.Map (singleton)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -12,6 +14,7 @@ import qualified Data.Text as T
 import Shonkier.Syntax
 import Shonkier.Value
 import {-# SOURCE #-} Shonkier.Semantics
+import Shonkier.Parser (numlit)
 import Shonkier.Pretty (ppRational)
 
 ---------------------------------------------------------------------------
@@ -36,6 +39,7 @@ primitives =
   , ("primNumMinus"    , primNumMinus)
   , ("primNumMult"     , primNumMult)
   , ("primNumToString" , primNumToString)
+  , ("primStringToNum" , primStringToNum)
   ]
 
 ---------------------------------------------------------------------------
@@ -63,6 +67,15 @@ primNumToString = \case
 
 ---------------------------------------------------------------------------
 -- STRING
+
+primStringToNum :: PRIMITIVE
+primStringToNum = \case
+  [CString _ s]  -> case (parseOnly numlit s) of
+    Left err -> handle ("Invalid_primStringToNum_ParseError", [VString "" (T.pack err)]) []
+    Right (Num n) -> use (VNum n)
+  [Value m] -> handle ("Invalid_primStringToNum_ArgType", [m]) []
+  [_]       -> handle ("Invalid_primStringToNum_ArgRequest",[]) []
+  _         -> handle ("Invalid_primStringToNum_Arity", []) []
 
 primStringConcat :: PRIMITIVE
 primStringConcat cs = go cs Nothing [] where
