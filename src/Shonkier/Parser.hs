@@ -110,10 +110,10 @@ pattern EndNested a b = (a, b, [])
 
 
 decl :: Parser [[String]]
-decl = tupleOf (sep skipSpace atom) <* char ':'
+decl = argTuple (sep skipSpace atom) <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> tupleOf pcomputation
+defn = (,) <$> argTuple pcomputation
            <* arrow <* skipSpace <*> term
 
 punc :: Char -> Parser ()
@@ -147,7 +147,7 @@ weeTerm = choice
 
 moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
 moreTerm z t = choice
-  [ App t <$> tupleOf term >>= moreTerm z
+  [ App t <$> argTuple term >>= moreTerm z
   , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut z
   , pure t
   ]
@@ -227,8 +227,16 @@ listOf p nil = (,) <$ char '['
       <*> (id <$ char '|' <* skipSpace <*> p <|> pure nil)
       <* skipSpace <* char ']'
 
-tupleOf :: Parser a -> Parser [a]
-tupleOf p = id <$ punc '(' <*> sep (punc ',') p <* punc ')'
+------------------------------------------------------------------------------
+-- NOTA BENE                                                                --
+--                                                                          --
+-- no whitespace before an argtuple!                                        --
+                                                                            --
+argTuple :: Parser a -> Parser [a]                                          --
+argTuple p = id <$ char '(' <* skipSpace <*> sep (punc ',') p <* punc ')'   --
+                                                                            --
+--                                                                          --
+------------------------------------------------------------------------------
 
 variable :: Parser RawVariable
 variable = do
@@ -249,7 +257,7 @@ pcomputation
   =   PValue <$> pvalue
   <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
-       <|> PRequest <$> ((,) <$> atom <*> tupleOf pvalue)
+       <|> PRequest <$> ((,) <$> atom <*> argTuple pvalue)
            <* arrow <* skipSpace <*> (Just <$> identifier <|> Nothing <$ char '_')
       ) <* skipSpace <* char '}'
 
