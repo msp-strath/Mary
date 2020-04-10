@@ -23,6 +23,9 @@ testConfig = Config
   , siteRoot = "."
   }
 
+-- POST and GET data for test file FILE.mary can be supplied as
+-- url-encoded strings on the first two lines of FILE.input
+
 maryRunner :: FilePath -> IO Text
 maryRunner inp = do
   let page = case L.stripPrefix (siteRoot testConfig) inp of
