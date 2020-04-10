@@ -234,7 +234,7 @@ numlit = do
 
 listOf :: Parser a -> a -> Parser ([a], a)
 listOf p nil = (,) <$ char '['
-      <*> many (skipSpace *> p) <* skipSpace
+      <*> many (spaceMaybeComma *> p) <* spaceMaybeComma
       <*> (id <$ char '|' <* skipSpace <*> p <|> pure nil)
       <* skipSpace <* char ']'
 
@@ -261,8 +261,12 @@ variable = do
     Nothing  -> (Nothing, start)
     Just end -> (Just start, end)
 
+spaceMaybeComma :: Parser ()
+spaceMaybeComma =
+  () <$ skipSpace <* (() <$ char ',' <* skipSpace <|> pure ())
+
 clause :: Parser RawClause
-clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace
+clause = (,) <$> sep spaceMaybeComma pcomputation <* skipSpace <* arrow <* skipSpace
              <*> term
   <|> (,) [] <$> term
 
