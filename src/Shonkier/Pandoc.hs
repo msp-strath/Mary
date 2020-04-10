@@ -69,9 +69,8 @@ instance ToRawTerm Block where
     LineBlock ps      -> toListy "LineBlock" ps
     CodeBlock a@(b, cs, d) e
       | "mary" `elem` cs
-      , Right v <- parseOnly identifier e
-        -> toAfter1Listy "Div" (a, filter ("mary" /=) cs, d)
-                               [Var (Nothing, v) :: RawTerm]
+      , Right t <- parseOnly term e
+        -> toAfter1Listy "Div" (a, filter ("mary" /=) cs, d) [t]
       | otherwise
         -> toTakes2 "Code" a e
     CodeBlock a b     -> toTakes2 "CodeBlock" a b
@@ -95,9 +94,8 @@ instance ToRawTerm Inline where
     SmallCaps is   -> toListy "SmallCaps" is
     Code a@(b, cs, d) e
       | "mary" `elem` cs
-      , Right v <- parseOnly identifier e
-        -> toAfter1Listy "Span" (b, filter ("mary" /=) cs, d)
-                                [Var (Nothing, v) :: RawTerm]
+      , Right t <- parseOnly term e
+        -> toAfter1Listy "Span" (b, filter ("mary" /=) cs, d) [t]
       | otherwise
         -> toTakes2 "Code" a e
     SoftBreak      -> Atom "SoftBreak"
