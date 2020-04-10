@@ -1,0 +1,13 @@
+foo(x) -> ['foo x]
+catch('abort,):
+catch(v, _) -> v
+catch({'abort() -> k}, f) -> f()
+
+main() -> [ foo := 5; foo
+            x := foo(7); x
+            ['foo x] := foo(7); x
+            catch(['goo x] := foo(7); x, {'phew})
+            catch('0 ; 'boo, {'phew})
+            catch('1 ; 'phew, {'boo})
+          ]
+          

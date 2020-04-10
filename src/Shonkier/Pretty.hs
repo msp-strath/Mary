@@ -24,6 +24,7 @@ data Annotation
   | AnnFunction
   | AnnKeyword
   | AnnNumeric
+  | AnnBoolean  -- wasn't she married to Henry VIII?
   | AnnOperator
   | AnnPrimitive
   | AnnSplice
@@ -67,7 +68,6 @@ ppRational p = T.pack $
 
 ppAtom :: String -> Doc
 ppAtom str = annotate AnnAtom $ case str of
-  [] -> "[]"
   a  -> squote <> pretty a
 
 arrow :: Doc
@@ -75,6 +75,9 @@ arrow = annotate AnnOperator "->"
 
 arobase :: Doc
 arobase = annotate AnnOperator "@"
+
+assignment :: Doc
+assignment = annotate AnnOperator ":="
 
 semi :: Doc
 semi = annotate AnnOperator P.semi
@@ -155,17 +158,20 @@ mkKeyword k ts = pretty $ case maximum (maximum ((-2):occ) : qso) of
 instance Pretty Literal where
   pretty = \case
     Num r        -> annotate AnnNumeric $ pretty r
+    Boolean b
+      | b         -> annotate AnnBoolean "'1"
+      | otherwise -> annotate AnnBoolean "'0"
 
 instance Pretty RawVariable where
   pretty (mns, v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
 
 instance Pretty ScopedVariable where
-  pretty = \case
-    LocalVar x           -> pretty x
-    GlobalVar _ x        -> ppGlobalVar x
-    AmbiguousVar _ x     -> annotate AnnError $ pretty x
-    OutOfScope x         -> annotate AnnError $ pretty x
-    InvalidNamespace _ x -> annotate AnnError $ pretty x
+  pretty (sco :.: x) = case sco of
+    LocalVar           -> pretty x
+    GlobalVar b _      -> if b then ppGlobalVar x else pretty x
+    AmbiguousVar _     -> annotate AnnError $ pretty x
+    OutOfScope         -> annotate AnnError $ pretty x
+    InvalidNamespace _ -> annotate AnnError $ pretty x
 
 instance Pretty v => Pretty (Term' String v) where
   pretty t = case listView t of
@@ -174,10 +180,12 @@ instance Pretty v => Pretty (Term' String v) where
       Lit l         -> pretty l
       String k ps t -> ppSplice k ps t
       Var v         -> pretty v
+      Nil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts      -> ppApp (pretty f) ts
       Semi l r      -> pretty l <> semi <+> pretty r
       Fun hs cls    -> ppFun hs cls
+      Match p t     -> parens $ pretty p <+> assignment <+> pretty t
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where
@@ -194,6 +202,7 @@ instance Pretty PValue where
       PBind v        -> pretty v
       PAs v p        -> pretty v <> arobase <> pretty p
       PWild          -> "_"
+      PNil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       PCell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
     it -> ppList it
 
@@ -210,6 +219,7 @@ instance Pretty Value where
       VLit l           -> pretty l
       VString k t      -> ppStringLit k t
       VPrim f _        -> pretty f
+      VNil             -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       VCell a b        -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       VFun _ _ hs cls  -> ppFun hs cls
       VThunk c         -> braces $ pretty c

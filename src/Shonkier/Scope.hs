@@ -74,27 +74,28 @@ instance ScopeCheck RawProgram Program where
 
 instance ScopeCheck RawVariable ScopedVariable where
   scopeCheck local (mns, v) = case mns of
-    Nothing | Set.member v local -> pure $ LocalVar v
+    Nothing | Set.member v local -> pure $ LocalVar :.: v
     Just nm -> get >>= \ st -> case namespaces st Map.!? nm of
-      Nothing  -> pure $ InvalidNamespace nm v
-      Just fps -> checkGlobal fps v
-    _ -> get >>= \ st -> checkGlobal (imports st) v
+      Nothing  -> pure $ InvalidNamespace nm :.: v
+      Just fps -> checkGlobal True fps v
+    _ -> get >>= \ st -> checkGlobal False (imports st) v
 
     where
 
-    checkGlobal :: Set FilePath -> Variable -> ScopeM ScopedVariable
-    checkGlobal scp v = do
+    checkGlobal :: Bool -> Set FilePath -> Variable -> ScopeM ScopedVariable
+    checkGlobal b scp v = do
       candidates <- gets (\ st -> globalScope st Map.!? v)
       pure $ case Set.toList . Set.intersection scp <$> candidates of
-        Just [fp]      -> GlobalVar fp v
-        Just fps@(_:_) -> AmbiguousVar fps v
-        _              -> OutOfScope v
+        Just [fp]      -> GlobalVar b fp :.: v
+        Just fps@(_:_) -> AmbiguousVar fps :.: v
+        _              -> OutOfScope :.: v
 
 instance ScopeCheck RawTerm Term where
   scopeCheck local = \case
     Atom a -> pure (Atom a)
     Lit l  -> pure (Lit l)
     Var v  -> Var <$> scopeCheck local v
+    Nil    -> pure Nil
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Semi l r  -> Semi <$> scopeCheck local l <*> scopeCheck local r
@@ -103,6 +104,7 @@ instance ScopeCheck RawTerm Term where
       String k
         <$> traverse (traverse (scopeCheck local)) sts
         <*> pure u
+    Match p t -> Match p <$> scopeCheck local t  -- for now
 
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
@@ -121,6 +123,7 @@ instance ScopeCheck PValue LocalScope where
   scopeCheck local = \case
     PAtom{}   -> pure Set.empty
     PLit{}    -> pure Set.empty
+    PNil      -> pure Set.empty
     PBind x   -> pure (Set.singleton x)
     PWild{}   -> pure Set.empty
     PAs x p   -> Set.insert x <$> scopeCheck local p
