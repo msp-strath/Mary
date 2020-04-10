@@ -418,12 +418,12 @@ function prim(f, vs) {
                           , cs
                          );
     };
-    function primLitToString(cs) {
+    function primNumToString(cs) {
         if (hasLength(cs) && cs.length == 1) {
             var x = cs[0];
             if (x.tag == "Value" &&
                 x.value.tag == "Lit") {
-                if (!stringy(x.value.literal)) {
+                if (!stringy(x.value.literal) && !boolean(x.value.literal)) {
                     return Use(Lit(render(x)));
                 };
                 return Handle("Invalid_primNumToString_ArgType",[],null);
@@ -475,7 +475,7 @@ function prim(f, vs) {
     case "primNumMult":
         return primNumMult(vs);
     case "primNumToString":
-        return primLitToString(vs);
+        return primNumToString(vs);
     case "primStringToNum":
         return primStringToNum(vs);
     default:
