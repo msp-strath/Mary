@@ -418,13 +418,13 @@ function prim(f, vs) {
                           , cs
                          );
     };
-    function primNumToString(cs) {
+    function primLitToString(cs) {
         if (hasLength(cs) && cs.length == 1) {
-            if (cs[0].tag == "Value" &&
-                cs[0].value.tag == "Lit") {
-                var x = cs[0].value.literal;
-                if (!stringy(x)) {
-                    return Use(Lit(x.num.toString())); //FIXME
+            var x = cs[0];
+            if (x.tag == "Value" &&
+                x.value.tag == "Lit") {
+                if (!stringy(x.value.literal)) {
+                    return Use(Lit(render(x)));
                 };
                 return Handle("Invalid_primNumToString_ArgType",[],null);
             };
@@ -438,7 +438,25 @@ function prim(f, vs) {
                 cs[0].value.tag == "Lit") {
                 var x = cs[0].value.literal;
                 if (stringy(x)) {
-                    return Use(Lit(LitNum(parseInt(x),1))); // FIXME
+                    var p = /^(\d)+$/; // matches integers
+
+                    if (p.test(x)) {
+                        return Use(Lit(LitNum(parseInt(x), 1)));
+                    };
+                    var xs = x.split("/");
+                    if (hasLength(xs) && xs.length == 2 &&
+                        p.test(xs[0]) && p.test(xs[1])) {
+                        return Use(Lit(LitNum(parseInt(xs[0]),
+                                              parseInt(xs[1]))));
+                    };
+                    xs = x.split(".");
+                    if (hasLength(xs) && xs.length == 2 &&
+                        p.test(xs[0]) && p.test(xs[1])) {
+                        let a = parseInt(xs[0]); // whole number
+                        let b = parseInt(xs[1]); // num of rest
+                        let c = Math.pow(10, xs[1].length); //denom of rest
+                        return Use(Lit(LitNum(c * a + b, c)));
+                    };
                 };
                 return Handle("Invalid_primStringToNum_ArgType",[],null);
             };
@@ -457,7 +475,7 @@ function prim(f, vs) {
     case "primNumMult":
         return primNumMult(vs);
     case "primNumToString":
-        return primNumToString(vs);
+        return primLitToString(vs);
     case "primStringToNum":
         return primStringToNum(vs);
     default:
@@ -727,10 +745,22 @@ function render(v) {
                 output(v.literal);
                 output("\"");
                 continue; };
-            output (v.literal.num.toString());
-            if (v.literal.den == 1) { continue; };
+            let n = v.literal.num; d = v.literal.den;
+            if (d == 1) { output (n.toString()); continue; };
+            if (d == 2) {
+                output((Math.trunc(n/2)).toString());
+                output(".5")
+                continue;
+            };
+            if (d == 4) {
+                output((Math.trunc(n/4)).toString());
+                if (n % 4 == 1) { output(".25"); } else { output(".75"); };
+                continue;
+            };
+            // otherwise
+            output (n.toString());
             output("/");
-            output(v.literal.den.toString());
+            output(d.toString());
             continue;
         default: continue;
         };
