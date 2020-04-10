@@ -33,7 +33,6 @@ instance JS Scoping where
     AmbiguousVar _     -> ["AmbiguousVar()"]
     OutOfScope         -> ["OutOfScope()"]
     InvalidNamespace _ -> ["InvalidNamespace()"]
-    
 
 instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]

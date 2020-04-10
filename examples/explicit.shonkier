@@ -10,4 +10,3 @@ main() -> [ foo := 5; foo
             catch('0 ; 'boo, {'phew})
             catch('1 ; 'phew, {'boo})
           ]
-          

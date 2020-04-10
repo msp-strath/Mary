@@ -21,7 +21,7 @@ function AmbiguousVar() {
 function OutOfScope() {
     return {tag: "OutOfScope"};
 };
-function AmbiguousVar() {
+function InvalidNamespace() {
     return {tag: "InvalidNamespace"};
 };
 function dynVar(sco) {
