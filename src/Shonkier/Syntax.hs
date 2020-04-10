@@ -45,7 +45,6 @@ type RawTerm = Term' String RawVariable
 type Term    = Term' String ScopedVariable
 
 pattern TNum n        = Lit (Num n)
-pattern TNil          = Atom ""
 
 type Import = (FilePath, Maybe Namespace)
 type Program' a v = [(String, Either [[String]] (Clause' a v))]
