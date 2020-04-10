@@ -1,4 +1,4 @@
-main () ->
+main() ->
   [ {[] -> 'true [_|_] -> 'false}([])
     {[] -> 'true [_|_] -> 'false}(['boo])
     {[] -> 'true [_|_] -> 'false}

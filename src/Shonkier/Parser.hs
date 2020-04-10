@@ -110,10 +110,10 @@ pattern EndNested a b = (a, b, [])
 
 
 decl :: Parser [[String]]
-decl = argTuple (sep skipSpace atom) <* char ':'
+decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> argTuple pcomputation
+defn = (,) <$> argTuple pcomputation <* skipSpace
            <* arrow <* skipSpace <*> term
 
 punc :: Char -> Parser ()
@@ -126,6 +126,10 @@ data Forbidden
   = NoProb
   | NoSemi
   deriving (Show, Ord, Eq, Enum, Bounded)
+
+
+spaceTerm :: Parser RawTerm
+spaceTerm = id <$ skipSpace <*> term <* skipSpace
 
 ------------------------------------------------------------------------------
 -- NOTA BENE                                                                --
@@ -145,11 +149,11 @@ weeTerm = choice
   [ Match <$> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace <*> termBut NoSemi
   , Atom <$> atom
   , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf term
+  , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
   , Var <$> variable
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
   , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
-  , id <$ char '(' <* skipSpace <*> term <* skipSpace <* char ')'
+  , id <$ char '(' <*> spaceTerm <* char ')'
   ]
 
 moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
@@ -267,7 +271,7 @@ pcomputation
   =   PValue <$> pvalue
   <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
-       <|> PRequest <$> ((,) <$> atom <*> argTuple pvalue)
+       <|> PRequest <$> ((,) <$> atom <*> argTuple pvalue) <* skipSpace
            <* arrow <* skipSpace <*> (Just <$> identifier <|> Nothing <$ char '_')
       ) <* skipSpace <* char '}'
 
@@ -300,4 +304,4 @@ getMeAProgram :: Text -> RawProgram
 getMeAProgram = getMeA program
 
 getMeATerm :: Text -> RawTerm
-getMeATerm = getMeA (term <* endOfInput)
+getMeATerm = getMeA (spaceTerm <* endOfInput)
