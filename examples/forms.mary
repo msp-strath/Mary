@@ -20,10 +20,12 @@ greet()
 ```
 
 ```mary
-numberGame('field("number"))
+numberGame('field(concat("num","ber")))
 ```
 
 ```mary-def
+concat(x, y) -> "`x``y`"
+
 greet() -> ['Para "Hello " 'field("name") "! You are on page " 'param("page")]
 numberGame(guess) ->
   ['Para "Wrong, the right number was "

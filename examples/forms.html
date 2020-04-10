@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
   <script>
   var globalEnv = {};
+  globalEnv["concat"] = {};
+  globalEnv["concat"]["."] = VFun(null,{},[],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]);
   globalEnv["greet"] = {};
   globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("field"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("param"),[Stringy("page")]),Nil()))))))]);
   globalEnv["numberGame"] = {};
