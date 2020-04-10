@@ -127,6 +127,13 @@ data Forbidden
   | NoSemi
   deriving (Show, Ord, Eq, Enum, Bounded)
 
+------------------------------------------------------------------------------
+-- NOTA BENE                                                                --
+--                                                                          --
+-- parsers for terms/patterns must forbid leading/trailing space            --
+--                                                                          --
+------------------------------------------------------------------------------
+
 term :: Parser RawTerm
 term = termBut NoProb
 
@@ -230,10 +237,13 @@ listOf p nil = (,) <$ char '['
 ------------------------------------------------------------------------------
 -- NOTA BENE                                                                --
 --                                                                          --
--- no whitespace before an argtuple!                                        --
+-- no whitespace before or after an argtuple!                               --
                                                                             --
 argTuple :: Parser a -> Parser [a]                                          --
-argTuple p = id <$ char '(' <* skipSpace <*> sep (punc ',') p <* punc ')'   --
+argTuple p =                                                                --
+  id <$ char '(' <* skipSpace                                               --
+  <*> sep (punc ',') p                                                      --
+  <* skipSpace <* char ')'                                                  --
                                                                             --
 --                                                                          --
 ------------------------------------------------------------------------------
