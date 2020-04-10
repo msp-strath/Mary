@@ -34,7 +34,7 @@ homepage:            https://github.com/msp-strath/Mary
 -- license-file:        LICENSE
 
 -- The package author(s).
-author:              Conor McBride
+author:              Conor McBride, Guillaume Allais, and Fredrik Nordvall Forsberg
 
 -- An email address to which users can send suggestions, bug reports, and
 -- patches.
@@ -72,6 +72,7 @@ library
                      , prettyprinter >=1.6 && <1.7
                      , process >=1.6.5.0 && <1.7
                      , unordered-containers >=0.2.10.0 && <0.2.11
+                     , uri-encode >=1.5 && <1.6
                      , text >=1.2 && <1.3
                      , yaml >=0.11.2.0 && < 0.12
 

@@ -36,8 +36,8 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
     shonkierjs <- getDataFileName "src/data-dir/Shonkier.js"
     compileShonkier shonkierjs filename >>= TIO.putStrLn
   Page filename postString getString siteRoot username -> do
-    let postArray = parseRequests postString
-    let getArray' = parseRequests getString
+    let postArray = parseRequests (pack postString)
+    let getArray' = parseRequests (pack getString)
     -- make sure there is a page
     let getArray = case lookup "page" getArray' of
           Just _  -> getArray'
@@ -50,11 +50,6 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
     user' <- if L.null user then defaultUser else pure user
     maryFind sitesRoot user' page
   where
-    parseRequests x = L.concatMap pairs $ splitOn "&" (pack x)
-      where pairs s = case splitOn "=" s of
-                        [a,b] -> [(a,b)]
-                        [a]   -> [(a, "")]
-                        _     -> []
     pp = prefs showHelpOnEmpty
     opts = info (optsParser <**> helper)
       ( fullDesc <> header "Mary - a content delivery and assessment engine")

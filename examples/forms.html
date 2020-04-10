@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Displaying Forms</title>
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/msp-strath/Mary/master/src/data-dir/shonkier.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+  <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
+  <script>
+  var globalEnv = {};
+  globalEnv["concat"] = {};
+  globalEnv["concat"]["."] = VFun(null,{},[],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]);
+  globalEnv["greet"] = {};
+  globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("field"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("param"),[Stringy("page")]),Nil()))))))]);
+  globalEnv["numberGame"] = {};
+  globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(GlobalVar(false,"."),"primNumAdd"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
+  globalEnv["primNumAdd"] = {};
+  globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
+  globalEnv["primNumMinus"] = {};
+  globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
+  globalEnv["primNumMult"] = {};
+  globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["primNumToString"] = {};
+  globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primStringConcat"] = {};
+  globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["primStringToNum"] = {};
+  globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  </script>
+</head>
+<body>
+<form method="post">
+<h1 id="displaying-forms">Displaying Forms</h1>
+<p>Name: <input name="name" id="name" type="text" size="12" value="Eric"></p>
+<p>What number am I thinking of? <input name="number" id="number" value="7"></p>
+<p>This is what I did during my summer holiday:</p>
+<textarea name="essay" id="essay">Seven weeks of reading papers
+Seven weeks of feeling guilty
+Seven weeks of staying up all night</textarea>
+<p><input value="Submit answers and essay" type="submit"></p>
+<h2 id="using-the-inputs">Using the inputs</h2>
+<p>Hello Eric! You are on page /examples/forms.mary</p>
+<p>Wrong, the right number was 8. Better luck next time!</p>
+</form>
+</body>
+</html>

@@ -15,6 +15,8 @@ import Utils.List
 -- ENVIRONMENTS
 ---------------------------------------------------------------------------
 
+type Env = (GlobalEnv, Map Text Text) -- map for form data
+
 type GlobalEnv' a v = Map Variable (Map FilePath (Value' a v))
 type GlobalEnv = GlobalEnv' String ScopedVariable
 
@@ -45,6 +47,7 @@ type Value = Value' String ScopedVariable
 
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
+pattern VBoolean b    = VLit (Boolean b)
 pattern CString k str = Value (VString k str)
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
@@ -122,9 +125,9 @@ type Context = Context' String ScopedVariable
 ---------------------------------------------------------------------------
 
 newtype Shonkier a = Shonkier
-  { getShonkier :: StateT Context (Reader GlobalEnv) a }
+  { getShonkier :: StateT Context (Reader Env) a }
   deriving ( Functor, Applicative, Monad
-           , MonadState Context, MonadReader GlobalEnv
+           , MonadState Context, MonadReader Env
            )
 
 ---------------------------------------------------------------------------

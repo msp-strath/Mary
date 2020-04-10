@@ -14,12 +14,12 @@ import Shonkier.Semantics
 import Shonkier.ShonkierJS
 import Shonkier.Syntax
 
-onShonkierModule :: (Module -> GlobalEnv -> Term -> IO a)
+onShonkierModule :: (Module -> Env -> Term -> IO a)
                  -> FilePath -> IO a
 onShonkierModule action filename = do
   (mod@(is, ps), gl) <- importToplevelModule filename
   case [ m | ("main", Right m) <- ps ] of
-    [([],body)] -> action mod gl body
+    [([],body)] -> action mod (gl, mempty) body
     _ -> error "not exactly one main function"
 
 interpretShonkier :: FilePath -> IO ()
@@ -32,7 +32,7 @@ interpretShonkier = onShonkierModule $ \ _ gl body ->
 
 -- no support for imports here yet!
 compileShonkier :: FilePath -> FilePath -> IO Text
-compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ env body -> do
+compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ (env,_) body -> do
   -- Couldn't figure how to import in node so I just concat the
   -- whole interpreter defined 'Shonkier.js' on top
   interpreter <- TIO.readFile shonkierjs

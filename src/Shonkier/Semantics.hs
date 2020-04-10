@@ -8,6 +8,7 @@ import Control.Applicative
 import Data.Maybe (fromMaybe)
 import Data.Map (singleton, (!?), keysSet)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
+import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.Bwd
@@ -53,7 +54,7 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
-smatch :: Eq a => [(T.Text, PValue' a)] -> T.Text -> Maybe (LocalEnv' a v)
+smatch :: Eq a => [(Text, PValue' a)] -> Text -> Maybe (LocalEnv' a v)
 smatch [] t = mempty <$ guard (T.null t)
 smatch ((d, p) : dps) t = do
   t <- T.stripPrefix d t
@@ -64,15 +65,15 @@ smatch ((d, p) : dps) t = do
 data MaPo -- lazy patterns match differently depending on their position
   = Head            -- in a head position, they match one character
   | ToEnd           -- in an undelimited tail position, they match the whole text
-  | ToDelim T.Text  -- in a delimited tail position, they match until the delimiter
+  | ToDelim Text  -- in a delimited tail position, they match until the delimiter
 
 tmatch :: Eq a
        => PValue' a   -- pattern in tail position
        -> MaPo        -- match position
-       -> T.Text      -- text
-       -> Maybe ( Bwd T.Text     -- segments consumed, in case of as-pattern
+       -> Text        -- text
+       -> Maybe ( Bwd Text       -- segments consumed, in case of as-pattern
                 , LocalEnv' a v  -- matching environment
-                , T.Text         -- rest of text
+                , Text           -- rest of text
                 )
 tmatch p d t0 = case p of
   PAs x p   -> do
@@ -105,23 +106,23 @@ matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 -- Evaluation contexts
 
-runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
+runShonkier :: Shonkier a -> Env -> Context -> (a, Context)
 runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
 
-evalShonkier :: Shonkier a -> GlobalEnv -> Context -> a
+evalShonkier :: Shonkier a -> Env -> Context -> a
 evalShonkier m gl s = fst $ runShonkier m gl s
 
-execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
+execShonkier :: Shonkier a -> Env -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
-shonkier :: GlobalEnv -> Term -> Computation
+shonkier :: Env -> Term -> Computation
 shonkier rho t = evalShonkier (eval (mempty, t)) rho B0
 
-rawShonkier :: [Import] -> GlobalEnv -> RawTerm -> Computation
-rawShonkier is gl t =
+rawShonkier :: [Import] -> Env -> RawTerm -> Computation
+rawShonkier is env@(gl, ins) t =
   let scope = fmap keysSet gl
       term  = checkRaw "." is scope t
-  in shonkier gl term
+  in shonkier env term
 
 push :: Frame -> Shonkier ()
 push fr = modify (:< fr)
@@ -137,10 +138,15 @@ pop = do
 
 globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
 globalLookup fp x = do
-  st <- ask
+  (st, _) <- ask
   pure $ do
     candidates <- st !? x
     candidates !? fp
+
+inputLookup :: Text -> Shonkier (Maybe Value)
+inputLookup f = do
+  (_, inp) <- ask
+  pure $ VString "" <$> inp !? f
 
 dynVar :: ScopedVariable -> Maybe Variable
 dynVar (sco :.: x) = x <$ guard (dyn sco) where
@@ -259,8 +265,20 @@ unsafeComToValue = \case
     , show r
     ]
 
+handleInput :: Request -> Shonkier Computation
+handleInput (a, vs) = case vs of
+  [VString _ f] -> do
+    let f' = case a of
+          "field" -> "POST_" <> f
+          "param" -> "GET_"  <> f
+          _       -> f
+    mv <- inputLookup f'
+    maybe (handle ("UnknownInput", vs) []) use mv
+  _             -> handle ("IncorrectInputRequest", vs) []
+
 handle :: Request -> [Frame]
        -> Shonkier Computation
+handle r@(a, _) _ | a `elem` ["field", "param", "meta"] = handleInput r
 handle r@(a, vs) frs = pop >>= \case
   Nothing         -> return (Request r frs)
   Just fr -> case fr of
