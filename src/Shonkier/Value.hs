@@ -48,7 +48,7 @@ pattern CNum n        = Value (VNum n)
 pattern CString k str = Value (VString k str)
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
-
+pattern CNil          = Value VNil
 
 ---------------------------------------------------------------------------
 -- EXPLICIT ENVIRONMENTS

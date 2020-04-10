@@ -375,6 +375,8 @@ function primStringConcat(vs) {
             continue;
         case "Atom":
             continue;
+        case "Nil":
+            continue;
         default:
             return Handle("Invalid_StringConcat_ArgType",[],null);
         };
