@@ -5,7 +5,8 @@
 /****************************************************************************/
 
 
-// variables are strings, environments are objects
+// variables are not strings any more: they are objects tagged "Var"
+// environments are still objects
 
 // Scope info
 
@@ -202,7 +203,7 @@ function cmatch(rho, q, c) {
             return vmatch(rho,q.value,c.value);
         case "Request" :
             if (q.cmd == c.cmd && vmatches(rho,q.args,c.args)) {
-                rho[q.cont] = VFun(c.cont,[],null,[Clause([Value("_return")],"_return")]);
+                rho[q.cont] = VFun(c.cont,[],null,[Clause([Value("_return")],Var(LocalVar(),"_return"))]);
                 return true;
             };
             return false;
@@ -537,6 +538,10 @@ function shonkier(glob,t) {
             continue;
         case 2: // Eval
             var t = state.term;
+            if (stringy(t)) {
+                state = Handle("antiqueVariable",[Lit(t)],null);
+                continue;
+            };
             switch (t.tag) {
             case "Var":
                 if (dynVar(t.scope)) {
