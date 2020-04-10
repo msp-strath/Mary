@@ -70,9 +70,10 @@ primNumToString = \case
 
 primStringToNum :: PRIMITIVE
 primStringToNum = \case
-  [CString _ s]  -> case (parseOnly numlit s) of
+  [CString _ s]  -> case parseOnly numlit s of
     Left err -> handle ("Invalid_primStringToNum_ParseError", [VString "" (T.pack err)]) []
     Right (Num n) -> use (VNum n)
+    Right (Boolean b) -> handle ("Invalid_primStringToNum_ValueType", [VBoolean b]) []
   [Value m] -> handle ("Invalid_primStringToNum_ArgType", [m]) []
   [_]       -> handle ("Invalid_primStringToNum_ArgRequest",[]) []
   _         -> handle ("Invalid_primStringToNum_Arity", []) []

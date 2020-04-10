@@ -40,7 +40,7 @@ process doc0@(Pandoc meta docs) = do
   -- we assume that there is page metadata, put there by mary find
   let inputs = metaToInputValues meta
   let page = flip fromMaybe (getGET inputs "page")
-               $ error $ "Meta data 'page' missing!"
+               $ error "Meta data 'page' missing!"
   let doc2 = walk (evalMaryInline is (env, inputs) page)
            . walk (evalMaryBlock is (env, inputs))
            $ doc1
@@ -109,7 +109,7 @@ evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs
 evalMaryBlock is (env, inputs) (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set
-  = let textarea = not ("type" `elem` L.map fst as) in
+  = let textarea = "type" `notElem` L.map fst as in
     RawBlock (Format "html") (makeInputForm inputs textarea a t)
 evalMaryBlock _ _ b = b
 
@@ -138,8 +138,7 @@ makeInputForm inputs textarea a@(i, cs, as) p =
       [ if textarea then "<textarea" else "<input"] ++
       [ T.concat [k, "=\"", v, "\""] |
         (k, v) <- ("name",name):("id", name):as ]) <>
-      T.concat (if textarea then [">", if isJust mval then fromJust mval
-                                                      else "", "</textarea>"]
+      T.concat (if textarea then [">", fromMaybe "" mval , "</textarea>"]
                else [ T.concat [" value=\"", fromJust mval, "\""] | isJust mval] ++  [">"])
 
 makeAbsolute :: Text -> Target -> Target

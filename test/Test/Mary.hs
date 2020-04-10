@@ -34,7 +34,7 @@ maryRunner inp = do
   let inputFile = replaceExtension inp ".input"
   inputExists <- doesFileExist inputFile
   (post:get:_) <- if inputExists then
-                    (map parseRequests . T.lines) <$> TIO.readFile inputFile
+                    map parseRequests . T.lines <$> TIO.readFile inputFile
                  else pure [[],[]]
   servePage testConfig post (("page", page):get) inp
 
