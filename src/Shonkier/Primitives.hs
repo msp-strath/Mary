@@ -87,5 +87,6 @@ primStringConcat cs = go cs Nothing [] where
     (CString k t : cs) -> go cs (mk <|> pure k) (t:ts)
     (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
     (CAtom {}    : cs) -> go cs mk ts
+    (CNil        : cs) -> go cs mk ts
     (Value v     : cs) -> handle ("Invalid_StringConcat_ArgType", [v]) []
     _                  -> handle ("Invalid_StringConcat_ArgRequest",[]) []

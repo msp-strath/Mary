@@ -16,13 +16,19 @@ import Shonkier.Syntax
 import Shonkier.Scope
 import Shonkier.Value
 import Shonkier.Primitives (prim)
+import Utils.List
+
+
+-- how to signal a failure
+
+abort :: Shonkier Computation
+abort = handle ("abort", []) []
+
 
 -- environments
 
 lmatch :: Literal -> Literal -> Maybe ()
--- lmatch (String _ str) (String _ str') = guard (str == str')
-lmatch (Num q)        (Num q')        = guard (q == q')
--- lmatch _ _ = Nothing
+lmatch x y = guard (x == y)
 
 vmatch :: Eq a => PValue' a -> Value' a v -> Maybe (LocalEnv' a v)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
@@ -30,6 +36,7 @@ vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
 vmatch (PAs x p)   v           = merge (singleton x v) <$> vmatch p v
 vmatch PWild       v           = pure mempty
+vmatch PNil        VNil        = pure mempty
 vmatch (PCell p q) (VCell v w) = merge <$> vmatch p v <*> vmatch q w
 vmatch (PString _ sps u) (VString _ t) | Just p <- T.stripSuffix u t =
   smatch sps p
@@ -43,7 +50,7 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   return $ merge rho $ case k of
     Nothing -> mempty
     Just k  -> singleton k $
-      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar "_return"))]
+      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar :.: "_return"))]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
@@ -73,11 +80,12 @@ tmatch p d t0 = case p of
     (tz, rho, t1) <- tmatch p d t0
     let v = VString "" (T.concat (tz <>> []))
     return (tz, merge (singleton x v) rho, t1)
+  PNil    -> return (B0, mempty, t0)
   PCell p q -> do
     (tz1, rho1, t1) <- tmatch p Head t0
     (tz2, rho2, t2) <- tmatch q d t1
     return (tz1 <> tz2, merge rho1 rho2, t2)
-  PAtom a -> return (Nil, mempty, t0)
+  PAtom a -> return (B0, mempty, t0)
   PLit _  -> Nothing
   -- otherwise, it's a lazy string pattern, and we need the MaPo logic...
   _ -> do
@@ -89,17 +97,12 @@ tmatch p d t0 = case p of
       ToDelim d | T.null d  -> return ("", t0)
                 | otherwise -> return (T.breakOn d t0)
     rho <- vmatch p (VString "" l)
-    return (Nil :< l, rho, r)
-
-mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
-mayZipWith f []       []       = pure []
-mayZipWith f (a : as) (b : bs) =
-  (:) <$> f a b <*> mayZipWith f as bs
-mayZipWith _ _ _ = Nothing
+    return (B0 :< l, rho, r)
 
 matches :: (a -> b -> Maybe (LocalEnv' c d))
         -> [a] -> [b] -> Maybe (LocalEnv' c d)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
+
 
 -- Evaluation contexts
 
@@ -113,7 +116,7 @@ execShonkier :: Shonkier a -> Env -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
 shonkier :: Env -> Term -> Computation
-shonkier rho t = evalShonkier (eval (mempty, t)) rho Nil
+shonkier rho t = evalShonkier (eval (mempty, t)) rho B0
 
 rawShonkier :: [Import] -> Env -> RawTerm -> Computation
 rawShonkier is env@(gl, ins) t =
@@ -128,7 +131,7 @@ pop :: Shonkier (Maybe Frame)
 pop = do
   x <- get
   case x of
-    Nil -> return Nothing
+    B0        -> return Nothing
     ctx :< fr -> do
       put ctx
       return (Just fr)
@@ -145,25 +148,37 @@ inputLookup f = do
   (_, inp) <- ask
   pure $ VString "" <$> inp !? f
 
+dynVar :: ScopedVariable -> Maybe Variable
+dynVar (sco :.: x) = x <$ guard (dyn sco) where
+  dyn (GlobalVar True _)    = False
+  dyn (InvalidNamespace _)  = False
+  dyn _                     = True
+
 eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
-  Var x     -> case x of
-    -- successes
-    LocalVar x     -> use (fromMaybe theIMPOSSIBLE $ rho !? x)
-    GlobalVar fp x -> do v <- globalLookup fp x
-                         use (fromMaybe theIMPOSSIBLE v)
-    -- error cases
-    AmbiguousVar _ x     -> handle ("AmbiguousVar", [vVar x]) []
-    OutOfScope x         -> handle ("OutOfScope", [vVar x]) []
-    InvalidNamespace _ x -> handle ("InvalidNamespace", [vVar x]) []
+  Var x@(sco :.: x') -> case dynVar x >>= (rho !?) of
+    Just v  -> use v
+    Nothing -> case sco of
+      -- successes
+      LocalVar       -> theIMPOSSIBLE
+      GlobalVar _ fp -> do
+        v <- globalLookup fp x'
+        use (fromMaybe theIMPOSSIBLE v)
+
+      -- error cases
+      OutOfScope         -> handle ("OutOfScope", [vVar x']) []
+      AmbiguousVar _     -> handle ("AmbiguousVar", [vVar x']) []
+      InvalidNamespace _ -> handle ("InvalidNamespace", [vVar x']) []
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
+  Nil       -> use VNil
   Cell a b  -> do push (CellL rho b)
                   eval (rho, a)
   App f as  -> do push (AppL rho as)
                   eval (rho, f)
-  Semi l r  -> do push (SemiL rho r)
+  Semi l r  -> do -- push (SemiL rho r)
+                  push (AppL rho [r])
                   eval (rho, l)
   Fun es cs -> use (VFun [] rho es cs)
   String k sts u -> case sts of
@@ -171,9 +186,13 @@ eval (rho, t) = case t of
     (s, t) : sts -> do
       push (StringLR (VString k s) rho sts u)
       eval (rho, t)
+  Match p t -> do
+    push (MatchR p)
+    eval (rho, t)
 
-  where theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
-        vVar x = VString "" $ T.pack x
+  where
+    theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
+    vVar x = VString "" $ T.pack x
 
 use :: Value -> Shonkier Computation
 use v = pop >>= \case
@@ -185,24 +204,31 @@ use v = pop >>= \case
     CellR u rho -> use (VCell u v)
     -- we better be making a request or using a function
     AppL rho as -> case v of
-      VAtom f            ->
+      VLit (Boolean b)
+        | b -> case as of
+            [t] -> eval (rho, t)
+            _   -> handle ("GuardsAreUnary", []) []
+        | otherwise -> abort
+      VAtom f ->
         -- Here we are enforcing the invariant:
         -- Atomic functions i.e. requests only ever offer
         -- to handle the empty list of requests.
         let cs = map ([],) as
-        in app (FAtom f) Nil rho cs
+        in app (FAtom f) B0 rho cs
       VPrim f hs          ->
         let cs = zip (hs ++ repeat []) as
-        in app (FPrim f) Nil rho cs
+        in app (FPrim f) B0 rho cs
       VFun frs sig hs cls ->
         let cs = zip (hs ++ repeat []) as
-        in app (FFun frs sig cls) Nil rho cs
+        in app (FFun frs sig cls) B0 rho cs
       VThunk c -> case as of
         [] -> case c of
           Value v       -> use v
           Request r frs -> handle r frs
         _  -> handle ("ThunksAreNullary", [v]) []
-      _ -> handle ("NoFun",[v]) []
+      v -> case as of
+        [t] -> eval (merge rho (value2Env v), t)
+        _   -> handle ("EnvironmentsAreUnary", []) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
     StringLR p rho sts u -> case sts of
@@ -210,6 +236,9 @@ use v = pop >>= \case
       ((s, t) : sts) -> do
         push (StringLR (VCell p (VCell v (VString "" s))) rho sts u)
         eval (rho, t)
+    MatchR p -> case vmatch p v of
+      Nothing  -> abort
+      Just sig -> use (env2value sig)
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
@@ -259,9 +288,7 @@ handle r@(a, vs) frs = pop >>= \case
 
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
-call rho []                cs = do
-  st <- get
-  handle ("IncompletePattern", []) []
+call rho []                cs = abort
 call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> eval (merge rho sig, rhs)
@@ -272,31 +299,12 @@ call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
 ---------------------------------------------------------------------------
 
 glom :: Value -> Shonkier Computation
-glom v = go Nothing Nil [v] where
+glom v = go Nothing B0 [v] where
   go mk tz vs = case vs of
     [] ->
       use (VString (fromMaybe "" mk) (T.concat $ (tz <>> [])))
     VCell a b   : vs -> go mk tz (a : b : vs)
     VAtom _     : vs -> go mk tz vs
+    VNil        : vs -> go mk tz vs
     VString k t : vs -> go (mk <|> pure k) (tz :< t) vs
     v           : _  -> handle ("Invalid_StringConcat_ArgType", [v]) []
-
-
----------------------------------------------------------------------------
--- FROMVALUE
----------------------------------------------------------------------------
-
-class FromValue t where
-  fromValue :: Value -> t
-
-instance FromValue t => FromValue [t] where
-  fromValue (VCell t ts) = fromValue t : fromValue ts
-  fromValue _ = []
-
-instance (FromValue a, FromValue b) => FromValue (a, b) where
-  fromValue (VCell a b) = (fromValue a, fromValue b)
-  fromValue _ = (fromValue VNil, fromValue VNil)
-
-instance (FromValue a, FromValue b, FromValue c) => FromValue (a, b, c) where
-  fromValue (VCell a (VCell b c)) = (fromValue a, fromValue b, fromValue c)
-  fromValue _ = (fromValue VNil, fromValue VNil, fromValue VNil)

@@ -10,20 +10,27 @@ type Namespace = String
 type Variable     = String
 type RawVariable  = (Maybe Namespace, Variable)
 
-data ScopedVariable
-  = LocalVar Variable
-  | GlobalVar FilePath Variable
-  | AmbiguousVar [FilePath] Variable
-  | InvalidNamespace Namespace Variable
-  | OutOfScope Variable
+data ScopedVariable = (:.:)
+  { scoping :: Scoping
+  , nameOf  :: Variable
+  } deriving Show
+
+data Scoping
+  = LocalVar
+  | GlobalVar Bool{-from longname?-} FilePath
+  | AmbiguousVar [FilePath]
+  | InvalidNamespace Namespace
+  | OutOfScope
   deriving (Show)
 
 data Literal
   = Num Rational
-  deriving (Show)
+  | Boolean Bool
+  deriving (Show, Eq)
 
 data Term' a v
   = Atom a
+  | Nil
   | Lit Literal
   | String Keyword [(Text, Term' a v)] Text
   | Var v
@@ -31,6 +38,7 @@ data Term' a v
   | App (Term' a v) [Term' a v]
   | Semi (Term' a v) (Term' a v)
   | Fun [[a]] [Clause' a v]
+  | Match (PValue' a) (Term' a v)
   deriving (Show, Functor)
 
 type RawTerm = Term' String RawVariable
@@ -58,6 +66,7 @@ data PValue' a
   | PBind Variable
   | PWild
   | PAs Variable (PValue' a)
+  | PNil
   | PCell (PValue' a) (PValue' a)
   deriving (Show)
 type PValue = PValue' String
@@ -78,12 +87,19 @@ type PComputation = PComputation' String
 
 instance HasListView (Term' String v) (Term' String v) where
   coalgebra = \case
-    Atom ""  -> ItsNil
+    Nil      -> ItsNil
     Cell a b -> ItsCons a b
     _        -> ItsNot
 
 instance HasListView PValue PValue where
   coalgebra = \case
-    PAtom ""  -> ItsNil
+    PNil      -> ItsNil
     PCell a b -> ItsCons a b
     _         -> ItsNot
+
+---------------------------------------------------------------------------
+-- TORAWTERM
+---------------------------------------------------------------------------
+
+class ToRawTerm t where
+  toRawTerm :: t -> RawTerm

@@ -148,8 +148,8 @@ simplifyTerm :: Functor f => String -> f ScopedVariable -> f ScopedVariable
 simplifyTerm lcp = fmap simp
   where
     simp :: ScopedVariable -> ScopedVariable
-    simp (GlobalVar fp x) = GlobalVar (stripPrefixButDot lcp fp) x
-    simp y                = y
+    simp (GlobalVar b fp :.: x) = GlobalVar b (stripPrefixButDot lcp fp) :.: x
+    simp y                      = y
 
 stripPrefixButDot :: String -> String -> String
 stripPrefixButDot prf "." = "."

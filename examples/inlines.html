@@ -25,9 +25,9 @@
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
   globalEnv["testBlock"] = {};
-  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Atom(""))),Atom(""))))))]);
+  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Nil(),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Nil())),Nil())))))]);
   globalEnv["testInline"] = {};
-  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Atom(""))))]);
+  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Nil())))]);
   </script>
 </head>
 <body>

@@ -5,19 +5,44 @@
 /****************************************************************************/
 
 
-// variables are strings, environments are objects
+// variables are not strings any more: they are objects tagged "Var"
+// environments are still objects
+
+// Scope info
+
+function LocalVar() {
+    return {tag: "LocalVar"};
+};
+function GlobalVar(b, fp) {
+    return {tag: "GlobalVar", longname: b, filepath: fp};
+};
+function AmbiguousVar() {
+    return {tag: "AmbiguousVar"};
+};
+function OutOfScope() {
+    return {tag: "OutOfScope"};
+};
+function InvalidNamespace() {
+    return {tag: "InvalidNamespace"};
+};
+function dynVar(sco) {
+    return !(sco.tag == "GlobalVar" && sco.longname || sco.tag == "InvalidNamespace");
+};
+
 
 // Constructors for Term, Pattern, Value
 
-function GVar(fp,v) { // Global variable
-    return {tag: "GVar", file: fp, name: v};
+function Var(sco, x) { // scopechecked thing
+    return {tag: "Var", scope: sco, name: x};
 };
-
 function Atom(a) { // Atom a
     return {tag: "Atom", atom: a};
 };
 function Lit(l) { // Lit l
     return {tag: "Lit", literal: l};
+};
+function Nil() { // Nil
+    return {tag: "Nil"};
 };
 function Cell(x,y) { // Cell x y
     return {tag: "Cell", fst: x, snd: y};
@@ -38,6 +63,9 @@ function Semi(l, r) { // Semi l r
 };
 function Fun(hs, cs) { // Fun hs cs, both arrays
     return {tag: "Fun", handles: hs, clauses: cs};
+};
+function Match(p, t) { // Match p t
+    return {tag: "Match", pat: p, term: t};
 };
 
 // PValue only
@@ -130,9 +158,33 @@ function Clause(ps,t) {
     return {pats: ps, term: t};
 };
 
+
+/* explicit environments */
+function value2env(rho, v) {
+    var stk = [v]; var i = 1;
+    while (i > 0) {
+        i--;
+        v = stk[i];
+        if (v.tag == "Cell") {
+            if (v.fst.tag == "Atom") { rho[v.fst.atom] = v.snd; continue; };
+            stk[i++] = v.fst;
+            stk[i++] = v.snd;
+        };
+    };
+    return;
+};
+
+function env2value(rho) {
+    var v = Nil();
+    for (x in rho) { v = Cell(Cell(Atom(x),rho[x]),v); };
+    return v;
+};
+
+
 /* Matchers on success grow an environment, return a Boolean */
 
 function stringy(x) { return (typeof(x)=="string"); };
+function boolean(x) { return (typeof(x)=="boolean"); };
 
 function cmatches(rho, qs, cs) {
     if (qs.length != cs.length) { return false; };
@@ -151,7 +203,7 @@ function cmatch(rho, q, c) {
             return vmatch(rho,q.value,c.value);
         case "Request" :
             if (q.cmd == c.cmd && vmatches(rho,q.args,c.args)) {
-                rho[q.cont] = VFun(c.cont,[],null,[Clause([Value("_return")],"_return")]);
+                rho[q.cont] = VFun(c.cont,[],null,[Clause([Value("_return")],Var(LocalVar(),"_return"))]);
                 return true;
             };
             return false;
@@ -181,6 +233,7 @@ function vmatch(rho, p, v) {
         switch (p.tag) {
         case "Atom" :
             return (p.atom == v.atom);
+        case "Nil" : return true;
         case "Cell" :
             if (vmatch(rho,p.fst,v.fst)) {
                 return (vmatch(rho,p.snd,v.snd));
@@ -234,6 +287,8 @@ function smatch(rho, p, v) {
             var b = tmatch(rho, p.snd, m);
             if (!stringy(b)) { return null; };
             return a.concat(b);
+        case "Nil":
+            return "";
         case "Atom":
             return "";
         case "Lit":
@@ -273,6 +328,9 @@ function SemiL(rho,r) {
 function StringLR(v,rho,u) {
     return {tag: 5, done: v, env: rho, chunks: u};
 };
+function MatchR(p) {
+    return {tag: 6, pat: p};
+};
 
 // State
 // pop states, ie those which pop ctx until done
@@ -291,6 +349,10 @@ function Apply(f,cz,rho,i,hs,ts) { // carefully engineered pun with AppR
 };
 function Call(rho,cs,as) {
     return {tag: 4, env: rho, clauses: cs, args: as};
+};
+
+function Abort() {
+    return Handle("abort",[],null);
 };
 
 // Primitives
@@ -312,6 +374,8 @@ function primStringConcat(vs) {
             cs.push(x.snd,x.fst); // note push in the right order!
             continue;
         case "Atom":
+            continue;
+        case "Nil":
             continue;
         default:
             return Handle("Invalid_StringConcat_ArgType",[],null);
@@ -428,7 +492,26 @@ function shonkier(glob,t) {
                 state = Use(Cell(fr.fst,state.val));
                 continue;
             case 2: // AppL
-                state = Apply(state.val,null,fr.env,0,fhandles(state.val),fr.args);
+                switch (state.val.tag) {
+                case "Lit":
+                    if (state.val.literal === false) {
+                        state = Abort();
+                        continue;
+                    };
+                    break;
+                case "Atom":
+                case "VPrim":
+                case "VFun":
+                case "VThunk":
+                    state = Apply(state.val,null,fr.env,0,fhandles(state.val),fr.args);
+                    continue;
+                };
+                if (fr.args.length != 1) {
+                    state = Handle();
+                };
+                var rho = Object.assign({}, fr.env);
+                value2env(rho, state.val);
+                state = Eval(rho, fr.args[0]);
                 continue;
             case 3: // AppR
                 state = Apply(fr.fun
@@ -447,6 +530,11 @@ function shonkier(glob,t) {
                 };
                 push(StringLR(Cell(fr.done,Cell(state.val,Lit(fr.chunks.prefix))),fr.env,fr.chunks.tail));
                 state = Eval(fr.env,fr.chunks.splice);
+                continue;
+            case 6: // MatchR
+                var rho = {};
+                if (vmatch(rho, fr.pat, state.val)) { state = Use(env2value(rho)); continue; };
+                state = Abort();
                 continue;
             };
             state = Handle("BadFrame",[],null);
@@ -469,28 +557,34 @@ function shonkier(glob,t) {
         case 2: // Eval
             var t = state.term;
             if (stringy(t)) {
-                var v = state.env[t];
-                if (v != undefined) {
-                    state = Use(v);
-                    continue;
-                };
-                state = Handle("OutOfScope",[],null);
-                continue;
-            };
-            if (t.tag == "GVar") {
-                v = glob[t.name][t.file];
-                if (v != undefined) {
-                    state = Use(v);
-                    continue;
-                };
-                state = Handle("OutOfScope",[],null);
+                state = Handle("antiqueVariable",[Lit(t)],null);
                 continue;
             };
             switch (t.tag) {
+            case "Var":
+                if (dynVar(t.scope)) {
+                    var v = state.env[t.name];
+                    if (v != undefined) {
+                        state = Use(v);
+                        continue;
+                    };
+                };
+                if (t.scope.tag == "GlobalVar") {
+                    var v = glob[t.name][t.scope.filepath];
+                    if (v != undefined) {
+                        state = Use(v);
+                        continue;
+                    };
+                };
+                state = Handle(t.scope.tag,[Lit(t.name)],null);
+                continue;
             case "Atom":
                 state = Use(t);
                 continue;
             case "Lit":
+                state = Use(t);
+                continue;
+            case "Nil":
                 state = Use(t);
                 continue;
             case "Cell":
@@ -502,7 +596,7 @@ function shonkier(glob,t) {
                 state = Eval(state.env,t.fun);
                 continue;
             case "Semi":
-                push(SemiL(state.env,t.right));
+                push(AppL(state.env,[t.right]));
                 state = Eval(state.env,t.left);
                 continue;
             case "Fun":
@@ -515,6 +609,10 @@ function shonkier(glob,t) {
                 };
                 push(StringLR(Lit(t.chunks.prefix),state.env,t.chunks.tail));
                 state = Eval(state.env,t.chunks.splice);
+                continue;
+            case "Match":
+                push(MatchR(t.pat));
+                state = Eval(state.env,t.term);
                 continue;
             };
             break;
@@ -569,7 +667,7 @@ function shonkier(glob,t) {
                 };
                 i++;
             };
-            if (i == cs.length) { state = Handle("NoMatch",[],null); };
+            if (i == cs.length) { state = Abort(); };
             continue;
         };
     };
@@ -594,8 +692,8 @@ function renderList(a,b) {
         output(render(Value(hd)));
         switch (tl.tag) {
         case "Atom":
-            if (tl.atom === "") { tl = null; continue; };
             output("|"); output(render(Value(tl))); tl = null; continue;
+        case "Nil": tl = null; continue;
         case "Cell": hd = tl.fst; tl = tl.snd; continue;
         default: output("|"); output(render(Value(tl))); tl = null; continue;
         };
@@ -619,8 +717,9 @@ function render(v) {
         stk = stk.tl;
         switch (v.tag) {
         case "Atom":
-            if (v.atom === "") { output("[]"); continue; };
             output("'".concat(v.atom)); continue;
+        case "Nil" :
+            output("[]"); continue;
         case "Cell": output("[");output(renderList(v.fst,v.snd)); continue;
         case "Lit":
             if (stringy(v.literal)) {

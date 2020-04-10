@@ -3,7 +3,7 @@ module Shonkier.Value where
 import Control.Monad.State
 import Control.Monad.Reader
 
-import Data.Map (Map)
+import Data.Map (Map, singleton, toAscList)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 
@@ -33,9 +33,10 @@ merge = flip (<>)
 data Value' a v
   = VAtom a
   | VLit Literal
+  | VNil
+  | VCell (Value' a v) (Value' a v)
   | VString Keyword Text
   | VPrim Primitive [[a]]
-  | VCell (Value' a v) (Value' a v)
   | VFun [Frame' a v] (LocalEnv' a v) [[a]] [Clause' a v]
   -- ^ Env is the one the function was created in
   --   Frames ??
@@ -47,9 +48,25 @@ type Value = Value' String ScopedVariable
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
 pattern CString k str = Value (VString k str)
-pattern VNil          = VAtom ""
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
+pattern CNil          = Value VNil
+
+---------------------------------------------------------------------------
+-- EXPLICIT ENVIRONMENTS
+---------------------------------------------------------------------------
+
+value2Env :: Value -> LocalEnv
+value2Env (VCell (VAtom x) v) = singleton x v
+value2Env (VCell e1 e2)       = merge (value2Env e2) (value2Env e1)
+value2Env _                   = mempty
+
+env2value :: LocalEnv -> Value
+env2value = foldr (VCell . sing) VNil . toAscList where
+  sing (k, v) = VCell (VAtom k) v
+
+
+
 
 ---------------------------------------------------------------------------
 -- COMPUTATIONS
@@ -94,6 +111,7 @@ data Frame' a v
          -- ^ each arg comes with requests we are willing to handle
   | SemiL (LocalEnv' a v) (Term' a v)
   | StringLR (Value' a v) (LocalEnv' a v) [(Text, Term' a v)] Text
+  | MatchR (PValue' a)
   deriving (Show, Functor)
 
 type Frame = Frame' String ScopedVariable
@@ -117,6 +135,25 @@ newtype Shonkier a = Shonkier
 
 instance HasListView Value Value where
   coalgebra = \case
-    VAtom ""  -> ItsNil
+    VNil      -> ItsNil
     VCell a b -> ItsCons a b
     _         -> ItsNot
+
+---------------------------------------------------------------------------
+-- FROMVALUE
+---------------------------------------------------------------------------
+
+class FromValue t where
+  fromValue :: Value -> t
+
+instance FromValue t => FromValue [t] where
+  fromValue (VCell t ts) = fromValue t : fromValue ts
+  fromValue _ = []
+
+instance (FromValue a, FromValue b) => FromValue (a, b) where
+  fromValue (VCell a b) = (fromValue a, fromValue b)
+  fromValue _ = (fromValue VNil, fromValue VNil)
+
+instance (FromValue a, FromValue b, FromValue c) => FromValue (a, b, c) where
+  fromValue (VCell a (VCell b c)) = (fromValue a, fromValue b, fromValue c)
+  fromValue _ = (fromValue VNil, fromValue VNil, fromValue VNil)
