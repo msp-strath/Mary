@@ -73,7 +73,6 @@ instance ToRawTerm Block where
         -> toAfter1Listy "Div" (a, filter ("mary" /=) cs, d) [t]
       | otherwise
         -> toTakes2 "Code" a e
-    CodeBlock a b     -> toTakes2 "CodeBlock" a b
     RawBlock a b      -> toTakes2 "RawBlock" a b
     BlockQuote a      -> toListy "BlockQuote" a
     OrderedList a b   -> toAfter1Listy "OrderedList" a b

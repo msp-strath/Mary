@@ -97,12 +97,6 @@ tmatch p d t0 = case p of
                 | otherwise -> return (T.breakOn d t0)
     rho <- vmatch p (VString "" l)
     return (B0 :< l, rho, r)
-          
-mayZipWith :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
-mayZipWith f []       []       = pure []
-mayZipWith f (a : as) (b : bs) =
-  (:) <$> f a b <*> mayZipWith f as bs
-mayZipWith _ _ _ = Nothing
 
 matches :: (a -> b -> Maybe (LocalEnv' c d))
         -> [a] -> [b] -> Maybe (LocalEnv' c d)
