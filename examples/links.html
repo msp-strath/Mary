@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Embedding Programs as Fenced Code Blocks</title>
+  <title>Links</title>
   <link rel="stylesheet" href="https://raw.githubusercontent.com/msp-strath/Mary/master/src/data-dir/shonkier.css" />
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
@@ -18,16 +18,23 @@
   globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
   globalEnv["primNumMult"] = {};
   globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["primNumToString"] = {};
+  globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
-  globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Atom(""))))]);
   </script>
 </head>
 <body>
 <form method="post">
-<h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as Fenced Code Blocks</h1>
-<p>Hello</p>
+<h1 id="links">Links</h1>
+<p>Here is an <a href="https://twitter.com/TheMERL/status/983341970318938112">absolute link</a>. This one is <a href="https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/?page=examples/hello.mary">all relative</a>, you know? And these ones are <a href="https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/?page=examples/enum.mary">complicated</a> <a href="https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/?page=examples/enum.mary">for no</a> <a href="https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/?page=examples/enum.mary">good reason</a>.</p>
+<p>And here are some images:</p>
+<figure>
+<img src="https://twitter.com/TheMERL/status/983341970318938112/photo/1" alt="" /><figcaption>That ram again</figcaption>
+</figure>
+<figure>
+<img src="https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/?pub=examples/pub/doesntActuallyExist.jpg" alt="" /><figcaption>A pub relative image</figcaption>
+</figure>
 </form>
 </body>
 </html>

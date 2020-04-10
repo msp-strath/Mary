@@ -364,7 +364,7 @@ function primStringConcat(vs) {
     while (hasLength(cs) && cs.length > 0) {
         var x = cs.pop();
         if (x.tag == "Value") { x = x.value; };
-            
+
         switch (x.tag) {
         case "Lit":
             if (stringy(x.literal)) { ts += x.literal; continue; }
@@ -415,6 +415,20 @@ function prim(f, vs) {
                           , cs
                          );
     };
+    function primNumToString(cs) {
+        if (hasLength(cs) && cs.length == 1) {
+            if (cs[0].tag == "Value" &&
+                cs[0].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                if (!stringy(x)) {
+                    return Use(Lit(x.toString()));
+                };
+                return Handle("Invalid_primNumToString_ArgType",[],null);
+            };
+            return Handle("Invalid_primNumToString_ArgRequest",[],null);
+        };
+        return Handle("Invalid_primNumToString_Arity",[],null);
+    };
 
     switch (f) {
     case "primStringConcat":
@@ -425,6 +439,8 @@ function prim(f, vs) {
         return primNumMinus(vs);
     case "primNumMult":
         return primNumMult(vs);
+    case "primNumToString":
+        return primNumToString(vs);
     default:
         return Handle("NoPrim",[],null);
     };

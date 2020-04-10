@@ -18,21 +18,18 @@
   globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
   globalEnv["primNumMult"] = {};
   globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["primNumToString"] = {};
+  globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
-  globalEnv["testBlock"] = {};
-  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Atom(""),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Atom(""))),Atom(""))))))]);
-  globalEnv["testInline"] = {};
-  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Atom(""))))]);
+  globalEnv["test"] = {};
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Atom(""))))]);
   </script>
 </head>
 <body>
 <form method="post">
 <h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as Fenced Code Blocks</h1>
-<p><input type=text name="foo"></p>
-<p>Hello <strong>World</strong></p>
-<p>Perhaps this will achieve some <em>blether</em>.</p>
-<p><input type=submit></p>
+<p>Hello</p>
 </form>
 </body>
 </html>

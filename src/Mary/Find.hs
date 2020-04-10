@@ -31,7 +31,7 @@ maryFind :: FilePath   -- what is the site root?
          -> String     -- username
          -> FilePath   -- page
          -> IO ()      -- PHP $POST $GET -[mary find user site page>- --- YAML ... markdown
-maryFind user sitesRoot page = do
+maryFind sitesRoot user page = do
   pbs <- B.getContents
   -- the inputs are serialised PHP objects representing post and get data, respectively
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
@@ -43,7 +43,7 @@ maryFind user sitesRoot page = do
     (site : _) -> do
       dirEx <- doesDirectoryExist (sitesRoot </> site)
       if not dirEx || not (isValid page)
-        then TIO.putStrLn $ T.concat ["Mary cannot find site ", pack site, "!"]
+        then error $ L.concat ["Mary cannot find site ", site, "!"]
       else do
         -- have we been asked to update the site? if so, git pull!
         case parseMaybe (withObject "get data" $ \ x -> x .:? "pull") getData of
@@ -52,8 +52,8 @@ maryFind user sitesRoot page = do
         -- now let us serve up (for pandoc) the YAML data, then the markdown page
         let sitePage = sitesRoot </> page
         fileEx <- doesFileExist sitePage
-        if not fileEx
-           then TIO.putStrLn $ T.concat ["Mary cannot find page ", pack page, "!"]
+        if not fileEx then do
+          error $ L.concat ["Mary cannot find page ", page, "!"]
         else do
             -- serve the metadata
             TIO.putStrLn "---"
@@ -65,4 +65,4 @@ maryFind user sitesRoot page = do
             TIO.putStrLn ""
             -- serve the markdown page
             TIO.readFile sitePage >>= TIO.putStr
-    _ -> TIO.putStrLn "Mary does not know which page you want!"
+    _ -> error "Mary does not know which page you want!"

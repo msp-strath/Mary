@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import Shonkier.Syntax
 import Shonkier.Value
 import {-# SOURCE #-} Shonkier.Semantics
+import Shonkier.Pretty (ppRational)
 
 ---------------------------------------------------------------------------
 -- /!\ Do not forget to also implement the primitive in the js interpreter!
@@ -34,6 +35,7 @@ primitives =
   , ("primNumAdd"      , primNumAdd)
   , ("primNumMinus"    , primNumMinus)
   , ("primNumMult"     , primNumMult)
+  , ("primNumToString" , primNumToString)
   ]
 
 ---------------------------------------------------------------------------
@@ -44,13 +46,20 @@ primNumBin :: String -> (Rational -> Rational -> Rational)
 primNumBin nm op = \case
   [CNum m, CNum n]   -> use (VNum (op m n))
   [Value m, Value n] -> handle ("Invalid_" ++ nm ++ "_ArgType", [m, n]) []
-  [_,_]              -> handle ("Invalid_" ++ nm ++ "Add_ArgRequest",[]) []
+  [_,_]              -> handle ("Invalid_" ++ nm ++ "_ArgRequest",[]) []
   _                  -> handle ("Invalid_" ++ nm ++ "_Arity", []) []
 
 primNumAdd, primNumMinus, primNumMult :: PRIMITIVE
 primNumAdd   = primNumBin "primNumAdd" (+)
 primNumMinus = primNumBin "primNumMinus" (-)
 primNumMult  = primNumBin "primNumMult" (*)
+
+primNumToString :: PRIMITIVE
+primNumToString = \case
+  [CNum m]  -> use (VString "" (ppRational m))
+  [Value m] -> handle ("Invalid_primNumToString_ArgType", [m]) []
+  [_]       -> handle ("Invalid_primNumToString_ArgRequest",[]) []
+  _         -> handle ("Invalid_primNumToString_Arity", []) []
 
 ---------------------------------------------------------------------------
 -- STRING

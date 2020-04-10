@@ -1,6 +1,6 @@
 # Links
 
-Here is an [absolute link](https://twitter.com/TheMERL/status/983341970318938112). This one is [all relative](hello.mary), you know? And these ones are [complicated](subfolder/../enum.mary) [for no](~/enum.mary) [good reason](../././enum.mary).
+Here is an [absolute link](https://twitter.com/TheMERL/status/983341970318938112). This one is [all relative](hello.mary), you know? And these ones are [complicated](subfolder/../enum.mary) [for no](~/examples/enum.mary) [good reason](.././examples/./enum.mary).
 
 And here are some images:
 
