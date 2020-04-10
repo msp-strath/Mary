@@ -102,6 +102,7 @@ function LitNum(n,d) {
 };
 function LitEq(x,y) {
     if (stringy(x) && stringy(y)) { return (x == y); };
+    if (boolean(x) && boolean(y)) { return (x == y); };
     if (stringy(x) || stringy(y)) { return false; };
     return (x.num == y.num && x.den == y.den);
 };
@@ -391,7 +392,7 @@ function prim(f, vs) {
                 cs[0].value.tag == "Lit" && cs[1].value.tag == "Lit") {
                 var x = cs[0].value.literal;
                 var y = cs[1].value.literal;
-                if (!stringy(x) && !stringy(y)) {
+                if (!stringy(x) && !stringy(y) && !boolean(x) && !boolean(y)) {
                     return Use(Lit(implem(x,y)));
                 };
                 return Handle("Invalid_" + nm + "_ArgType",[],null);
@@ -745,6 +746,10 @@ function render(v) {
                 output(v.literal);
                 output("\"");
                 continue; };
+            if (boolean(v.literal)) {
+                if (v.literal) output("'1"); else output("'0");
+                continue;
+            };
             let n = v.literal.num; d = v.literal.den;
             if (d == 1) { output (n.toString()); continue; };
             if (d == 2) {

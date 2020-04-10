@@ -1,0 +1,18 @@
+
+and('0,y) -> '0
+and('1,y) -> y
+
+or('1,y) -> '1
+or('0,y) -> y
+
+not('0) -> '1
+not('1) -> '0
+
+xor(x,y) -> and(or(x,y), not(and(x,y)))
+
+enum(f) -> [f('0) f('1) ]
+
+main() -> [ enum({ x -> enum({ y -> xor(x, y) }) })
+            enum({ x -> enum({ y -> and(x, y) }) })
+            enum({ x -> enum({ y -> or(x, y) }) })
+          ]
