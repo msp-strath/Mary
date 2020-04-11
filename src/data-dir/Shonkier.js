@@ -70,6 +70,9 @@ function Fun(hs, cs) { // Fun hs cs, both arrays
 function Match(p, t) { // Match p t
     return {tag: "Match", pat: p, term: t};
 };
+function Mask(a, t) { // Mask a t
+    return {tag: "Mask", atom: a, term: t};
+};
 
 // PValue only
 const PWild = {tag: "Wild"};
@@ -348,12 +351,17 @@ function MatchR(p) {
 function PrioL(rho,r) {
     return {tag: 7, env: rho, right: r};
 };
+function Masking(a) {
+    return {tag: 8, atom: a};
+};
 
 function handleFrame(fr) {
     switch (fr.tag) {
     case 3: // AppR
         return anyhandles(fr.now, fr.handles);
     case 7: // PrioL
+        return true;
+    case 8: // Masking
         return true;
     };
     return false;
@@ -364,8 +372,11 @@ function handleFrame(fr) {
 function Use(v) {
     return {tag: 0, val: v};
 };
-function Handle(c,as,k) {
-    return {tag: 1, cmd: c, args: as, cont: k};
+function Handle(c,i,as,k) {
+    return {tag: 1, cmd: c, inx: i, args: as, cont: k};
+};
+function Complain(c,as) {
+    return Handle(c,0,as,null);
 };
 // push states, ie those which grow ctx
 function Eval(rho, t) {
@@ -379,7 +390,7 @@ function Call(rho,cs,as) {
 };
 
 function Abort() {
-    return Handle("abort",[],null);
+    return Complain("abort",[]);
 };
 
 // Primitives
@@ -396,7 +407,7 @@ function primStringConcat(vs) {
         switch (x.tag) {
         case "Lit":
             if (stringy(x.literal)) { ts += x.literal; continue; }
-            else return Handle("Invalid_StringConcat_ArgType",[],null);
+            else return Complain("Invalid_StringConcat_ArgType",[]);
         case "Cell":
             cs.push(x.snd,x.fst); // note push in the right order!
             continue;
@@ -405,7 +416,7 @@ function primStringConcat(vs) {
         case "Nil":
             continue;
         default:
-            return Handle("Invalid_StringConcat_ArgType",[],null);
+            return Complain("Invalid_StringConcat_ArgType",[]);
         };
     };
     return Use(Lit(ts));
@@ -421,11 +432,11 @@ function prim(f, vs) {
                 if (!stringy(x) && !stringy(y) && !boolean(x) && !boolean(y)) {
                     return Use(Lit(implem(x,y)));
                 };
-                return Handle("Invalid_" + nm + "_ArgType",[],null);
+                return Complain("Invalid_" + nm + "_ArgType",[]);
             };
-            return Handle("Invalid_" + nm + "_ArgRequest",[],null);
+            return Complain("Invalid_" + nm + "_ArgRequest",[]);
         };
-        return Handle("Invalid_" + nm + "_Arity",[],null);
+        return Complain("Invalid_" + nm + "_Arity",[]);
     };
     function primNumAdd(cs) {
         return primNumBin("primNumAdd"
@@ -453,11 +464,11 @@ function prim(f, vs) {
                 if (!stringy(x.value.literal) && !boolean(x.value.literal)) {
                     return Use(Lit(render(x)));
                 };
-                return Handle("Invalid_primNumToString_ArgType",[],null);
+                return Complain("Invalid_primNumToString_ArgType",[]);
             };
-            return Handle("Invalid_primNumToString_ArgRequest",[],null);
+            return Complain("Invalid_primNumToString_ArgRequest",[]);
         };
-        return Handle("Invalid_primNumToString_Arity",[],null);
+        return Complain("Invalid_primNumToString_Arity",[]);
     };
     function primStringToNum(cs) {
         if (hasLength(cs) && cs.length == 1) {
@@ -485,11 +496,11 @@ function prim(f, vs) {
                         return Use(Lit(LitNum(c * a + b, c)));
                     };
                 };
-                return Handle("Invalid_primStringToNum_ArgType",[],null);
+                return Complain("Invalid_primStringToNum_ArgType",[]);
             };
-            return Handle("Invalid_primStringToNum_ArgRequest",[],null);
+            return Complain("Invalid_primStringToNum_ArgRequest",[]);
         };
-        return Handle("Invalid_primStringToNum_Arity",[],null);
+        return Complain("Invalid_primStringToNum_Arity",[]);
     };
 
     switch (f) {
@@ -506,7 +517,7 @@ function prim(f, vs) {
     case "primStringToNum":
         return primStringToNum(vs);
     default:
-        return Handle("NoPrim",[],null);
+        return Complain("NoPrim",[]);
     };
 };
 
@@ -604,7 +615,7 @@ function shonkier(glob,t) {
                     continue;
                 };
                 if (fr.args.length != 1) {
-                    state = Handle();
+                    state = Complain("EnvironmentsAreNullary",[]);
                 };
                 var rho = Object.assign({}, fr.env);
                 value2env(rho, state.val);
@@ -635,12 +646,14 @@ function shonkier(glob,t) {
                 continue;
             case 7: // PrioL
                 continue;
+            case 8: // Masking
+                continue;
             };
-            state = Handle("BadFrame",[],null);
+            state = Complain("BadFrame",[]);
             continue;
         case 1: // Handle
             if (hox == null) {
-                state = Handle(state.cmd,state.args,Lox(lox,state.cont));
+                state = Handle(state.cmd,state.inx,state.args,Lox(lox,state.cont));
                 lox = null;
                 continue;
             };
@@ -648,27 +661,36 @@ function shonkier(glob,t) {
             fr = hox.hand;
             lox = hox.lox;
             hox = hox.hox;
-            if (fr.tag == 3
+            if (fr.tag == 3 // AppR
                 && inhandles(state.cmd,fr.now,fr.handles)
                ) {
-                state = Apply(fr.fun
-                              ,Cons(Request(state.cmd,state.args,Lox(kox,state.cont)),fr.done)
-                              ,fr.env
-                              ,fr.now+1
-                              ,fr.handles
-                              ,fr.args);
+                if (state.inx == 0) {
+                    state = Apply(fr.fun
+                                 ,Cons(Request(state.cmd,state.args,Lox(kox,state.cont)),fr.done)
+                                 ,fr.env
+                                 ,fr.now+1
+                                 ,fr.handles
+                                  ,fr.args); }
+                else { state = Handle(state.cmd, state.inx-1, state.args, Hox(fr,kox,state.cont)); };
                 continue;
             };
-            if (fr.tag == 7 && state.cmd == "abort") {
-                state = Eval(fr.env, fr.right);
+            if (fr.tag == 7 // PrioL
+                && state.cmd == "abort") {
+                if (state.inx == 0) { state = Eval(fr.env, fr.right); }
+                else { state = Handle(state.cmd, state.inx-1, state.args, Hox(fr,kox,state.cont)); };
                 continue;
             };
-            state = Handle(state.cmd, state.args, Hox(fr,kox,state.cont));
+            if (fr.tag == 8 // Masking
+                && state.cmd == fr.atom) {
+                state = Handle(state.cmd, state.inx+1, state.args, Hox(fr,kox,state.cont));
+                continue;
+            };
+            state = Handle(state.cmd, state.inx, state.args, Hox(fr,kox,state.cont));
             continue;
         case 2: // Eval
             var t = state.term;
             if (stringy(t)) {
-                state = Handle("antiqueVariable",[Lit(t)],null);
+                state = Complain("antiqueVariable",[Lit(t)]);
                 continue;
             };
             switch (t.tag) {
@@ -687,7 +709,7 @@ function shonkier(glob,t) {
                         continue;
                     };
                 };
-                state = Handle(t.scope.tag,[Lit(t.name)],null);
+                state = Complain(t.scope.tag,[Lit(t.name)]);
                 continue;
             case "Atom":
                 state = Use(t);
@@ -729,6 +751,10 @@ function shonkier(glob,t) {
                 push(MatchR(t.pat));
                 state = Eval(state.env,t.term);
                 continue;
+            case "Mask":
+                push(Masking(t.atom));
+                state = Eval(state.env,t.term);
+                continue;
             };
             break;
         case 3: // Apply
@@ -748,7 +774,7 @@ function shonkier(glob,t) {
             switch (state.fun.tag) {
             case "Atom":
                 for (i = 0; i < args.length; i++) { args[i] = args[i].value; }
-                state = Handle(state.fun.atom,args,null);
+                state = Complain(state.fun.atom,args);
                 continue;
             case "VPrim":
                 state = prim(state.fun.prim, args);
@@ -764,11 +790,11 @@ function shonkier(glob,t) {
                     state = Use(d.value);
                     continue;
                 case "Request":
-                    state = Handle(d.cmd,d.args,d.cont);
+                    state = Handle(d.cmd,0,d.args,d.cont);
                     continue;
                 };
             };
-            state = Handle("NotFuny",[],null);
+            state = Complain("NotFuny",[]);
             continue;
         case 4: // Call
             var cs = state.clauses;
