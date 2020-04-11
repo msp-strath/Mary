@@ -29,7 +29,7 @@ type PRIMITIVE = [Computation] -> Shonkier Computation
 
 prim :: Primitive -> PRIMITIVE
 prim nm vs = case lookup nm primitives of
-  Nothing -> handle ("NoPrim",[VPrim nm []]) []
+  Nothing -> complain "NoPrim" [VPrim nm []]
   Just f  -> f vs
 
 primitives :: [(Primitive, PRIMITIVE)]
@@ -49,9 +49,9 @@ primNumBin :: String -> (Rational -> Rational -> Rational)
            -> PRIMITIVE
 primNumBin nm op = \case
   [CNum m, CNum n]   -> use (VNum (op m n))
-  [Value m, Value n] -> handle ("Invalid_" ++ nm ++ "_ArgType", [m, n]) []
-  [_,_]              -> handle ("Invalid_" ++ nm ++ "_ArgRequest",[]) []
-  _                  -> handle ("Invalid_" ++ nm ++ "_Arity", []) []
+  [Value m, Value n] -> complain ("Invalid_" ++ nm ++ "_ArgType") [m, n]
+  [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
+  _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
 
 primNumAdd, primNumMinus, primNumMult :: PRIMITIVE
 primNumAdd   = primNumBin "primNumAdd" (+)
@@ -61,9 +61,9 @@ primNumMult  = primNumBin "primNumMult" (*)
 primNumToString :: PRIMITIVE
 primNumToString = \case
   [CNum m]  -> use (VString "" (ppRational m))
-  [Value m] -> handle ("Invalid_primNumToString_ArgType", [m]) []
-  [_]       -> handle ("Invalid_primNumToString_ArgRequest",[]) []
-  _         -> handle ("Invalid_primNumToString_Arity", []) []
+  [Value m] -> complain "Invalid_primNumToString_ArgType" [m]
+  [_]       -> complain "Invalid_primNumToString_ArgRequest"[]
+  _         -> complain "Invalid_primNumToString_Arity" []
 
 ---------------------------------------------------------------------------
 -- STRING
@@ -71,12 +71,12 @@ primNumToString = \case
 primStringToNum :: PRIMITIVE
 primStringToNum = \case
   [CString _ s]  -> case parseOnly numlit s of
-    Left err -> handle ("Invalid_primStringToNum_ParseError", [VString "" (T.pack err)]) []
+    Left err -> complain "Invalid_primStringToNum_ParseError" [VString "" (T.pack err)]
     Right (Num n) -> use (VNum n)
-    Right (Boolean b) -> handle ("Invalid_primStringToNum_ValueType", [VBoolean b]) []
-  [Value m] -> handle ("Invalid_primStringToNum_ArgType", [m]) []
-  [_]       -> handle ("Invalid_primStringToNum_ArgRequest",[]) []
-  _         -> handle ("Invalid_primStringToNum_Arity", []) []
+    Right (Boolean b) -> complain "Invalid_primStringToNum_ValueType" [VBoolean b]
+  [Value m] -> complain "Invalid_primStringToNum_ArgType" [m]
+  [_]       -> complain "Invalid_primStringToNum_ArgRequest" []
+  _         -> complain "Invalid_primStringToNum_Arity" []
 
 primStringConcat :: PRIMITIVE
 primStringConcat cs = go cs Nothing [] where
@@ -89,5 +89,5 @@ primStringConcat cs = go cs Nothing [] where
     (CCell a b   : cs) -> go (Value a : Value b : cs) mk ts
     (CAtom {}    : cs) -> go cs mk ts
     (CNil        : cs) -> go cs mk ts
-    (Value v     : cs) -> handle ("Invalid_StringConcat_ArgType", [v]) []
-    _                  -> handle ("Invalid_StringConcat_ArgRequest",[]) []
+    (Value v     : cs) -> complain "Invalid_StringConcat_ArgType" [v]
+    _                  -> complain "Invalid_StringConcat_ArgRequest" []

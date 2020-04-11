@@ -22,7 +22,13 @@ import Utils.List
 -- how to signal a failure
 
 abort :: Shonkier Computation
-abort = handle ("abort", []) []
+abort = handle ("abort", []) CnNil
+
+
+-- how to complain
+
+complain :: String -> [Value] -> Shonkier Computation
+complain a vs = handle (a, vs) CnNil
 
 
 -- environments
@@ -104,7 +110,7 @@ matches :: (a -> b -> Maybe (LocalEnv' c d))
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 
--- Evaluation contexts
+-- entry points
 
 runShonkier :: Shonkier a -> Env -> Context -> (a, Context)
 runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
@@ -116,25 +122,13 @@ execShonkier :: Shonkier a -> Env -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
 shonkier :: Env -> Term -> Computation
-shonkier rho t = evalShonkier (eval (mempty, t)) rho B0
+shonkier rho t = evalShonkier (eval (mempty, t)) rho CxNil
 
 rawShonkier :: [Import] -> Env -> RawTerm -> Computation
 rawShonkier is env@(gl, ins) t =
   let scope = fmap keysSet gl
       term  = checkRaw "." is scope t
   in shonkier env term
-
-push :: Frame -> Shonkier ()
-push fr = modify (:< fr)
-
-pop :: Shonkier (Maybe Frame)
-pop = do
-  x <- get
-  case x of
-    B0        -> return Nothing
-    ctx :< fr -> do
-      put ctx
-      return (Just fr)
 
 globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
 globalLookup fp x = do
@@ -166,9 +160,9 @@ eval (rho, t) = case t of
         use (fromMaybe theIMPOSSIBLE v)
 
       -- error cases
-      OutOfScope         -> handle ("OutOfScope", [vVar x']) []
-      AmbiguousVar _     -> handle ("AmbiguousVar", [vVar x']) []
-      InvalidNamespace _ -> handle ("InvalidNamespace", [vVar x']) []
+      OutOfScope         -> complain "OutOfScope" [vVar x']
+      AmbiguousVar _     -> complain "AmbiguousVar" [vVar x']
+      InvalidNamespace _ -> complain "InvalidNamespace" [vVar x']
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
@@ -182,7 +176,7 @@ eval (rho, t) = case t of
                   eval (rho, l)
   Prio l r  -> do push (PrioL rho r)
                   eval (rho, l)
-  Fun es cs -> use (VFun [] rho es cs)
+  Fun es cs -> use (VFun CnNil rho es cs)
   String k sts u -> case sts of
     []           -> use (VString k u)
     (s, t) : sts -> do
@@ -209,7 +203,7 @@ use v = pop >>= \case
       VLit (Boolean b)
         | b -> case as of
             [t] -> eval (rho, t)
-            _   -> handle ("GuardsAreUnary", []) []
+            _   -> complain "GuardsAreUnary" []
         | otherwise -> abort
       VAtom f ->
         -- Here we are enforcing the invariant:
@@ -225,12 +219,12 @@ use v = pop >>= \case
         in app (FFun frs sig cls) B0 rho cs
       VThunk c -> case as of
         [] -> case c of
-          Value v       -> use v
-          Request r frs -> handle r frs
-        _  -> handle ("ThunksAreNullary", [v]) []
+          Value v      -> use v
+          Request r k  -> handle r k
+        _  -> complain "ThunksAreNullary" [v]
       v -> case as of
         [t] -> eval (merge rho (value2Env v), t)
-        _   -> handle ("EnvironmentsAreUnary", []) []
+        _   -> complain "EnvironmentsAreUnary" []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
     PrioL _ _ -> use v
@@ -253,9 +247,9 @@ app f cz rho = \case
       -- Atomic functions i.e. requests only ever offer
       -- to handle the empty list of requests.
       let vs = map unsafeComToValue (cz <>> []) in
-      handle (a, vs) []
+      complain a vs
     FPrim p         -> prim p (cz <>> [])
-    FFun frs sig cs -> do traverse push frs
+    FFun frs sig cs -> do gets (`cxCn` frs) >>= put
                           call sig cs (cz <>> [])
   ((hs, a) : as) -> do push (AppR f cz (hs, rho) as)
                        eval (rho, a)
@@ -276,20 +270,23 @@ handleInput (a, vs) = case vs of
           "param" -> "GET_"  <> f
           _       -> f
     mv <- inputLookup f'
-    maybe (handle ("UnknownInput", vs) []) use mv
-  _             -> handle ("IncorrectInputRequest", vs) []
+    maybe (complain "UnknownInput" vs) use mv
+  _             -> complain "IncorrectInputRequest" vs
 
-handle :: Request -> [Frame]
+handle :: Request -> Continuation
        -> Shonkier Computation
-handle r@(a, _) _ | a `elem` ["field", "param", "meta"] = handleInput r
-handle r@(a, vs) frs = pop >>= \case
-  Nothing         -> return (Request r frs)
-  Just fr -> case fr of
-    AppR f cz (hs, rho) as | a `elem` hs ->
-      app f (cz :< Request r frs) rho as
-    PrioL rho r | a == "abort" -> eval (rho, r)
-    _ -> handle r (fr : frs)
-
+       
+handle r@(a, _) k = go (Right k) where
+  go x = leap x >>= \case
+    Left k
+      | a `elem` ["field", "param", "meta"] -> handleInput r
+      | otherwise -> return (Request r k)
+    Right (hs, (fr, k)) -> case fr of
+      AppR f cz (es, rho) as | a `elem` es ->
+        app f (cz :< Request r k) rho as
+      PrioL rho r | a == "abort" -> eval (rho, r)
+      _ -> go (Left hs)
+  
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
 call rho []                cs = abort
@@ -311,4 +308,4 @@ glom v = go Nothing B0 [v] where
     VAtom _     : vs -> go mk tz vs
     VNil        : vs -> go mk tz vs
     VString k t : vs -> go (mk <|> pure k) (tz :< t) vs
-    v           : _  -> handle ("Invalid_StringConcat_ArgType", [v]) []
+    v           : _  -> complain "Invalid_StringConcat_ArgType" [v]

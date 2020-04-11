@@ -95,7 +95,7 @@ jsGlobalEnv gl =
   ((`foldMapWithKey` gl) $ \ x loc ->
     ((T.concat [ "globalEnv[", jsAtom x, "] = {};\n"]) :) $
     flip foldMapWithKey loc $ \ fp -> \case
-    VFun [] _ hs cs -> pure $ T.concat $
+    VFun CnNil _ hs cs -> pure $ T.concat $
       ["globalEnv[", jsAtom x, "][", jsAtom fp ,"] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs
