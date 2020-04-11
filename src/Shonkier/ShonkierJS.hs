@@ -54,6 +54,7 @@ instance (JS v, JSAtom a) => JS (Term' a v) where
                     ++ js cs
                     ++ [")"]
   js (Match p t)     = ["Match("] ++ js p ++ [","] ++ js t ++ [")"]
+  js (Mask a t)      = ["Mask(", jsAtom a, ","] ++ js t ++ [")"]
 
 instance JS Literal where
   js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
