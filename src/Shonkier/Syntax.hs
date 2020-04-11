@@ -37,6 +37,7 @@ data Term' a v
   | Cell (Term' a v) (Term' a v)
   | App (Term' a v) [Term' a v]
   | Semi (Term' a v) (Term' a v)
+  | Prio (Term' a v) (Term' a v)
   | Fun [[a]] [Clause' a v]
   | Match (PValue' a) (Term' a v)
   deriving (Show, Functor)

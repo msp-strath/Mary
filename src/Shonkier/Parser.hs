@@ -124,6 +124,7 @@ sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
 data Forbidden
   = NoProb
+  | NoPrio
   | NoSemi
   deriving (Show, Ord, Eq, Enum, Bounded)
 
@@ -159,7 +160,8 @@ weeTerm = choice
 moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
 moreTerm z t = choice
   [ App t <$> argTuple term >>= moreTerm z
-  , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut z
+  , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut (pred NoSemi) >>= moreTerm z
+  , Prio t <$ guard (z < NoPrio) <* punc '%' <*> termBut (pred NoPrio) >>= moreTerm z
   , pure t
   ]
 
