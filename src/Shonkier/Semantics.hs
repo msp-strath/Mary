@@ -22,7 +22,7 @@ import Utils.List
 -- how to signal a failure
 
 abort :: Shonkier Computation
-abort = handle ("abort", []) CnNil
+abort = complain "abort" []
 
 
 -- how to complain
@@ -249,7 +249,7 @@ app f cz rho = \case
       let vs = map unsafeComToValue (cz <>> []) in
       complain a vs
     FPrim p         -> prim p (cz <>> [])
-    FFun frs sig cs -> do gets (`cxCn` frs) >>= put
+    FFun frs sig cs -> do cont frs
                           call sig cs (cz <>> [])
   ((hs, a) : as) -> do push (AppR f cz (hs, rho) as)
                        eval (rho, a)
@@ -262,24 +262,26 @@ unsafeComToValue = \case
     , show r
     ]
 
-handleInput :: Request -> Shonkier Computation
-handleInput (a, vs) = case vs of
+handleInput :: Request -> Continuation -> Shonkier Computation
+handleInput (a, vs) k = case vs of
   [VString _ f] -> do
     let f' = case a of
           "field" -> "POST_" <> f
           "param" -> "GET_"  <> f
           _       -> f
-    mv <- inputLookup f'
-    maybe (complain "UnknownInput" vs) use mv
+    inputLookup f' >>= \case
+      Nothing -> complain "UnknownInput" vs
+      Just v -> do
+        cont k
+        use v
   _             -> complain "IncorrectInputRequest" vs
 
 handle :: Request -> Continuation
-       -> Shonkier Computation
-       
+       -> Shonkier Computation       
 handle r@(a, _) k = go (Right k) where
   go x = leap x >>= \case
     Left k
-      | a `elem` ["field", "param", "meta"] -> handleInput r
+      | a `elem` ["field", "param", "meta"] -> handleInput r k
       | otherwise -> return (Request r k)
     Right (hs, (fr, k)) -> case fr of
       AppR f cz (es, rho) as | a `elem` es ->
