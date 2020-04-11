@@ -49,6 +49,7 @@ instance (JS v, JSAtom a) => JS (Term' a v) where
   js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js (App f as)      = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
   js (Semi l r)      = ["Semi("] ++ js l ++ [","] ++ js r ++ [")"]
+  js (Prio l r)      = ["Prio("] ++ js l ++ [","] ++ js r ++ [")"]
   js (Fun hs cs)     = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
                     ++ js cs
                     ++ [")"]

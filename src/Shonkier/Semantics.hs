@@ -180,6 +180,8 @@ eval (rho, t) = case t of
   Semi l r  -> do -- push (SemiL rho r)
                   push (AppL rho [r])
                   eval (rho, l)
+  Prio l r  -> do push (PrioL rho r)
+                  eval (rho, l)
   Fun es cs -> use (VFun [] rho es cs)
   String k sts u -> case sts of
     []           -> use (VString k u)
@@ -231,6 +233,7 @@ use v = pop >>= \case
         _   -> handle ("EnvironmentsAreUnary", []) []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
+    PrioL _ _ -> use v
     StringLR p rho sts u -> case sts of
       [] -> glom (VCell p (VCell v (VString "" u)))
       ((s, t) : sts) -> do
@@ -284,6 +287,7 @@ handle r@(a, vs) frs = pop >>= \case
   Just fr -> case fr of
     AppR f cz (hs, rho) as | a `elem` hs ->
       app f (cz :< Request r frs) rho as
+    PrioL rho r | a == "abort" -> eval (rho, r)
     _ -> handle r (fr : frs)
 
 call :: LocalEnv -> [Clause] -> [Computation]

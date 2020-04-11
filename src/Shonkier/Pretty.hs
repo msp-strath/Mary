@@ -79,6 +79,9 @@ arobase = annotate AnnOperator "@"
 assignment :: Doc
 assignment = annotate AnnOperator ":="
 
+prioritize :: Doc
+prioritize = annotate AnnOperator "%"
+
 semi :: Doc
 semi = annotate AnnOperator P.semi
 
@@ -184,6 +187,7 @@ instance Pretty v => Pretty (Term' String v) where
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts      -> ppApp (pretty f) ts
       Semi l r      -> pretty l <> semi <+> pretty r
+      Prio l r      -> pretty l <+> prioritize <+> pretty r
       Fun hs cls    -> ppFun hs cls
       Match p t     -> parens $ pretty p <+> assignment <+> pretty t
     it -> ppList it

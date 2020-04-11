@@ -61,6 +61,9 @@ function App(f, as) {       // App f as, where as is an array
 function Semi(l, r) { // Semi l r
     return {tag: "Semi", left: l, right: r};
 };
+function Prio(l, r) { // Semi l r
+    return {tag: "Prio", left: l, right: r};
+};
 function Fun(hs, cs) { // Fun hs cs, both arrays
     return {tag: "Fun", handles: hs, clauses: cs};
 };
@@ -332,6 +335,9 @@ function StringLR(v,rho,u) {
 function MatchR(p) {
     return {tag: 6, pat: p};
 };
+function PrioL(rho,r) {
+    return {tag: 7, env: rho, right: r};
+};
 
 // State
 // pop states, ie those which pop ctx until done
@@ -555,6 +561,8 @@ function shonkier(glob,t) {
                 if (vmatch(rho, fr.pat, state.val)) { state = Use(env2value(rho)); continue; };
                 state = Abort();
                 continue;
+            case 7: // PrioL
+                continue;
             };
             state = Handle("BadFrame",[],null);
             continue;
@@ -569,6 +577,10 @@ function shonkier(glob,t) {
                               ,fr.now+1
                               ,fr.handles
                               ,fr.args);
+                continue;
+            };
+            if (fr.tag == 7 && state.cmd == "abort") {
+                state = Eval(fr.env, fr.right);
                 continue;
             };
             state = Handle(state.cmd, state.args, Cons(fr,state.cont));
@@ -616,6 +628,10 @@ function shonkier(glob,t) {
                 continue;
             case "Semi":
                 push(AppL(state.env,[t.right]));
+                state = Eval(state.env,t.left);
+                continue;
+            case "Prio":
+                push(PrioL(state.env,t.right));
                 state = Eval(state.env,t.left);
                 continue;
             case "Fun":

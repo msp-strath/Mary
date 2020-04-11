@@ -99,6 +99,7 @@ instance ScopeCheck RawTerm Term where
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Semi l r  -> Semi <$> scopeCheck local l <*> scopeCheck local r
+    Prio l r  -> Prio <$> scopeCheck local l <*> scopeCheck local r
     Fun hs cs -> Fun hs <$> traverse (scopeCheck local) cs
     String k sts u ->
       String k
