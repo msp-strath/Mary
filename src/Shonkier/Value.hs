@@ -37,7 +37,7 @@ data Value' a v
   | VCell (Value' a v) (Value' a v)
   | VString Keyword Text
   | VPrim Primitive [[a]]
-  | VFun [Frame' a v] (LocalEnv' a v) [[a]] [Clause' a v]
+  | VFun (Continuation' a v) (LocalEnv' a v) [[a]] [Clause' a v]
   -- ^ Env is the one the function was created in
   --   Frames ??
   | VThunk (Computation' a v)
@@ -78,12 +78,34 @@ type Request = Request' String ScopedVariable
 
 data Computation' a v
   = Value (Value' a v)
-  | Request (Request' a v) [Frame' a v]
+  | Request (Request' a v) (Continuation' a v) -- [Frame' a v]
   -- ^ Invoking an effect & none of the
   -- frames present know how to interpret it
   deriving (Show, Functor)
 
 type Computation = Computation' String ScopedVariable
+
+type HandList' a v =
+  [ ( Frame' a v        -- handleFrame
+    , Bwd (Frame' a v)  -- all (not . handleFrame)
+    )
+  ]
+
+type HandList = HandList' String ScopedVariable
+
+data Continuation' a v = Cn
+  { aftard   :: Bwd (Frame' a v)   -- all (not . handleFrame)
+  , handlers :: HandList' a v
+  }
+  deriving (Show, Functor)
+
+type Continuation = Continuation' String ScopedVariable
+
+pattern CnNil = Cn B0 []
+
+cnFlat :: Continuation' a v -> [Frame' a v]
+cnFlat (Cn fz hs) = fz <>> foldr (\ (f, fz) fs -> f : fz <>> fs) [] hs
+
 
 ---------------------------------------------------------------------------
 -- EVALUATION CONTEXTS
@@ -92,7 +114,7 @@ type Computation = Computation' String ScopedVariable
 data Funy' a v
   = FAtom a
   | FPrim Primitive
-  | FFun [Frame' a v] (LocalEnv' a v) [Clause' a v]
+  | FFun (Continuation' a v) (LocalEnv' a v) [Clause' a v]
   deriving (Show, Functor)
 type Funy = Funy' String ScopedVariable
 
@@ -116,10 +138,51 @@ data Frame' a v
   | MatchR (PValue' a)
   deriving (Show, Functor)
 
+handleFrame :: Frame' a v -> Bool
+handleFrame (PrioL _ _)           = True
+handleFrame (AppR _ _ (_:_, _) _) = True
+handleFrame _ = False
+
 type Frame = Frame' String ScopedVariable
 
-type Context' a v = Bwd (Frame' a v)
+data Context' a v = Cx
+  { handlerz :: Bwd ( Bwd (Frame' a v)  -- all (not . handleFrame)
+                    , Frame' a v        -- handleFrame
+                    )
+  , nandlerz :: Bwd (Frame' a v)        -- all (not . handleFrame)
+  }
 type Context = Context' String ScopedVariable
+
+pattern CxNil = Cx B0 B0
+
+cxNull :: Context' a v -> Bool
+cxNull CxNil = True
+cxNull _     = False
+
+cxPush :: Context' a v -> Frame' a v -> Context' a v
+cxPush (Cx hz fz) f
+  | handleFrame f = Cx (hz :< (fz, f)) B0
+  | otherwise     = Cx hz (fz :< f)
+
+cxPop :: Context' a v -> Maybe (Context' a v, Frame' a v)
+cxPop (Cx hz (fz :< f))        = Just (Cx hz fz, f)
+cxPop (Cx (hz :< (fz, f)) B0)  = Just (Cx hz fz, f)
+cxPop (Cx B0 B0) = Nothing
+
+cxHand :: Context' a v -> Either
+  ( Bwd (Frame' a v)   -- all (not . handleFrame)
+  )
+  ( Context' a v       -- whatever
+  , Frame' a v         -- handleFrame
+  , Bwd (Frame' a v)   -- all (not . handleFrame)
+  )
+cxHand (Cx (hz :< (fz, f)) gz) = Right (Cx hz fz, f, gz)
+cxHand (Cx B0 gz)              = Left  gz
+
+cxCn :: Context' a v -> Continuation' a v -> Context' a v
+cxCn (Cx hz fz) (Cn gz hs) = foldl go (Cx hz (fz <> gz)) hs where
+  go (Cx hz fz) (g , gz) = Cx (hz :< (fz, g)) gz
+
 
 ---------------------------------------------------------------------------
 -- EVALUATION MONAD
@@ -130,6 +193,37 @@ newtype Shonkier a = Shonkier
   deriving ( Functor, Applicative, Monad
            , MonadState Context, MonadReader Env
            )
+
+push :: Frame -> Shonkier ()
+push fr = modify (`cxPush` fr)
+
+pop :: Shonkier (Maybe Frame)
+pop = gets cxPop >>= \case
+  Nothing        -> return Nothing
+  Just (ctx, fr) -> do
+    put ctx
+    return (Just fr)
+
+leap :: Either HandList Continuation -> Shonkier
+  (Either
+    Continuation             -- unhandled effect has reached the world
+    ( HandList               -- to keep searching, use this
+    , (Frame, Continuation)  -- but maybe this frame handles you
+    )
+  )
+leap x = gets cxHand >>= \case
+  Left gz -> do
+    put CxNil
+    return . Left $ case x of
+      Left   hs         -> (Cn gz hs)
+      Right  (Cn fz hs) -> Cn (gz <> fz) hs
+  Right (ctx, f, gz) -> do
+    put ctx
+    return . Right $ case x of
+      Left hs          -> ((f , gz) : hs, (f, (Cn gz hs)))
+      Right (Cn fz hs) -> let ez = gz <> fz in
+        ((f , ez) : hs, (f, (Cn ez hs)))
+    
 
 ---------------------------------------------------------------------------
 -- INSTANCES
