@@ -111,6 +111,7 @@ data Frame' a v
          [([a], Term' a v)]
          -- ^ each arg comes with requests we are willing to handle
   | SemiL (LocalEnv' a v) (Term' a v)
+  | PrioL (LocalEnv' a v) (Term' a v)
   | StringLR (Value' a v) (LocalEnv' a v) [(Text, Term' a v)] Text
   | MatchR (PValue' a)
   deriving (Show, Functor)
