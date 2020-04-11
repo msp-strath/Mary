@@ -144,7 +144,17 @@ function hasLength(x) {
     return (!(x === null || x === undefined || x.length === undefined));
 };
 
-// is command c handled in position i by handlers hs?
+
+// are there any handles in position i of handlers hss?
+function anyhandles(i,hss) {
+    if (hasLength(hss) && i < hss.length) {
+        var hs = hss[i];
+        return hasLength(hs) && hs.length > 0;
+    };
+    return false;
+};
+
+// is command c handled in position i by handlers hss?
 function inhandles(c,i,hss) {
     if (hasLength(hss) && i < hss.length) {
         var hs = hss[i];
@@ -339,6 +349,16 @@ function PrioL(rho,r) {
     return {tag: 7, env: rho, right: r};
 };
 
+function handleFrame(fr) {
+    switch (fr.tag) {
+    case 3: // AppR
+        return anyhandles(fr.now, fr.handles);
+    case 7: // PrioL
+        return true;
+    };
+    return false;
+};
+
 // State
 // pop states, ie those which pop ctx until done
 function Use(v) {
@@ -490,20 +510,72 @@ function prim(f, vs) {
     };
 };
 
-// Continuations made by null and
+// Lists made by null and
 function Cons(h,t) {
     return {hd: h, tl: t};
 };
 
+//Continuations are null or
+function Lox(l, k) {
+    return {tag: false, lox: l, cont: k};
+};
+function Hox(f, l, k) {
+    return {tag: true, hand: f, lox: l, cont: k};
+};
+
 function shonkier(glob,t) {
-    var ctx = null;
+    var lox = null
+    var hox = null;
     var fr = null;
 
-    function push(f) { ctx = {top: f, pop:ctx}; };
-    function pop()   { fr = ctx.top; ctx = ctx.pop; };
+    function done() { return (lox == null && hox == null); };
+    
+    function push(f) {
+        if (handleFrame(f)) {
+            hox = {hox: hox, lox: lox, hand: f};
+            lox = null;
+            return;
+        };
+        lox = {pop: lox, top: f};
+    };
+    function pop() {
+        if (lox == null) {
+            fr = hox.hand;
+            lox = hox.lox;
+            hox = hox.hox;
+            return;
+        };
+        fr = lox.top; lox = lox.pop;
+    };
+    function kpush(k) {
+        while (k != null) {
+            if (k.tag) {
+                hox = {hox: hox, lox: lox, hand: k.hand};
+                lox = null;
+            };
+            if (lox == null) {lox = k.lox} else {
+                var l = k.lox;
+                var m = null;
+                var t = null;
+                // nondestructively make m the reverse of l
+                while (l != null) {
+                    m = {top: l.top, pop: m};
+                    l = l.pop;
+                };
+                // destructively reverse m onto lox
+                while (m != null) {
+                    t = m.pop;
+                    m.pop = lox;
+                    lox = m;
+                    m = t;
+                };
+            };
+            k = k.cont;
+        };
+    };
 
     var state = Eval({},t);
-    while (state.tag > 1 || ctx != null) // done when ctx is null in a pop state
+    while (state.tag > 1 || !(done())) // done when ctx is null in a pop state
     {
         switch (state.tag) {
         case 0: // Use
@@ -567,12 +639,20 @@ function shonkier(glob,t) {
             state = Handle("BadFrame",[],null);
             continue;
         case 1: // Handle
-            pop();
+            if (hox == null) {
+                state = Handle(state.cmd,state.args,Lox(lox,state.cont));
+                lox = null;
+                continue;
+            };
+            var kox = lox;
+            fr = hox.hand;
+            lox = hox.lox;
+            hox = hox.hox;
             if (fr.tag == 3
                 && inhandles(state.cmd,fr.now,fr.handles)
                ) {
                 state = Apply(fr.fun
-                              ,Cons(Request(state.cmd,state.args,state.cont),fr.done)
+                              ,Cons(Request(state.cmd,state.args,Lox(kox,state.cont)),fr.done)
                               ,fr.env
                               ,fr.now+1
                               ,fr.handles
@@ -583,7 +663,7 @@ function shonkier(glob,t) {
                 state = Eval(fr.env, fr.right);
                 continue;
             };
-            state = Handle(state.cmd, state.args, Cons(fr,state.cont));
+            state = Handle(state.cmd, state.args, Hox(fr,kox,state.cont));
             continue;
         case 2: // Eval
             var t = state.term;
@@ -674,8 +754,7 @@ function shonkier(glob,t) {
                 state = prim(state.fun.prim, args);
                 continue;
             case "VFun":
-                d = state.fun.cont;
-                while (d != null) { push(d.hd); d = d.tl; }
+                kpush(state.fun.cont);
                 state = Call(state.fun.env,state.fun.clauses,args);
                 continue;
             case "VThunk":
