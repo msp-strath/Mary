@@ -136,11 +136,13 @@ data Frame' a v
   | PrioL (LocalEnv' a v) (Term' a v)
   | StringLR (Value' a v) (LocalEnv' a v) [(Text, Term' a v)] Text
   | MatchR (PValue' a)
+  | Masking a
   deriving (Show, Functor)
 
 handleFrame :: Frame' a v -> Bool
 handleFrame (PrioL _ _)           = True
 handleFrame (AppR _ _ (_:_, _) _) = True
+handleFrame (Masking a)           = True
 handleFrame _ = False
 
 type Frame = Frame' String ScopedVariable

@@ -40,6 +40,7 @@ data Term' a v
   | Prio (Term' a v) (Term' a v)
   | Fun [[a]] [Clause' a v]
   | Match (PValue' a) (Term' a v)
+  | Mask a (Term' a v)
   deriving (Show, Functor)
 
 type RawTerm = Term' String RawVariable

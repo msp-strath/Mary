@@ -185,6 +185,9 @@ eval (rho, t) = case t of
   Match p t -> do
     push (MatchR p)
     eval (rho, t)
+  Mask a t -> do
+    push (Masking a)
+    eval (rho, t)
 
   where
     theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
@@ -236,6 +239,7 @@ use v = pop >>= \case
     MatchR p -> case vmatch p v of
       Nothing  -> abort
       Just sig -> use (env2value sig)
+    Masking _ -> use v
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
@@ -276,18 +280,26 @@ handleInput (a, vs) k = case vs of
         use v
   _             -> complain "IncorrectInputRequest" vs
 
-handle :: Request -> Continuation
+handle :: Request
+       -> Continuation
        -> Shonkier Computation       
-handle r@(a, _) k = go (Right k) where
-  go x = leap x >>= \case
+handle r@(a, _) k = go (Right k) 0 where
+  -- do we get away with not making the number part of the request?
+  go x i = leap x >>= \case
     Left k
-      | a `elem` ["field", "param", "meta"] -> handleInput r k
+      | a `elem` ["field", "param", "meta"] && i == 0 -> handleInput r k
       | otherwise -> return (Request r k)
     Right (hs, (fr, k)) -> case fr of
       AppR f cz (es, rho) as | a `elem` es ->
-        app f (cz :< Request r k) rho as
-      PrioL rho r | a == "abort" -> eval (rho, r)
-      _ -> go (Left hs)
+        if i == 0
+          then app f (cz :< Request r k) rho as
+          else go (Left hs) (i - 1)
+      PrioL rho r | a == "abort" ->
+        if (i == 0)
+          then eval (rho, r)
+          else go (Left hs) (i - 1)
+      Masking b | a == b -> go (Left hs) (i + 1)
+      _ -> go (Left hs) i
   
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation

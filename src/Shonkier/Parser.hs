@@ -126,6 +126,7 @@ data Forbidden
   = NoProb
   | NoPrio
   | NoSemi
+  | NoMask
   deriving (Show, Ord, Eq, Enum, Bounded)
 
 
@@ -155,15 +156,18 @@ weeTerm = choice
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
   , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
   , id <$ char '(' <*> spaceTerm <* char ')'
-  ]
+  ] where
 
 moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
 moreTerm z t = choice
   [ App t <$> argTuple term >>= moreTerm z
+  , Mask <$> tmAtom t <* punc '\\' <*> termBut (pred NoMask) >>= moreTerm z
   , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut (pred NoSemi) >>= moreTerm z
   , Prio t <$ guard (z < NoPrio) <* punc '%' <*> termBut (pred NoPrio) >>= moreTerm z
   , pure t
-  ]
+  ] where
+  tmAtom (Atom a) = pure a
+  tmAtom _ = empty
 
 atom :: Parser String
 atom = id <$ char '\'' <*> identifier

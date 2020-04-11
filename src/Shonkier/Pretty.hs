@@ -82,6 +82,9 @@ assignment = annotate AnnOperator ":="
 prioritize :: Doc
 prioritize = annotate AnnOperator "%"
 
+mask :: Doc
+mask = annotate AnnOperator "\\"
+
 semi :: Doc
 semi = annotate AnnOperator P.semi
 
@@ -190,6 +193,7 @@ instance Pretty v => Pretty (Term' String v) where
       Prio l r      -> pretty l <+> prioritize <+> pretty r
       Fun hs cls    -> ppFun hs cls
       Match p t     -> parens $ pretty p <+> assignment <+> pretty t
+      Mask a t      -> ppAtom a <+> mask <+> pretty t
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where

@@ -106,6 +106,7 @@ instance ScopeCheck RawTerm Term where
         <$> traverse (traverse (scopeCheck local)) sts
         <*> pure u
     Match p t -> Match p <$> scopeCheck local t  -- for now
+    Mask a t -> Mask a <$> scopeCheck local t
 
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
