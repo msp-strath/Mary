@@ -7,6 +7,7 @@ import Data.Char
 import Data.Foldable
 import Data.Function
 import Data.List (isPrefixOf, intersperse, groupBy)
+import qualified Data.Map as Map
 import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
@@ -14,6 +15,7 @@ import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
 import qualified Data.Text.Prettyprint.Doc as P
 
+import Shonkier.FreeVars
 import Shonkier.Syntax
 import Shonkier.Value
 import Utils.List
@@ -106,6 +108,9 @@ ppFun hs [cl] = enclose lbrace rbrace $ pretty cl
 ppFun hs cls  = hang 0 $ enclose lbrace rbrace
               $ (hang 0 $ pretty cls) <> line
 
+ppMatch :: (Pretty a, Pretty b) => a -> b -> Doc
+ppMatch p t = parens $ pretty p <+> assignment <+> pretty t
+
 ppClause :: Pretty v => Clause' String v -> Doc
 ppClause ([], t) = pretty t
 ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
@@ -185,7 +190,7 @@ instance Pretty v => Pretty (Term' String v) where
       App f ts      -> ppApp (pretty f) ts
       Semi l r      -> pretty l <> semi <+> pretty r
       Fun hs cls    -> ppFun hs cls
-      Match p t     -> parens $ pretty p <+> assignment <+> pretty t
+      Match p t     -> ppMatch p t
     it -> ppList it
 
 instance Pretty v => Pretty (Clause' String v) where
@@ -215,20 +220,23 @@ instance Pretty PComputation where
 instance Pretty Value where
   pretty v = case listView v of
     ([], Just _) -> case v of
-      VAtom a          -> ppAtom a
-      VLit l           -> pretty l
-      VString k t      -> ppStringLit k t
-      VPrim f _        -> pretty f
-      VNil             -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
-      VCell a b        -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      VFun _ _ hs cls  -> ppFun hs cls
-      VThunk c         -> braces $ pretty c
+      VAtom a           -> ppAtom a
+      VLit l            -> pretty l
+      VString k t       -> ppStringLit k t
+      VPrim f _         -> pretty f
+      VNil              -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
+      VCell a b         -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      VFun _ rho hs cls -> pretty (Map.restrictKeys rho (freeVars cls)) <> ppFun hs cls
+      VThunk c          -> braces $ pretty c
     it -> ppList it
 
 instance Pretty Computation where
   pretty = \case
     Value v             -> pretty v
     Request (a, vs) frs -> ppApp (ppAtom a) vs
+
+instance Pretty LocalEnv where
+  pretty = Map.foldMapWithKey (\ k v -> ppMatch k v <> space)
 
 instance Pretty v => Pretty (String, Either [[String]] (Clause' String v)) where
   prettyList = vcat

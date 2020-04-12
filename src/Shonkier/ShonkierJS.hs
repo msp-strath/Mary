@@ -8,6 +8,7 @@ import Data.List
 import Data.Ratio
 import Data.Map (foldMapWithKey)
 
+import Shonkier.FreeVars
 import Shonkier.Syntax
 import Shonkier.Value
 
