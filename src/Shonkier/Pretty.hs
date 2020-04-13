@@ -1,5 +1,7 @@
-{-# LANGUAGE MultiWayIf            #-}
-{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE MultiWayIf           #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shonkier.Pretty where
 
@@ -103,15 +105,23 @@ ppList (as, m) = encloseSep lbracket closing space $ pretty <$> as
 ppApp :: Pretty a => Doc -> [a] -> Doc
 ppApp f ts = f <> tupled (pretty <$> ts)
 
-ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc
-ppFun hs [cl] = enclose lbrace rbrace $ pretty cl
-ppFun hs cls  = hang 0 $ enclose lbrace rbrace
-              $ (hang 0 $ pretty cls) <> line
+ppFun :: ( Pretty a, Pretty b, Pretty v
+         , FreeVars b, FreeVars v
+         , SelfListView (Value' String v)
+         ) => LocalEnv' String v -> [[a]] -> [b] -> Doc
+ppFun rho hs cls =
+ let local  = Map.restrictKeys rho (freeVars cls)
+     plocal = Map.foldMapWithKey (\ k v -> pure (ppMatch k v)) local
+  in case cls of
+    [cl] -> sep (plocal ++ [enclose lbrace rbrace $ pretty cl])
+    _    -> (case plocal of [] -> mempty; _ -> sep plocal <> line)
+         <> hang 0 (enclose lbrace rbrace
+                   ((hang 0 $ pretty cls) <> line))
 
 ppMatch :: (Pretty a, Pretty b) => a -> b -> Doc
 ppMatch p t = parens $ pretty p <+> assignment <+> pretty t
 
-ppClause :: Pretty v => Clause' String v -> Doc
+ppClause :: (FreeVars v, Pretty v) => Clause' String v -> Doc
 ppClause ([], t) = pretty t
 ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
 
@@ -178,7 +188,7 @@ instance Pretty ScopedVariable where
     OutOfScope         -> annotate AnnError $ pretty x
     InvalidNamespace _ -> annotate AnnError $ pretty x
 
-instance Pretty v => Pretty (Term' String v) where
+instance (FreeVars v, Pretty v) => Pretty (Term' String v) where
   pretty t = case listView t of
     ([], Just _) -> case t of
       Atom a        -> ppAtom a
@@ -189,11 +199,11 @@ instance Pretty v => Pretty (Term' String v) where
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts      -> ppApp (pretty f) ts
       Semi l r      -> pretty l <> semi <+> pretty r
-      Fun hs cls    -> ppFun hs cls
+      Fun hs cls    -> ppFun (mempty :: LocalEnv) hs cls
       Match p t     -> ppMatch p t
     it -> ppList it
 
-instance Pretty v => Pretty (Clause' String v) where
+instance (FreeVars v, Pretty v) => Pretty (Clause' String v) where
   pretty = ppClause
 
   prettyList = vcat . map pretty
@@ -217,7 +227,8 @@ instance Pretty PComputation where
     PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, arrow, pretty v]
     PThunk v           -> braces $ pretty v
 
-instance Pretty Value where
+instance (SelfListView (Value' String v), FreeVars v, Pretty v) =>
+         Pretty (Value' String v) where
   pretty v = case listView v of
     ([], Just _) -> case v of
       VAtom a           -> ppAtom a
@@ -226,19 +237,17 @@ instance Pretty Value where
       VPrim f _         -> pretty f
       VNil              -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       VCell a b         -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      VFun _ rho hs cls -> pretty (Map.restrictKeys rho (freeVars cls)) <> ppFun hs cls
+      VFun _ rho hs cls -> ppFun rho hs cls
       VThunk c          -> braces $ pretty c
     it -> ppList it
 
-instance Pretty Computation where
+instance (SelfListView (Value' String v), FreeVars v, Pretty v) =>
+         Pretty (Computation' String v) where
   pretty = \case
     Value v             -> pretty v
     Request (a, vs) frs -> ppApp (ppAtom a) vs
 
-instance Pretty LocalEnv where
-  pretty = Map.foldMapWithKey (\ k v -> ppMatch k v <> space)
-
-instance Pretty v => Pretty (String, Either [[String]] (Clause' String v)) where
+instance (FreeVars v, Pretty v) => Pretty (String, Either [[String]] (Clause' String v)) where
   prettyList = vcat
              . intersperse ""
              . map (vcat . map pretty)
@@ -256,5 +265,5 @@ instance Pretty (FilePath, Maybe Namespace) where
     annotate AnnKeyword "import" <+> pretty fp
     <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
-instance Pretty v => Pretty (Module' String v) where
+instance (FreeVars v, Pretty v) => Pretty (Module' String v) where
   pretty (is, p) = pretty is <> pretty p
