@@ -196,7 +196,7 @@ eval (rho, t) = case t of
   Mask "abort" t -> do
     gets cxHand >>= \case
       Right (ctx@(Cx hz fz), fr, gz)
-        | case fr of { PrioL _ _ -> True ; Clauses _ _ _ -> True ; _ -> False }
+        | case fr of { PrioL _ _ -> True ; Clauses{} -> True ; _ -> False }
         -> put (Cx hz (fz <> gz))
       _ -> push (Masking "abort")
     eval (rho, t)
