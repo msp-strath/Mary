@@ -1,0 +1,22 @@
+myfun() | '0 -> 'hello
+        | '1 -> 'world
+
+mygun(x) | [] := x -> 'nilly
+         | [y|ys] := x -> y
+
+myhun() | '1 -> 'abort()
+        | '1 -> 'boo
+
+myiun(f, x) | y := f(x) -> y
+            -> 'nope
+
+head([x|xs]) -> x
+
+main() ->
+  [ myfun()
+    mygun([])
+    mygun([1 2 3])
+    myhun() % 'phew
+    myiun(head, [1 2 3])
+    myiun(head, [])
+  ]
