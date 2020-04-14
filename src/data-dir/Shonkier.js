@@ -336,9 +336,7 @@ function CellR(v,rho) {
 function AppL(rho,ts) {
     return {tag: 2, env: rho, args: ts};
 };
-function AppR(f,cz,rho,i,hs,ts) { // carefully engineered pun with Apply
-    return {tag: 3, fun: f, done: cz, env: rho, now: i, handles: hs, args: ts};
-};
+// AppR is a carefully engineered pun with Apply
 function SemiL(rho,r) {
     return {tag: 4, env: rho, right: r};
 };
@@ -354,14 +352,15 @@ function PrioL(rho,r) {
 function Masking(a) {
     return {tag: 8, atom: a};
 };
+//Clauses is a carefully engineered pun with Call
 
 function handleFrame(fr) {
     switch (fr.tag) {
-    case 3: // AppR
+    case 3: // Apply
         return anyhandles(fr.now, fr.handles);
     case 7: // PrioL
-        return true;
     case 8: // Masking
+    case 9: // Call
         return true;
     };
     return false;
@@ -385,8 +384,8 @@ function Eval(rho, t) {
 function Apply(f,cz,rho,i,hs,ts) { // carefully engineered pun with AppR
     return {tag: 3, fun: f, done: cz, env: rho, now: i, handles: hs, args: ts};
 };
-function Call(rho,cs,as) {
-    return {tag: 4, env: rho, clauses: cs, args: as};
+function Call(rho,cs,i,as) {
+    return {tag: 9, env: rho, clauses: cs, finger: i, args: as};
 };
 
 function Abort() {
@@ -621,7 +620,7 @@ function shonkier(glob,t) {
                 value2env(rho, state.val);
                 state = Eval(rho, fr.args[0]);
                 continue;
-            case 3: // AppR
+            case 3: // Apply
                 state = Apply(fr.fun
                               ,Cons(Value(state.val),fr.done) // stash value
                               ,fr.env
@@ -645,8 +644,8 @@ function shonkier(glob,t) {
                 state = Abort();
                 continue;
             case 7: // PrioL
-                continue;
             case 8: // Masking
+            case 9: // Call
                 continue;
             };
             state = Complain("BadFrame",[]);
@@ -661,7 +660,7 @@ function shonkier(glob,t) {
             fr = hox.hand;
             lox = hox.lox;
             hox = hox.hox;
-            if (fr.tag == 3 // AppR
+            if (fr.tag == 3 // Apply
                 && inhandles(state.cmd,fr.now,fr.handles)
                ) {
                 if (state.inx == 0) {
@@ -683,6 +682,12 @@ function shonkier(glob,t) {
             if (fr.tag == 8 // Masking
                 && state.cmd == fr.atom) {
                 state = Handle(state.cmd, state.inx+1, state.args, Hox(fr,kox,state.cont));
+                continue;
+            };
+            if (fr.tag == 9 // Call
+                && state.cmd == "abort") {
+                if (state.inx == 0) { state = fr; } // pun activated!
+                else { state = Handle(state.cmd, state.inx-1, state.args, Hox(fr,kox,state.cont)); };
                 continue;
             };
             state = Handle(state.cmd, state.inx, state.args, Hox(fr,kox,state.cont));
@@ -752,7 +757,23 @@ function shonkier(glob,t) {
                 state = Eval(state.env,t.term);
                 continue;
             case "Mask":
-                push(Masking(t.atom));
+                if (t.atom == "abort" && hox != null
+                    && (hox.hand.tag == 7     // PrioL
+                        || hox.hand.tag == 9  // Call
+                       )) {
+                    var tmp = null;
+                    while (lox != null) {
+                        tmp = {hd: lox.top, tl: tmp};
+                        lox = lox.pop;
+                    };
+                    lox = hox.lox;
+                    hox = hox.hox;
+                    while (tmp != null) {
+                        lox = {pop: lox, top: tmp.hd};
+                        tmp = tmp.tl;
+                    };
+                }
+                else { push(Masking(t.atom)) };
                 state = Eval(state.env,t.term);
                 continue;
             };
@@ -781,7 +802,7 @@ function shonkier(glob,t) {
                 continue;
             case "VFun":
                 kpush(state.fun.cont);
-                state = Call(state.fun.env,state.fun.clauses,args);
+                state = Call(state.fun.env,state.fun.clauses,0,args);
                 continue;
             case "VThunk":
                 d = state.fun.thunk;
@@ -796,12 +817,13 @@ function shonkier(glob,t) {
             };
             state = Complain("NotFuny",[]);
             continue;
-        case 4: // Call
+        case 9: // Call
             var cs = state.clauses;
-            var i = 0;
+            var i = state.finger;
             while (i < cs.length) {
                 var rho = Object.assign({}, state.env);
-                if (cmatches(rho,cs[i].pats,args)) {
+                if (cmatches(rho,cs[i].pats,state.args)) {
+                    push(Call(state.env,state.clauses,i+1,state.args))
                     state = Eval(rho,cs[i].term);
                     break;
                 };

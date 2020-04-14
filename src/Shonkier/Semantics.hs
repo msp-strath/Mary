@@ -19,10 +19,12 @@ import Shonkier.Primitives (prim)
 import Utils.List
 
 
--- how to signal a failure
 
-abortA :: String
-abortA = "abort"
+---------------------------------------------------------------------------
+-- EXCEPTIONS (ESPECIALLY ABORT)
+---------------------------------------------------------------------------
+
+-- Shonkier.Value defines abortA
 
 abort :: Shonkier Computation
 abort = complain abortA []
@@ -327,11 +329,7 @@ call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> do
     push (Clauses rho cls cs)
-    eval (merge rho sig, foldr (Prio . fudge) (App (Atom abortA) []) rhs)
- where
-  fudge (mg :?> t) = ($ Mask abortA t) $ case mg of
-    Just g  -> App g . (:[])
-    Nothing -> id
+    eval (merge rho sig, rhs2Term rhs)
 
 
 ---------------------------------------------------------------------------

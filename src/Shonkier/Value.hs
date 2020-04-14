@@ -11,6 +11,28 @@ import Data.Bwd
 import Shonkier.Syntax
 import Utils.List
 
+
+---------------------------------------------------------------------------
+-- ABORT
+---------------------------------------------------------------------------
+
+-- how to signal a failure
+
+abortA :: String
+abortA = "abort"
+
+
+---------------------------------------------------------------------------
+-- RHS TRANSLATION
+---------------------------------------------------------------------------
+
+rhs2Term :: [Rhs' String v] -> Term' String v
+rhs2Term = foldr (Prio . guardy) (App (Atom abortA) []) where
+  guardy (mg :?> t) = ($ Mask abortA t) $ case mg of
+    Nothing -> id
+    Just g  -> App g . (:[])
+
+
 ---------------------------------------------------------------------------
 -- ENVIRONMENTS
 ---------------------------------------------------------------------------
