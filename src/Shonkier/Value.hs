@@ -250,7 +250,7 @@ leap x = gets cxHand >>= \case
     return . Right $ case x of
       Left hs          -> ((f , gz) : hs, (f, (Cn gz hs)))
       Right (Cn fz hs) -> let ez = gz <> fz in
-        ((f , ez) : hs, (f, (Cn ez hs)))
+        ((f , ez) : hs, (f, Cn ez hs))
 
 cont :: Continuation -> Shonkier ()
 cont k = modify (`cxCn` k)
