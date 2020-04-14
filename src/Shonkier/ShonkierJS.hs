@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Data.List
 import Data.Ratio
 import Data.Map (foldMapWithKey)
+import Data.Maybe (fromMaybe)
 
 import Shonkier.Syntax
 import Shonkier.Value
@@ -39,6 +40,10 @@ instance JS ScopedVariable where
 
 instance (JS v, JSAtom a) => JS (Clause' a v) where
   js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
+
+instance (JS v, JSAtom a) => JS (Rhs' a v) where
+  js (mg :?> t) = ["{ret:"] ++ js t ++ [",guard:"]
+               ++ js (fromMaybe (Lit (Boolean True)) mg) ++ ["}"]
 
 instance (JS v, JSAtom a) => JS (Term' a v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]

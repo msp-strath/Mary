@@ -21,8 +21,11 @@ import Utils.List
 
 -- how to signal a failure
 
+abortA :: String
+abortA = "abort"
+
 abort :: Shonkier Computation
-abort = complain "abort" []
+abort = complain abortA []
 
 
 -- how to complain
@@ -56,7 +59,9 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   return $ merge rho $ case k of
     Nothing -> mempty
     Just k  -> singleton k $
-      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar :.: "_return"))]
+      VFun frs mempty []
+        [([PValue (PBind "_return")],
+          [Nothing :?> Var (LocalVar :.: "_return")])]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
@@ -185,6 +190,15 @@ eval (rho, t) = case t of
   Match p t -> do
     push (MatchR p)
     eval (rho, t)
+  -- premature optimization is the root of all evil
+  Mask "abort" t -> do
+    gets cxHand >>= \case
+      Right (ctx@(Cx hz fz), fr, gz)
+        | case fr of { PrioL _ _ -> True ; Clauses _ _ _ -> True ; _ -> False }
+        -> put (Cx hz (fz <> gz))
+      _ -> push (Masking "abort")
+    eval (rho, t)
+  -- back to the usual
   Mask a t -> do
     push (Masking a)
     eval (rho, t)
@@ -240,6 +254,7 @@ use v = pop >>= \case
       Nothing  -> abort
       Just sig -> use (env2value sig)
     Masking _ -> use v
+    Clauses _ _ _ -> use v
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
@@ -298,6 +313,10 @@ handle r@(a, _) k = go (Right k) 0 where
         if (i == 0)
           then eval (rho, r)
           else go (Left hs) (i - 1)
+      Clauses rho cls cs | a == "abort" ->
+        if (i == 0)
+          then call rho cls cs
+          else go (Left hs) (i - 1)
       Masking b | a == b -> go (Left hs) (i + 1)
       _ -> go (Left hs) i
   
@@ -306,7 +325,13 @@ call :: LocalEnv -> [Clause] -> [Computation]
 call rho []                cs = abort
 call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
-  Just sig -> eval (merge rho sig, rhs)
+  Just sig -> do
+    push (Clauses rho cls cs)
+    eval (merge rho sig, foldr (Prio . fudge) (App (Atom abortA) []) rhs)
+ where
+  fudge (mg :?> t) = ($ Mask abortA t) $ case mg of
+    Just g  -> App g . (:[])
+    Nothing -> id
 
 
 ---------------------------------------------------------------------------

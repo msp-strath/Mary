@@ -113,8 +113,9 @@ ppFun hs cls  = hang 0 $ enclose lbrace rbrace
               $ (hang 0 $ pretty cls) <> line
 
 ppClause :: Pretty v => Clause' String v -> Doc
-ppClause ([], t) = pretty t
-ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
+ppClause ([], [Nothing :?> t])  = pretty t
+ppClause (ps, rs) = hsep (pretty <$> ps) <+>
+  hsep (map pretty rs)
 
 ppSplice :: Pretty a => Keyword -> [(Text, a)] -> Text -> Doc
 ppSplice k tas u = annotate AnnString $
@@ -200,6 +201,14 @@ instance Pretty v => Pretty (Clause' String v) where
   pretty = ppClause
 
   prettyList = vcat . map pretty
+
+instance Pretty v => Pretty (Rhs' String v) where
+  pretty (mg :?> t) = hsep (g ++ [arrow, pretty t]) where
+    g = case mg of
+      Nothing -> []
+      Just g  -> [pipe, pretty g]
+
+
 
 instance Pretty PValue where
   pretty p = case listView p of

@@ -109,12 +109,15 @@ pattern NewNested a c = (a, [], c)
 pattern EndNested a b = (a, b, [])
 
 
+someSp :: Parser a -> Parser [a]
+someSp p = (:) <$> p <*> many (id <$ skipSpace <*> p)
+
 decl :: Parser [[String]]
 decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
 defn = (,) <$> argTuple pcomputation <* skipSpace
-           <* arrow <* skipSpace <*> term
+           <*> someSp rhs
 
 punc :: Char -> Parser ()
 punc c = () <$ skipSpace <* char c <* skipSpace
@@ -272,9 +275,13 @@ spaceMaybeComma =
   () <$ skipSpace <* (() <$ char ',' <* skipSpace <|> pure ())
 
 clause :: Parser RawClause
-clause = (,) <$> sep spaceMaybeComma pcomputation <* skipSpace <* arrow <* skipSpace
-             <*> term
-  <|> (,) [] <$> term
+clause = (,) <$> sep spaceMaybeComma pcomputation <* skipSpace <*> someSp rhs
+  <|> (,) [] <$> ((:[]) . (Nothing :?>) <$> term)
+
+rhs :: Parser RawRhs
+rhs = (:?>) <$>
+  (Just <$ char '|' <* skipSpace <*> term <* skipSpace <|> pure Nothing)
+  <* arrow <* skipSpace <*> term
 
 pcomputation :: Parser PComputation
 pcomputation
