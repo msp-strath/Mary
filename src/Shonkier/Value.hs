@@ -168,7 +168,7 @@ handleFrame :: Frame' a v -> Bool
 handleFrame (PrioL _ _)           = True
 handleFrame (AppR _ _ (_:_, _) _) = True
 handleFrame (Masking a)           = True
-handleFrame (Clauses _ _ _)       = True
+handleFrame (Clauses{})       = True
 handleFrame _ = False
 
 type Frame = Frame' String ScopedVariable
