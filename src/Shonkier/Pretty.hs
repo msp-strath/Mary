@@ -256,7 +256,7 @@ instance Pretty v => Pretty (String, Either [[String]] (Clause' String v)) where
   pretty (fun, decl) =
     (annotate AnnFunction (pretty fun) <>) $ case decl of
       Left hs       -> tupled $ map (hsep . map pretty) hs
-      Right (ps, t) -> tupled (pretty <$> ps) <+> arrow <+> pretty t
+      Right (ps, rs) -> tupled (pretty <$> ps) <+> hsep (map pretty rs)
 
 instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty

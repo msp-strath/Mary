@@ -27,10 +27,12 @@ abortA = "abort"
 ---------------------------------------------------------------------------
 
 rhs2Term :: [Rhs' String v] -> Term' String v
-rhs2Term = foldr (Prio . guardy) (App (Atom abortA) []) where
-  guardy (mg :?> t) = ($ Mask abortA t) $ case mg of
-    Nothing -> id
-    Just g  -> App g . (:[])
+rhs2Term [] = App (Atom abortA) []
+rhs2Term [Nothing :?> t] = t
+rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
+  where
+  guardBy Nothing  t = t
+  guardBy (Just g) t = App g [t]
 
 
 ---------------------------------------------------------------------------
