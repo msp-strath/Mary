@@ -112,7 +112,11 @@ instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
     locals <- mapM (scopeCheck local) ps
     let new = fold (local : locals)
-    (ps,) <$> scopeCheck new t
+    (ps,) <$> traverse (scopeCheck new) t
+
+instance ScopeCheck RawRhs Rhs where
+  scopeCheck local (mg :?> t) =
+    (:?>) <$> traverse (scopeCheck local) mg <*> scopeCheck local t
 
 instance ScopeCheck PComputation LocalScope where
   scopeCheck local (PValue v) = scopeCheck local v

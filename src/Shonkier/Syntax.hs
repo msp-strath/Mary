@@ -57,9 +57,13 @@ type Program    = Program' String ScopedVariable
 type RawModule  = Module' String RawVariable
 type Module     = Module' String ScopedVariable
 
-type Clause' a v = ([PComputation' a], Term' a v)
+type Clause' a v = ([PComputation' a], [Rhs' a v])
 type RawClause = Clause' String RawVariable
 type Clause    = Clause' String ScopedVariable
+data Rhs' a v = Maybe (Term' a v) :?> Term' a v
+  deriving (Show, Functor)
+type Rhs = Rhs' String ScopedVariable
+type RawRhs = Rhs' String RawVariable
 
 data PValue' a
   = PAtom a
