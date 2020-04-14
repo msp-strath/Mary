@@ -248,7 +248,7 @@ leap x = gets cxHand >>= \case
   Right (ctx, f, gz) -> do
     put ctx
     return . Right $ case x of
-      Left hs          -> ((f , gz) : hs, (f, (Cn gz hs)))
+      Left hs          -> ((f , gz) : hs, (f, Cn gz hs))
       Right (Cn fz hs) -> let ez = gz <> fz in
         ((f , ez) : hs, (f, Cn ez hs))
 
