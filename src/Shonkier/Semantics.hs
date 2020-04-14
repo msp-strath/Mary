@@ -256,7 +256,7 @@ use v = pop >>= \case
       Nothing  -> abort
       Just sig -> use (env2value sig)
     Masking _ -> use v
-    Clauses _ _ _ -> use v
+    Clauses{} -> use v
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
@@ -299,7 +299,7 @@ handleInput (a, vs) k = case vs of
 
 handle :: Request
        -> Continuation
-       -> Shonkier Computation       
+       -> Shonkier Computation
 handle r@(a, _) k = go (Right k) 0 where
   -- do we get away with not making the number part of the request?
   go x i = leap x >>= \case
@@ -321,7 +321,6 @@ handle r@(a, _) k = go (Right k) 0 where
           else go (Left hs) (i - 1)
       Masking b | a == b -> go (Left hs) (i + 1)
       _ -> go (Left hs) i
-  
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
 call rho []                cs = abort

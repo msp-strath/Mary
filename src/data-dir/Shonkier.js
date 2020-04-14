@@ -539,7 +539,6 @@ function shonkier(glob,t) {
     var fr = null;
 
     function done() { return (lox == null && hox == null); };
-    
     function push(f) {
         if (handleFrame(f)) {
             hox = {hox: hox, lox: lox, hand: f};
