@@ -1,5 +1,5 @@
-andLazy(e1,e2) -> e1(); e2() % '0
-orLazy(e1,e2)  -> e1(); '1 % e2()
+andLazy(e1,e2) -> e1(); e2() ?> '0
+orLazy(e1,e2)  -> e1(); '1 ?> e2()
 
 main() ->
   [ andLazy({'0},{'0})
