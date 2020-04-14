@@ -168,7 +168,7 @@ handleFrame :: Frame' a v -> Bool
 handleFrame (PrioL _ _)           = True
 handleFrame (AppR _ _ (_:_, _) _) = True
 handleFrame (Masking a)           = True
-handleFrame (Clauses _ _ _)       = True
+handleFrame (Clauses{})       = True
 handleFrame _ = False
 
 type Frame = Frame' String ScopedVariable
@@ -248,9 +248,9 @@ leap x = gets cxHand >>= \case
   Right (ctx, f, gz) -> do
     put ctx
     return . Right $ case x of
-      Left hs          -> ((f , gz) : hs, (f, (Cn gz hs)))
+      Left hs          -> ((f , gz) : hs, (f, Cn gz hs))
       Right (Cn fz hs) -> let ez = gz <> fz in
-        ((f , ez) : hs, (f, (Cn ez hs)))
+        ((f , ez) : hs, (f, Cn ez hs))
 
 cont :: Continuation -> Shonkier ()
 cont k = modify (`cxCn` k)
