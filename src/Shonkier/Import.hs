@@ -116,7 +116,7 @@ loadToplevelModule fp rm = do
   -- strip common prefix from global env
   let (lcp, gl) = simplifyGlobalEnv $ globals st
   -- strip common prefix from all programs
-  let m' = (second (fmap (fmap (fmap (fmap (fmap $ simplifyTerm lcp)))))) m
+  let m' = second (fmap (fmap (fmap (fmap (fmap $ simplifyTerm lcp))))) m
   pure (m', gl)
 
 importToplevelModule :: FilePath -> IO (Module, GlobalEnv)
