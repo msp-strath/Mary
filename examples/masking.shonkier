@@ -1,4 +1,4 @@
 main() ->
-  [ ('abort() % 'inner) % 'outer
-    ('abort \ 'abort() % 'inner) % 'outer
+  [ ('abort() ?> 'inner) ?> 'outer
+    ('abort ^ 'abort() ?> 'inner) ?> 'outer
   ]

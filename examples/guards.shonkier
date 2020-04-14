@@ -8,7 +8,7 @@ myhun() | '1 -> 'abort()
         | '1 -> 'boo
 
 myiun(f, x) | y := f(x) -> y
-            -> 'nope
+            | -> 'nope
 
 head([x|xs]) -> x
 
@@ -16,7 +16,7 @@ main() ->
   [ myfun()
     mygun([])
     mygun([1 2 3])
-    myhun() % 'phew
+    myhun() ?> 'phew
     myiun(head, [1 2 3])
     myiun(head, [])
   ]

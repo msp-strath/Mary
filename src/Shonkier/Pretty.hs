@@ -80,10 +80,10 @@ assignment :: Doc
 assignment = annotate AnnOperator ":="
 
 prioritize :: Doc
-prioritize = annotate AnnOperator "%"
+prioritize = annotate AnnOperator "?>"
 
 mask :: Doc
-mask = annotate AnnOperator "\\"
+mask = annotate AnnOperator "^"
 
 semi :: Doc
 semi = annotate AnnOperator P.semi
@@ -114,8 +114,11 @@ ppFun hs cls  = hang 0 $ enclose lbrace rbrace
 
 ppClause :: Pretty v => Clause' String v -> Doc
 ppClause ([], [Nothing :?> t])  = pretty t
-ppClause (ps, rs) = hsep (pretty <$> ps) <+>
-  hsep (map pretty rs)
+ppClause (ps, rs) = hsep (pretty <$> ps) <+> ppRights rs
+
+ppRights :: Pretty v => [Rhs' String v] -> Doc
+ppRights [Nothing :?> t] = hsep [arrow, pretty t]
+ppRights rs              = hsep (map pretty rs)
 
 ppSplice :: Pretty a => Keyword -> [(Text, a)] -> Text -> Doc
 ppSplice k tas u = annotate AnnString $
@@ -203,12 +206,7 @@ instance Pretty v => Pretty (Clause' String v) where
   prettyList = vcat . map pretty
 
 instance Pretty v => Pretty (Rhs' String v) where
-  pretty (mg :?> t) = hsep (g ++ [arrow, pretty t]) where
-    g = case mg of
-      Nothing -> []
-      Just g  -> [pipe, pretty g]
-
-
+  pretty (mg :?> t) = hsep (pipe : foldMap (pure . pretty) mg ++ [arrow, pretty t])
 
 instance Pretty PValue where
   pretty p = case listView p of
@@ -255,8 +253,8 @@ instance Pretty v => Pretty (String, Either [[String]] (Clause' String v)) where
 
   pretty (fun, decl) =
     (annotate AnnFunction (pretty fun) <>) $ case decl of
-      Left hs       -> tupled $ map (hsep . map pretty) hs
-      Right (ps, rs) -> tupled (pretty <$> ps) <+> hsep (map pretty rs)
+      Left hs        -> tupled $ map (hsep . map pretty) hs
+      Right (ps, rs) -> tupled (pretty <$> ps) <+> ppRights rs
 
 instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty

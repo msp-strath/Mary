@@ -116,11 +116,10 @@ decl :: Parser [[String]]
 decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> argTuple pcomputation <* skipSpace
-           <*> someSp rhs
+defn = (,) <$> argTuple pcomputation <*> rhs
 
-punc :: Char -> Parser ()
-punc c = () <$ skipSpace <* char c <* skipSpace
+punc :: String -> Parser ()
+punc c = () <$ skipSpace <* traverse char c <* skipSpace
 
 sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
@@ -164,9 +163,9 @@ weeTerm = choice
 moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
 moreTerm z t = choice
   [ App t <$> argTuple term >>= moreTerm z
-  , Mask <$> tmAtom t <* punc '\\' <*> termBut (pred NoMask) >>= moreTerm z
-  , Semi t <$ guard (z < NoSemi) <* punc ';' <*> termBut (pred NoSemi) >>= moreTerm z
-  , Prio t <$ guard (z < NoPrio) <* punc '%' <*> termBut (pred NoPrio) >>= moreTerm z
+  , Mask <$> tmAtom t <* punc "^" <*> termBut (pred NoMask) >>= moreTerm z
+  , Semi t <$ guard (z < NoSemi) <* punc ";" <*> termBut (pred NoSemi) >>= moreTerm z
+  , Prio t <$ guard (z < NoPrio) <* punc "?>" <*> termBut (pred NoPrio) >>= moreTerm z
   , pure t
   ] where
   tmAtom (Atom a) = pure a
@@ -255,7 +254,7 @@ listOf p nil = (,) <$ char '['
 argTuple :: Parser a -> Parser [a]                                          --
 argTuple p =                                                                --
   id <$ char '(' <* skipSpace                                               --
-  <*> sep (punc ',') p                                                      --
+  <*> sep (punc ",") p                                                      --
   <* skipSpace <* char ')'                                                  --
                                                                             --
 --                                                                          --
@@ -274,14 +273,15 @@ spaceMaybeComma :: Parser ()
 spaceMaybeComma =
   () <$ skipSpace <* (() <$ char ',' <* skipSpace <|> pure ())
 
+
 clause :: Parser RawClause
-clause = (,) <$> sep spaceMaybeComma pcomputation <* skipSpace <*> someSp rhs
+clause = (,) <$> sep spaceMaybeComma pcomputation <*> rhs
   <|> (,) [] <$> ((:[]) . (Nothing :?>) <$> term)
 
-rhs :: Parser RawRhs
-rhs = (:?>) <$>
-  (Just <$ char '|' <* skipSpace <*> term <* skipSpace <|> pure Nothing)
-  <* arrow <* skipSpace <*> term
+rhs :: Parser [RawRhs]
+rhs = (:[]) . (Nothing :?>) <$ punc "->" <*> term
+  <|> someSp ((:?>) <$ punc "|" <*> (Just <$> term <|> pure Nothing)
+                    <* punc "->" <*> term)
 
 pcomputation :: Parser PComputation
 pcomputation
