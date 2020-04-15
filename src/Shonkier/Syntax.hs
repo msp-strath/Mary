@@ -6,6 +6,7 @@ import Utils.List
 type Keyword   = String
 type Primitive = String
 type Namespace = String
+type Operator  = String
 
 type Variable     = String
 type RawVariable  = (Maybe Namespace, Variable)
@@ -109,3 +110,94 @@ instance HasListView PValue PValue where
 
 class ToRawTerm t where
   toRawTerm :: t -> RawTerm
+
+
+---------------------------------------------------------------------------
+-- FIXITY
+---------------------------------------------------------------------------
+
+data Tightness
+  -- funky control
+  = PriT   -- e1 ; e2 ?> e3    ->    (e1 ; e2) ?> e3
+  | SemT   -- p := e1 ; e2     ->    (p := e1) ; e2
+  | PaMa   -- p := 'a ^ e      ->    p := ('a ^ e)
+  | MasT   -- 'a ^ e1 \/ e2    ->    'a ^ (e1 \/ e2)
+
+  -- boolean things
+  | Disj   -- a \/ b /\ c      ->    a \/ (b /\ c)
+  | Conj   -- a /\ ! b         ->    a /\ (! b)
+  | Nega   -- ! x == y         ->    ! (x == y)
+  | Comp   -- x == y + 1       ->    x == (y + 1)
+  
+  -- arithmetic
+  | Addy
+  | Mult
+
+  -- application
+  | Appl   -- 2 * f(x)         ->    2 * (f(x))
+  deriving (Show, Ord, Eq, Enum, Bounded)
+
+data Associativity
+  = LAsso | NAsso | RAsso
+  deriving (Show, Eq)
+
+data OpFax = OpFax
+  { tight :: Tightness
+  , assoc :: Associativity
+  , spell :: String
+  } deriving (Show, Eq)
+
+opChars :: String
+opChars = "-=!\\/<>+*/"
+
+
+prioFax, semiFax, pamaFax, maskFax, overFax, applFax :: OpFax
+prioFax = OpFax {tight = PriT, assoc = RAsso, spell = "Prio"}
+semiFax = OpFax {tight = SemT, assoc = RAsso, spell = "Semi"}
+pamaFax = OpFax {tight = PaMa, assoc = RAsso, spell = "PaMa"}
+maskFax = OpFax {tight = MasT, assoc = RAsso, spell = "Mask"}
+overFax = OpFax {tight = Mult, assoc = LAsso, spell = "Over"}
+applFax = OpFax {tight = Appl, assoc = LAsso, spell = "Appl"}
+
+-- morally...
+-- ?>   Prio RAsso
+-- ;    Semi RAsso
+-- :=   PaMa RAsso
+-- ^    Mask RAsso
+
+infixOpFax :: [(String, OpFax)]
+infixOpFax =
+  [ ("\\/", OpFax {tight = Disj, assoc = LAsso, spell = "Or"})
+  , ("/\\", OpFax {tight = Conj, assoc = LAsso, spell = "And"})
+  , ("==",  OpFax {tight = Comp, assoc = LAsso, spell = "Equals"})
+  , ("!=",  OpFax {tight = Comp, assoc = LAsso, spell = "Unequal"})
+  , ("<=",  OpFax {tight = Comp, assoc = LAsso, spell = "LessEq"})
+  , (">=",  OpFax {tight = Comp, assoc = LAsso, spell = "GreaterEq"})
+  , ("<",   OpFax {tight = Comp, assoc = LAsso, spell = "Less"})
+  , (">",   OpFax {tight = Comp, assoc = LAsso, spell = "Greater"})
+  , ("+",   OpFax {tight = Addy, assoc = LAsso, spell = "Plus"})
+  , ("-",   OpFax {tight = Addy, assoc = LAsso, spell = "Minus"})
+  , ("*",   OpFax {tight = Mult, assoc = LAsso, spell = "Times"})
+  , ("/",   overFax)
+  ]
+
+prefixOpFax :: [(String, OpFax)]
+prefixOpFax =
+  [ ("!", OpFax {tight = Nega, assoc = RAsso, spell = "Not"})
+  ]
+
+data Dir = LeftOf | RightOf deriving (Show, Eq)
+data WhereAmI
+  = Utopia
+  | Dir :^: OpFax
+  deriving (Show, Eq)
+
+needParens :: OpFax -> WhereAmI -> Bool
+needParens _ Utopia = False
+needParens x (d :^: y) = case compare (tight x) (tight y) of
+  LT -> True
+  EQ -> case (d, assoc y) of
+    (LeftOf, LAsso)  -> False
+    (RightOf, RAsso) -> False
+    _                -> True
+  GT -> False

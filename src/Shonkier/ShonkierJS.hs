@@ -7,7 +7,6 @@ import qualified Data.Text as T
 import Data.List
 import Data.Ratio
 import Data.Map (foldMapWithKey)
-import Data.Maybe (fromMaybe)
 
 import Shonkier.Syntax
 import Shonkier.Value

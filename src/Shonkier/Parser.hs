@@ -124,14 +124,6 @@ punc c = () <$ skipSpace <* traverse char c <* skipSpace
 sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
-data Forbidden
-  = NoProb
-  | NoPrio
-  | NoSemi
-  | NoMask
-  deriving (Show, Ord, Eq, Enum, Bounded)
-
-
 spaceTerm :: Parser RawTerm
 spaceTerm = id <$ skipSpace <*> term <* skipSpace
 
@@ -142,15 +134,20 @@ spaceTerm = id <$ skipSpace <*> term <* skipSpace
 --                                                                          --
 ------------------------------------------------------------------------------
 
+opok :: OpFax -> WhereAmI -> Parser ()
+opok o w = () <$ guard (not (needParens o w))
+
 term :: Parser RawTerm
-term = termBut NoProb
+term = termBut Utopia
 
-termBut :: Forbidden -> Parser RawTerm
-termBut z = weeTerm >>= moreTerm z
+termBut :: WhereAmI -> Parser RawTerm
+termBut w = weeTerm w >>= moreTerm w
 
-weeTerm :: Parser RawTerm
-weeTerm = choice
-  [ Match <$> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace <*> termBut NoSemi
+weeTerm :: WhereAmI -> Parser RawTerm
+weeTerm w = choice
+  [ Match <$ opok pamaFax w
+    <*> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace
+    <*> termBut (RightOf :^: pamaFax)
   , Atom <$> atom
   , Lit <$> literal
   , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
@@ -158,24 +155,50 @@ weeTerm = choice
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
   , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
   , id <$ char '(' <*> spaceTerm <* char ')'
-  ] where
+  , opCand >>= prefixApp w
+  ]
 
-moreTerm :: Forbidden -> RawTerm -> Parser RawTerm
-moreTerm z t = choice
-  [ App t <$> argTuple term >>= moreTerm z
-  , Mask <$> tmAtom t <* punc "^" <*> termBut (pred NoMask) >>= moreTerm z
-  , Semi t <$ guard (z < NoSemi) <* punc ";" <*> termBut (pred NoSemi) >>= moreTerm z
-  , Prio t <$ guard (z < NoPrio) <* punc "?>" <*> termBut (pred NoPrio) >>= moreTerm z
+moreTerm :: WhereAmI -> RawTerm -> Parser RawTerm
+moreTerm w t = choice
+  [ App t <$ opok applFax w <*> argTuple term >>= moreTerm w
+  , Mask <$> tmAtom t <* opok maskFax w <* punc "^"
+    <*> termBut (RightOf :^: maskFax) >>= moreTerm w
+  , Semi t <$ opok semiFax w <* punc ";"
+    <*> termBut (RightOf :^: semiFax) >>= moreTerm w
+  , Prio t <$ opok prioFax w <* punc "?>"
+    <*> termBut (RightOf :^: prioFax) >>= moreTerm w
+  , (skipSpace *> opCand) >>= infixApp w t >>= moreTerm w
   , pure t
   ] where
   tmAtom (Atom a) = pure a
   tmAtom _ = empty
+
+prefixApp :: WhereAmI -> String -> Parser RawTerm
+prefixApp w p = case lookup p prefixOpFax of
+  Nothing -> empty
+  Just x  -> App (Var (Nothing, "primPrefix" ++ spell x)) . (:[])
+          <$ opok x w
+          <* skipSpace
+         <*> termBut (RightOf :^: x)
+
+infixApp :: WhereAmI -> RawTerm -> String -> Parser RawTerm
+infixApp w l i = case lookup i infixOpFax of
+  Nothing -> empty
+  Just x  -> App (Var (Nothing, "primInfix" ++ spell x)) . (l :) . (:[])
+          <$ opok x w
+          <* skipSpace
+         <*> termBut (RightOf :^: x)
 
 atom :: Parser String
 atom = id <$ char '\'' <*> identifier
 
 identifier :: Parser String
 identifier = (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)
+
+opCand :: Parser String
+opCand = (:) <$> satisfy oppy
+             <*> (T.unpack <$> Atto.takeWhile oppy)
+  where oppy = inClass opChars
 
 arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'

@@ -35,9 +35,10 @@ prim nm vs = case lookup nm primitives of
 primitives :: [(Primitive, PRIMITIVE)]
 primitives =
   [ ("primStringConcat", primStringConcat)
-  , ("primNumAdd"      , primNumAdd)
-  , ("primNumMinus"    , primNumMinus)
-  , ("primNumMult"     , primNumMult)
+  , ("primInfixPlus"   , primInfixPlus)
+  , ("primInfixMinus"  , primInfixMinus)
+  , ("primInfixTimes"  , primInfixTimes)
+  , ("primInfixOver"   , primInfixOver)
   , ("primNumToString" , primNumToString)
   , ("primStringToNum" , primStringToNum)
   ]
@@ -53,14 +54,18 @@ primNumBin nm op = \case
   [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
   _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
 
-primNumAdd, primNumMinus, primNumMult :: PRIMITIVE
-primNumAdd   = primNumBin "primNumAdd" (+)
-primNumMinus = primNumBin "primNumMinus" (-)
-primNumMult  = primNumBin "primNumMult" (*)
+primInfixPlus, primInfixMinus, primInfixTimes :: PRIMITIVE
+primInfixPlus  = primNumBin "primInfixPlus"  (+)
+primInfixMinus = primNumBin "primInfixMinus" (-)
+primInfixTimes = primNumBin "primInfixTimes" (*)
+
+primInfixOver :: PRIMITIVE
+primInfixOver [_, CNum 0] = complain "divByZero" []
+primInfixOver as = primNumBin "primInfixOver" (/) as
 
 primNumToString :: PRIMITIVE
 primNumToString = \case
-  [CNum m]  -> use (VString "" (ppRational m))
+  [CNum m]  -> use (VString "" (ppRational Utopia m))
   [Value m] -> complain "Invalid_primNumToString_ArgType" [m]
   [_]       -> complain "Invalid_primNumToString_ArgRequest"[]
   _         -> complain "Invalid_primNumToString_Arity" []
