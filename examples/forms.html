@@ -17,13 +17,31 @@
   globalEnv["greet"] = {};
   globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("field"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("param"),[Stringy("page")]),Nil()))))))]);
   globalEnv["numberGame"] = {};
-  globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(GlobalVar(false,"."),"primNumAdd"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
-  globalEnv["primNumAdd"] = {};
-  globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
-  globalEnv["primNumMinus"] = {};
-  globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
-  globalEnv["primNumMult"] = {};
-  globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(OutOfScope(),"primNumAdd"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
+  globalEnv["primInfixAnd"] = {};
+  globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
+  globalEnv["primInfixEquals"] = {};
+  globalEnv["primInfixEquals"]["."] = VPrim("primInfixEquals",[]);
+  globalEnv["primInfixGreater"] = {};
+  globalEnv["primInfixGreater"]["."] = VPrim("primInfixGreater",[]);
+  globalEnv["primInfixGreaterEq"] = {};
+  globalEnv["primInfixGreaterEq"]["."] = VPrim("primInfixGreaterEq",[]);
+  globalEnv["primInfixLess"] = {};
+  globalEnv["primInfixLess"]["."] = VPrim("primInfixLess",[]);
+  globalEnv["primInfixLessEq"] = {};
+  globalEnv["primInfixLessEq"]["."] = VPrim("primInfixLessEq",[]);
+  globalEnv["primInfixMinus"] = {};
+  globalEnv["primInfixMinus"]["."] = VPrim("primInfixMinus",[]);
+  globalEnv["primInfixOr"] = {};
+  globalEnv["primInfixOr"]["."] = VPrim("primInfixOr",[]);
+  globalEnv["primInfixOver"] = {};
+  globalEnv["primInfixOver"]["."] = VPrim("primInfixOver",[]);
+  globalEnv["primInfixPlus"] = {};
+  globalEnv["primInfixPlus"]["."] = VPrim("primInfixPlus",[]);
+  globalEnv["primInfixTimes"] = {};
+  globalEnv["primInfixTimes"]["."] = VPrim("primInfixTimes",[]);
+  globalEnv["primInfixUnequal"] = {};
+  globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
   globalEnv["primNumToString"] = {};
   globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
   globalEnv["primStringConcat"] = {};
@@ -44,7 +62,6 @@ Seven weeks of staying up all night</textarea>
 <p><input value="Submit answers and essay" type="submit"></p>
 <h2 id="using-the-inputs">Using the inputs</h2>
 <p>Hello Eric! You are on page /examples/forms.mary</p>
-<p>Wrong, the right number was 8. Better luck next time!</p>
 </form>
 </body>
 </html>

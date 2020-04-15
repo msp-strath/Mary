@@ -57,7 +57,7 @@ primitives =
 
 primInfixEquals, primInfixUnequal :: PRIMITIVE
 primInfixEquals [Value x, Value y] = case valueEqHuh x y of
-  Nothing -> complain "'higherOrderEqTest" []
+  Nothing -> complain "higherOrderEqTest" []
   Just b  -> use (VBoolean b)
 primInfixEquals _ = complain "Invalid_primInfixEquals_Arity" []
 

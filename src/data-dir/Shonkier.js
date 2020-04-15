@@ -47,14 +47,14 @@ function Nil() { // Nil
 function Cell(x,y) { // Cell x y
     return {tag: "Cell", fst: x, snd: y};
 };
+
+// Term only
 function Stringy(x) { // from String k ts u, we get ts tipped by u
     return {tag: "String", chunks: x};
 };
 function Strunk(p,c,t) { // one chunk from a String
     return {prefix: p, splice: c, tail: t};
 };
-
-// Term only
 function App(f, as) {       // App f as, where as is an array
     return {tag: "App", fun: f, args: as};
 };
@@ -294,21 +294,21 @@ function smatch(rho, p, v) {
     };
     function tmatch(rho, p, m) {
         switch (p.tag) {
-        case "As":
+        case "As" :
             var s = tmatch(rho, p.pat, m);
             if (stringy(s)) { rho[p.var] = Lit(s) };
             return s;
-        case "Cell":
+        case "Cell" :
             var a = tmatch(rho, p.fst, {tag: "Head"});
             if (!stringy(a)) { return null; };
             var b = tmatch(rho, p.snd, m);
             if (!stringy(b)) { return null; };
             return a.concat(b);
-        case "Nil":
+        case "Nil" :
             return "";
-        case "Atom":
+        case "Atom" :
             return "";
-        case "Lit":
+        case "Lit" :
             return null;
         };
         var s = mfind(m);
@@ -356,11 +356,11 @@ function Masking(a) {
 
 function handleFrame(fr) {
     switch (fr.tag) {
-    case 3: // Apply
+    case 3 : // Apply
         return anyhandles(fr.now, fr.handles);
-    case 7: // PrioL
-    case 8: // Masking
-    case 9: // Call
+    case 7 : // PrioL
+    case 8 : // Masking
+    case 9 : // Call
         return true;
     };
     return false;
@@ -394,6 +394,45 @@ function Abort() {
 
 // Primitives
 
+// equality testing
+function valHoHuh(x) {
+    switch (x.tag) {
+    case "VFun" :
+    case "VPrim" :
+    case "VThunk" :
+        return true;
+    default:
+        return false;
+    };
+};
+
+function valEqHuh(x, y) {
+    var ls = [x]; var rs = [y]; var i = 1;
+    while (i-- > 0) {
+        x = ls[i]; y = rs[i];
+        if (valHoHuh(x) || valHoHuh(y)) {return null;};
+        if (x.tag == y.tag) {
+            switch (x.tag) {
+            case "Atom" :
+                if (x.atom == y.atom) {continue;};
+                break;
+            case "Lit" :
+                if (LitEq(x.literal, y.literal)) {continue;};
+                break;
+            case "Nil" :
+                continue;
+            case "Cell" :
+                ls[i] = x.snd; rs[i] = y.snd; i++;
+                ls[i] = x.fst; rs[i] = y.fst; i++;
+                continue;
+            };
+        };
+        return false;
+    };
+    return true;
+};
+
+
 // primStringConcat is needed by the interpreter, anyway
 function primStringConcat(vs) {
     var ts = []; // final string
@@ -422,6 +461,59 @@ function primStringConcat(vs) {
 };
 
 function prim(f, vs) {
+    function primBooBin(nm,implem,cs) {
+        if (hasLength(cs) && cs.length == 2) {
+            if (cs[0].tag == "Value" && cs[1].tag == "Value" &&
+                cs[0].value.tag == "Lit" && cs[1].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                var y = cs[1].value.literal;
+                if (boolean(x) && boolean(y)) {
+                    return Use(Lit(implem(x,y)));
+                };
+                return Complain("Invalid_" + nm + "_ArgType",[]);
+            };
+            return Complain("Invalid_" + nm + "_ArgRequest",[]);
+        };
+        return Complain("Invalid_" + nm + "_Arity",[]);
+    };
+    function primInfixAnd(cs) {
+        return primBooBin("primInfixAnd"
+                          , function(x,y){ return x && y;}
+                          , cs
+                         );
+    };
+    function primInfixOr(cs) {
+        return primBooBin("primInfixOr"
+                          , function(x,y){ return x || y;}
+                          , cs
+                         );
+    };
+    function primInfixEquals(cs) {
+        if (hasLength(cs) && cs.length == 2) {
+            if (cs[0].tag == "Value" && cs[1].tag == "Value") {
+                var b = valEqHuh(cs[0].value,cs[1].value);
+                if (b === null) {
+                    return Complain("higherOrderEqTest",[]);
+                };
+                return Use(Lit(b));
+            };
+            return Complain("Invalid_primInfixEquals_ArgRequest",[]);
+        };
+        return Complain("Invalid_primInfixEquals_Arity",[]);
+    };
+    function primInfixUnequal(cs) {
+        if (hasLength(cs) && cs.length == 2) {
+            if (cs[0].tag == "Value" && cs[1].tag == "Value") {
+                var b = valEqHuh(cs[0].value,cs[1].value);
+                if (b === null) {
+                    return Complain("higherOrderEqTest",[]);
+                };
+                return Use(Lit(!b));
+            };
+            return Complain("Invalid_primInfixUnequal_ArgRequest",[]);
+        };
+        return Complain("Invalid_primInfixUnequal_Arity",[]);
+    };
     function primNumBin(nm,implem,cs) {
         if (hasLength(cs) && cs.length == 2) {
             if (cs[0].tag == "Value" && cs[1].tag == "Value" &&
@@ -437,21 +529,63 @@ function prim(f, vs) {
         };
         return Complain("Invalid_" + nm + "_Arity",[]);
     };
-    function primNumAdd(cs) {
-        return primNumBin("primNumAdd"
+    function primInfixPlus(cs) {
+        return primNumBin("primInfixPlus"
                           , function(x,y){ return LitNum(x.num*y.den + y.num*x.den,x.den*y.den);}
                           , cs
                          );
     };
-    function primNumMult(cs) {
-        return primNumBin("primNumMult"
+    function primInfixTimes(cs) {
+        return primNumBin("primInfixTimes"
                           , function(x,y){ return LitNum(x.num*y.num,x.den*y.den);}
                           , cs
                          );
     };
-    function primNumMinus(cs) {
-        return primNumBin("primNumMinus"
+    function primInfixMinus(cs) {
+        return primNumBin("primInfixMinus"
                           , function(x,y){ return LitNum(x.num*y.den - y.num*x.den,x.den*y.den);}
+                          , cs
+                         );
+    };
+    function primInfixOver(cs) {
+        if (hasLength(cs) && cs.length == 2) {
+            if (cs[0].tag == "Value" && cs[1].tag == "Value" &&
+                cs[0].value.tag == "Lit" && cs[1].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                var y = cs[1].value.literal;
+                if (!stringy(x) && !stringy(y) && !boolean(x) && !boolean(y)) {
+                    if (y.num == 0) {
+                        return Complain("divByZero",[]);
+                    };
+                    return Use(Lit(LitNum(x.num*y.den, x.den*y.num)));
+                };
+                return Complain("Invalid_primInfixOver_ArgType",[]);
+            };
+            return Complain("Invalid_primInfixOver_ArgRequest",[]);
+        };
+        return Complain("Invalid_primInfixOver_Arity",[]);
+    };
+    function primInfixLessEq(cs) {
+        return primNumBin("primInfixLessEq"
+                          , function(x,y){ return x.num*y.den <= y.num*x.den;}
+                          , cs
+                         );
+    };
+    function primInfixLess(cs) {
+        return primNumBin("primInfixLessEq"
+                          , function(x,y){ return x.num*y.den < y.num*x.den;}
+                          , cs
+                         );
+    };
+    function primInfixGreaterEq(cs) {
+        return primNumBin("primInfixLessEq"
+                          , function(x,y){ return x.num*y.den >= y.num*x.den;}
+                          , cs
+                         );
+    };
+    function primInfixGreater(cs) {
+        return primNumBin("primInfixLessEq"
+                          , function(x,y){ return x.num*y.den > y.num*x.den;}
                           , cs
                          );
     };
@@ -505,12 +639,30 @@ function prim(f, vs) {
     switch (f) {
     case "primStringConcat":
         return primStringConcat(vs);
-    case "primNumAdd":
-        return primNumAdd(vs);
-    case "primNumMinus":
-        return primNumMinus(vs);
-    case "primNumMult":
-        return primNumMult(vs);
+    case "primInfixAnd":
+        return primInfixAnd(vs);
+    case "primInfixOr":
+        return primInfixOr(vs);
+    case "primInfixEquals":
+        return primInfixEquals(vs);
+    case "primInfixUnequal":
+        return primInfixUnequal(vs);
+    case "primInfixPlus":
+        return primInfixPlus(vs);
+    case "primInfixMinus":
+        return primInfixMinus(vs);
+    case "primInfixTimes":
+        return primInfixTimes(vs);
+    case "primInfixOver":
+        return primInfixOver(vs);
+    case "primInfixLessEq":
+        return primInfixLessEq(vs);
+    case "primInfixLess":
+        return primInfixLess(vs);
+    case "primInfixGreaterEq":
+        return primInfixGreaterEq(vs);
+    case "primInfixGreater":
+        return primInfixGreater(vs);
     case "primNumToString":
         return primNumToString(vs);
     case "primStringToNum":

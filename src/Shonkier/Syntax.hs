@@ -147,9 +147,25 @@ data OpFax = OpFax
   , spell :: String
   } deriving (Show, Eq)
 
+
+data Dir = LeftOf | RightOf deriving (Show, Eq)
+data WhereAmI
+  = Utopia
+  | Dir :^: OpFax
+  deriving (Show, Eq)
+
+needParens :: OpFax -> WhereAmI -> Bool
+needParens _ Utopia = False
+needParens x (d :^: y) = case compare (tight x) (tight y) of
+  LT -> True
+  EQ -> case (d, assoc y) of
+    (LeftOf, LAsso)  -> False
+    (RightOf, RAsso) -> False
+    _                -> True
+  GT -> False
+
 opChars :: String
 opChars = "-=!\\/<>+*/"
-
 
 prioFax, semiFax, pamaFax, maskFax, overFax, applFax :: OpFax
 prioFax = OpFax {tight = PriT, assoc = RAsso, spell = "Prio"}
@@ -185,19 +201,3 @@ prefixOpFax :: [(String, OpFax)]
 prefixOpFax =
   [ ("!", OpFax {tight = Nega, assoc = RAsso, spell = "Not"})
   ]
-
-data Dir = LeftOf | RightOf deriving (Show, Eq)
-data WhereAmI
-  = Utopia
-  | Dir :^: OpFax
-  deriving (Show, Eq)
-
-needParens :: OpFax -> WhereAmI -> Bool
-needParens _ Utopia = False
-needParens x (d :^: y) = case compare (tight x) (tight y) of
-  LT -> True
-  EQ -> case (d, assoc y) of
-    (LeftOf, LAsso)  -> False
-    (RightOf, RAsso) -> False
-    _                -> True
-  GT -> False
