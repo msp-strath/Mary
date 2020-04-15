@@ -35,12 +35,14 @@ prim nm vs = case lookup nm primitives of
 primitives :: [(Primitive, PRIMITIVE)]
 primitives =
   [ ("primStringConcat"   , primStringConcat)
+  , ("primInfixAnd"       , primInfixAnd)
+  , ("primInfixOr"        , primInfixOr)
   , ("primInfixEquals"    , primInfixEquals)
   , ("primInfixUnequal"   , primInfixUnequal)
   , ("primInfixLessEq"    , primInfixLessEq)
-  , ("primInfixGreaterEq" , primInfixLessEq)
-  , ("primInfixLess"      , primInfixLessEq)
-  , ("primInfixGreater"   , primInfixLessEq)
+  , ("primInfixGreaterEq" , primInfixGreaterEq)
+  , ("primInfixLess"      , primInfixLess)
+  , ("primInfixGreater"   , primInfixGreater)
   , ("primInfixPlus"      , primInfixPlus)
   , ("primInfixMinus"     , primInfixMinus)
   , ("primInfixTimes"     , primInfixTimes)
@@ -104,6 +106,23 @@ primInfixLessEq    = primNumBoo "primInfixLessEq"    (<=)
 primInfixGreaterEq = primNumBoo "primInfixGreaterEq" (>=)
 primInfixLess      = primNumBoo "primInfixLess"      (<)
 primInfixGreater   = primNumBoo "primInfixGreater"   (>)
+
+
+---------------------------------------------------------------------------
+-- BOOLEAN
+
+primBooBin :: String -> (Bool -> Bool -> Bool)
+           -> PRIMITIVE
+primBooBin nm op = \case
+  [CBoolean m, CBoolean n]   -> use (VBoolean (op m n))
+  [Value m, Value n] -> complain ("Invalid_" ++ nm ++ "_ArgType") [m, n]
+  [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
+  _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
+
+primInfixAnd, primInfixOr :: PRIMITIVE
+primInfixAnd = primBooBin "primInfixAnd" (&&)
+primInfixOr  = primBooBin "primInfixOr"  (||)
+
 
 ---------------------------------------------------------------------------
 -- STRING

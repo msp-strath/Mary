@@ -74,6 +74,7 @@ type Value = Value' String ScopedVariable
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
 pattern VBoolean b    = VLit (Boolean b)
+pattern CBoolean b    = Value (VBoolean b)
 pattern CString k str = Value (VString k str)
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
