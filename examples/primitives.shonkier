@@ -1,5 +1,5 @@
 main() -> [ primStringConcat([ "hello" | space" "space], the"world"the, "!")
-            primNumAdd(2.4, 3.6)
+            primInfixPlus(2.4, 3.6)
             this"a test of "th"this
              tofrom(17) fromto("17")
              tofrom(2.5) fromto("2.5")

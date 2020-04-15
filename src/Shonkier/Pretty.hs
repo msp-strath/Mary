@@ -312,5 +312,6 @@ instance InfixHuh ScopedVariable where
 
 instance InfixHuh RawVariable where
   infixHuh (Nothing, x) = infixHuh x        -- ORLY?
+  infixHuh _ = Nothing
 
 

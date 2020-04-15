@@ -34,14 +34,35 @@ prim nm vs = case lookup nm primitives of
 
 primitives :: [(Primitive, PRIMITIVE)]
 primitives =
-  [ ("primStringConcat", primStringConcat)
-  , ("primInfixPlus"   , primInfixPlus)
-  , ("primInfixMinus"  , primInfixMinus)
-  , ("primInfixTimes"  , primInfixTimes)
-  , ("primInfixOver"   , primInfixOver)
-  , ("primNumToString" , primNumToString)
-  , ("primStringToNum" , primStringToNum)
+  [ ("primStringConcat"   , primStringConcat)
+  , ("primInfixEquals"    , primInfixEquals)
+  , ("primInfixUnequal"   , primInfixUnequal)
+  , ("primInfixLessEq"    , primInfixLessEq)
+  , ("primInfixGreaterEq" , primInfixLessEq)
+  , ("primInfixLess"      , primInfixLessEq)
+  , ("primInfixGreater"   , primInfixLessEq)
+  , ("primInfixPlus"      , primInfixPlus)
+  , ("primInfixMinus"     , primInfixMinus)
+  , ("primInfixTimes"     , primInfixTimes)
+  , ("primInfixOver"      , primInfixOver)
+  , ("primNumToString"    , primNumToString)
+  , ("primStringToNum"    , primStringToNum)
   ]
+
+
+---------------------------------------------------------------------------
+-- EQUALS OR NOT
+
+primInfixEquals, primInfixUnequal :: PRIMITIVE
+primInfixEquals [Value x, Value y] = case valueEqHuh x y of
+  Nothing -> complain "'higherOrderEqTest" []
+  Just b  -> use (VBoolean b)
+primInfixEquals _ = complain "Invalid_primInfixEquals_Arity" []
+
+primInfixUnequal [Value x, Value y] = case valueEqHuh x y of
+  Nothing -> complain "'higherOrderEqTest" []
+  Just b  -> use (VBoolean (not b))
+primInfixUnequal _ = complain "Invalid_primInfixUnequal_Arity" []
 
 ---------------------------------------------------------------------------
 -- NUM
@@ -69,6 +90,20 @@ primNumToString = \case
   [Value m] -> complain "Invalid_primNumToString_ArgType" [m]
   [_]       -> complain "Invalid_primNumToString_ArgRequest"[]
   _         -> complain "Invalid_primNumToString_Arity" []
+
+primNumBoo :: String -> (Rational -> Rational -> Bool)
+           -> PRIMITIVE
+primNumBoo nm op = \case
+  [CNum m, CNum n]   -> use (VBoolean (op m n))
+  [Value m, Value n] -> complain ("Invalid_" ++ nm ++ "_ArgType") [m, n]
+  [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
+  _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
+
+primInfixLessEq, primInfixGreaterEq, primInfixLess, primInfixGreater :: PRIMITIVE
+primInfixLessEq    = primNumBoo "primInfixLessEq"    (<=)
+primInfixGreaterEq = primNumBoo "primInfixGreaterEq" (>=)
+primInfixLess      = primNumBoo "primInfixLess"      (<)
+primInfixGreater   = primNumBoo "primInfixGreater"   (>)
 
 ---------------------------------------------------------------------------
 -- STRING

@@ -3,9 +3,6 @@ pipe({'send(x) -> ks},{'recv() -> kr}) -> pipe(ks([]),kr(x))
 pipe({s},v) -> v
 pipe(v,{r}) -> 'abort()
 
-semi(x,y) -> y
-imes(x,y) -> x
-
 runState(, 'get 'put):
 runState(s, v) -> v
 runState(s, {'get() -> k})  -> runState(s, k(s))
@@ -14,7 +11,7 @@ runState(x, {'put(s) -> k}) -> runState(s, k([]))
 map(f,[]) -> []
 map(f,[x|xs]) -> [f(x)|map(f,xs)]
 
-bipper() -> semi('send('get()),semi('put(['bip|'get()]),bipper()))
+bipper() -> 'send('get()); 'put(['bip|'get()]); bipper()
 
 main() -> [ primStringConcat(["hello" | foo" world"foo])
           | runState([],pipe(bipper(),map({x -> 'recv()},[[] [] [] []])))

@@ -50,6 +50,8 @@ type LocalEnv = LocalEnv' String ScopedVariable
 merge :: LocalEnv' a v -> LocalEnv' a v -> LocalEnv' a v
 merge = flip (<>)
 
+
+
 ---------------------------------------------------------------------------
 -- VALUES
 ---------------------------------------------------------------------------
@@ -76,6 +78,29 @@ pattern CString k str = Value (VString k str)
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
 pattern CNil          = Value VNil
+
+
+---------------------------------------------------------------------------
+-- FIRST-ORDER EQUALITY
+---------------------------------------------------------------------------
+
+hoValue :: Value -> Bool
+hoValue (VPrim{})  = True
+hoValue (VFun{})   = True
+hoValue (VThunk{}) = True
+hoValue _          = False
+
+valueEqHuh :: Value -> Value -> Maybe Bool
+valueEqHuh (VAtom a)     (VAtom b)     = Just (a == b)
+valueEqHuh (VLit a)      (VLit b)      = Just (a == b)
+valueEqHuh VNil          VNil          = Just True
+valueEqHuh (VCell a b)   (VCell c d)   = (&&)
+  <$> valueEqHuh a c
+  <*> valueEqHuh b d
+valueEqHuh (VString _ a) (VString _ b) = Just (a == b)
+valueEqHuh x y | hoValue x || hoValue y = Nothing
+valueEqHuh _ _ = Just False
+
 
 ---------------------------------------------------------------------------
 -- EXPLICIT ENVIRONMENTS
