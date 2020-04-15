@@ -35,6 +35,7 @@ prim nm vs = case lookup nm primitives of
 primitives :: [(Primitive, PRIMITIVE)]
 primitives =
   [ ("primStringConcat"   , primStringConcat)
+  , ("primPrefixNot"      , primPrefixNot)
   , ("primInfixAnd"       , primInfixAnd)
   , ("primInfixOr"        , primInfixOr)
   , ("primInfixEquals"    , primInfixEquals)
@@ -110,6 +111,13 @@ primInfixGreater   = primNumBoo "primInfixGreater"   (>)
 
 ---------------------------------------------------------------------------
 -- BOOLEAN
+
+primPrefixNot :: PRIMITIVE
+primPrefixNot = \case
+  [CBoolean b]   -> use (VBoolean (not b))
+  [Value n]      -> complain ("Invalid_primPrefixNot_ArgType") [n]
+  [_]            -> complain ("Invalid_primPrefixNot_ArgRequest") []
+  _              -> complain ("Invalid_primPrefixNot_Arity") []
 
 primBooBin :: String -> (Bool -> Bool -> Bool)
            -> PRIMITIVE

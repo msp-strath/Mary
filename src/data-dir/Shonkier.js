@@ -488,6 +488,20 @@ function prim(f, vs) {
                           , cs
                          );
     };
+    function primPrefixNot(cs) {
+        if (hasLength(cs) && cs.length == 1) {
+            if (cs[0].tag == "Value" &&
+                cs[0].value.tag == "Lit") {
+                var x = cs[0].value.literal;
+                if (boolean(x)) {
+                    return Use(Lit(!x));
+                };
+                return Complain("Invalid_primPrefixNot_ArgType",[]);
+            };
+            return Complain("Invalid_primPrefixNot_ArgRequest",[]);
+        };
+        return Complain("Invalid_primPrefixNot_Arity",[]);
+    };
     function primInfixEquals(cs) {
         if (hasLength(cs) && cs.length == 2) {
             if (cs[0].tag == "Value" && cs[1].tag == "Value") {
@@ -639,6 +653,8 @@ function prim(f, vs) {
     switch (f) {
     case "primStringConcat":
         return primStringConcat(vs);
+    case "primPrefixNot":
+        return primPrefixNot(vs);
     case "primInfixAnd":
         return primInfixAnd(vs);
     case "primInfixOr":

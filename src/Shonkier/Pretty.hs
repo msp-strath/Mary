@@ -209,11 +209,16 @@ instance (Pretty v, InfixHuh v) => Pretty (Term' String v) where
       Nil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts      -> case (f, ts) of
-        (Var v, [l, r])  -- FIXME: that _ is suspicious
+        (Var v, [l, r])
           | Just (o, f) <- infixHuh v
           -> parensIf f w $
-             prettyPrec (LeftOf :^: f) l -- FIXME: left associativity baked in
+             prettyPrec (LeftOf :^: f) l
              <+> annotate AnnOperator (pretty o)
+             <+> prettyPrec (RightOf :^: f) r
+        (Var v, [r])
+          | Just (o, f) <- prefixHuh v
+          -> parensIf f w $
+             annotate AnnOperator (pretty o)
              <+> prettyPrec (RightOf :^: f) r
         _ -> ppApp (prettyPrec (LeftOf :^: applFax) f) ts
       Semi l r      -> parensIf semiFax w $
@@ -299,6 +304,7 @@ instance (Pretty v, InfixHuh v) => Pretty (Module' String v) where
 
 class InfixHuh v where
   infixHuh :: v -> Maybe (String, OpFax)
+  prefixHuh :: v -> Maybe (String, OpFax)
 
 instance InfixHuh Variable where
   infixHuh x
@@ -306,12 +312,20 @@ instance InfixHuh Variable where
     , [x] <- [x | x@(_, y) <- infixOpFax, spell y == i]
     = Just x
     | otherwise = Nothing
+  prefixHuh x
+    | Just i <- stripPrefix "primPrefix" x
+    , [x] <- [x | x@(_, y) <- prefixOpFax, spell y == i]
+    = Just x
+    | otherwise = Nothing
 
 instance InfixHuh ScopedVariable where
   infixHuh (_ :.: x) = infixHuh x        -- ORLY?
+  prefixHuh (_ :.: x) = prefixHuh x        -- ORLY?
 
 instance InfixHuh RawVariable where
   infixHuh (Nothing, x) = infixHuh x        -- ORLY?
   infixHuh _ = Nothing
+  prefixHuh (Nothing, x) = prefixHuh x        -- ORLY?
+  prefixHuh _ = Nothing
 
 
