@@ -52,7 +52,7 @@ convert([])     -> 0
 convert([d|ds]) -> d + 10 * convert(ds)
 
 
-parens(p) -> { [_ v _] -> v }([is("(") p() is(")")])
+parens(p) -> { ['1 v '1] -> v }([is("(") p() is(")")])
 
 chain(i,c,a) -> reduce(i(),many({[c() a()]}))
 

@@ -24,11 +24,11 @@ import Utils.List
 
 data Annotation
   = AnnAtom
+  | AnnBoolean  -- wasn't she married to Henry VIII?
   | AnnError
   | AnnFunction
   | AnnKeyword
   | AnnNumeric
-  | AnnBoolean  -- wasn't she married to Henry VIII?
   | AnnOperator
   | AnnPrimitive
   | AnnSplice

@@ -35,7 +35,7 @@
   globalEnv["number"] = {};
   globalEnv["number"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"convert"),[App(Var(GlobalVar(false,"."),"reverse"),[App(Var(GlobalVar(false,"."),"some"),[Var(GlobalVar(false,"."),"digit")])])]))]);
   globalEnv["parens"] = {};
-  globalEnv["parens"]["."] = VFun(null,{},[],[Clause([Value("p")],App(Fun([],[Clause([Value(Cell(PWild,Cell("v",Cell(PWild,Nil()))))],Var(LocalVar(),"v"))]),[Cell(App(Var(GlobalVar(false,"."),"is"),[Stringy("(")]),Cell(App(Var(LocalVar(),"p"),[]),Cell(App(Var(GlobalVar(false,"."),"is"),[Stringy(")")]),Nil())))]))]);
+  globalEnv["parens"]["."] = VFun(null,{},[],[Clause([Value("p")],App(Fun([],[Clause([Value(Cell(Lit(true),Cell("v",Cell(Lit(true),Nil()))))],Var(LocalVar(),"v"))]),[Cell(App(Var(GlobalVar(false,"."),"is"),[Stringy("(")]),Cell(App(Var(LocalVar(),"p"),[]),Cell(App(Var(GlobalVar(false,"."),"is"),[Stringy(")")]),Nil())))]))]);
   globalEnv["plus"] = {};
   globalEnv["plus"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"chain"),[Var(GlobalVar(false,"."),"mult"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"."),"is"),[Stringy("+")]),Atom("Plus")))]),Var(GlobalVar(false,"."),"mult")]))]);
   globalEnv["primInfixAnd"] = {};
@@ -136,7 +136,7 @@
 <span class="shonkier-function">convert</span>([]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-numeric">0</span><br />
 <span class="shonkier-function">convert</span>([d|ds]) <span class="shonkier-operator">-&gt;</span> d <span class="shonkier-operator">+</span> <span class="shonkier-numeric">10</span> <span class="shonkier-operator">*</span> convert(ds)<br />
 <br />
-<span class="shonkier-function">parens</span>(p) <span class="shonkier-operator">-&gt;</span> {[_ v _] <span class="shonkier-operator">-&gt;</span> v}([is(<span class="shonkier-string">"("</span>) p() is(<span class="shonkier-string">")"</span>)])<br />
+<span class="shonkier-function">parens</span>(p) <span class="shonkier-operator">-&gt;</span> {[<span class="shonkier-boolean">'1</span> v <span class="shonkier-boolean">'1</span>] <span class="shonkier-operator">-&gt;</span> v}([is(<span class="shonkier-string">"("</span>) p() is(<span class="shonkier-string">")"</span>)])<br />
 <br />
 <span class="shonkier-function">chain</span>(i, c, a) <span class="shonkier-operator">-&gt;</span> reduce(i(), many({[c() a()]}))<br />
 <br />
