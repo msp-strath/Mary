@@ -17,7 +17,7 @@
   globalEnv["chain"] = {};
   globalEnv["chain"]["."] = VFun(null,{},[],[Clause([Value("i"),Value("c"),Value("a")],App(Var(GlobalVar(false,"."),"reduce"),[App(Var(LocalVar(),"i"),[]),App(Var(GlobalVar(false,"."),"many"),[Fun([],[Clause([],Cell(App(Var(LocalVar(),"c"),[]),Cell(App(Var(LocalVar(),"a"),[]),Nil())))])])]))]);
   globalEnv["convert"] = {};
-  globalEnv["convert"]["."] = VFun(null,{},[],[Clause([Value(Nil())],Lit(LitNum(0,1))),Clause([Value(Cell("d","ds"))],App(Var(OutOfScope(),"primNumAdd"),[Var(LocalVar(),"d"),App(Var(OutOfScope(),"primNumMult"),[Lit(LitNum(10,1)),App(Var(GlobalVar(false,"."),"convert"),[Var(LocalVar(),"ds")])])]))]);
+  globalEnv["convert"]["."] = VFun(null,{},[],[Clause([Value(Nil())],Lit(LitNum(0,1))),Clause([Value(Cell("d","ds"))],App(Var(GlobalVar(false,"."),"primInfixPlus"),[Var(LocalVar(),"d"),App(Var(GlobalVar(false,"."),"primInfixTimes"),[Lit(LitNum(10,1)),App(Var(GlobalVar(false,"."),"convert"),[Var(LocalVar(),"ds")])])]))]);
   globalEnv["digit"] = {};
   globalEnv["digit"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"satisfy"),[Var(GlobalVar(false,"."),"isDigit")]))]);
   globalEnv["fromJust"] = {};
@@ -94,6 +94,7 @@
 <form method="post">
 <h1 id="huttons-razor">Hutton’s razor</h1>
 <p>The following AST</p>
+['Plus ['Mult 31 13] ['Mult 24 42]]
 <p>is obtained by running the following program</p>
 <div class="shonkier-pretty">
 <span class="shonkier-function">main</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Plain</span><br />
@@ -146,7 +147,7 @@
 <span class="shonkier-function">reverseAcc</span>(acc, [x|xs]) <span class="shonkier-operator">-&gt;</span> reverseAcc([x|acc], xs)<br />
 <br />
 <span class="shonkier-function">convert</span>([]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-numeric">0</span><br />
-<span class="shonkier-function">convert</span>([d|ds]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-primitive">primNumAdd</span>(d, <span class="shonkier-primitive">primNumMult</span>(<span class="shonkier-numeric">10</span>, convert(ds)))<br />
+<span class="shonkier-function">convert</span>([d|ds]) <span class="shonkier-operator">-&gt;</span> d <span class="shonkier-operator">+</span> <span class="shonkier-numeric">10</span> <span class="shonkier-operator">*</span> convert(ds)<br />
 <br />
 <span class="shonkier-function">isOperator</span>(<span class="shonkier-numeric">0</span>, <span class="shonkier-string">"*"</span>) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Mult</span>]<br />
 <span class="shonkier-function">isOperator</span>(<span class="shonkier-numeric">1</span>, <span class="shonkier-string">"+"</span>) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Plus</span>]<br />

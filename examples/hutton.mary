@@ -59,7 +59,7 @@ reverseAcc(acc,[])     -> acc
 reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
 
 convert([])     -> 0
-convert([d|ds]) -> primNumAdd(d, primNumMult(10,convert(ds)))
+convert([d|ds]) -> d + 10 * convert(ds)
 
 isOperator(0,"*") -> ['Mult]
 isOperator(1,"+") -> ['Plus]

@@ -17,7 +17,7 @@
   globalEnv["greet"] = {};
   globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("POST"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("GET"),[Stringy("page")]),Nil()))))))]);
   globalEnv["numberGame"] = {};
-  globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(OutOfScope(),"primNumAdd"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
+  globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(GlobalVar(false,"."),"primInfixPlus"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -64,6 +64,7 @@ Seven weeks of staying up all night</textarea>
 <p><input value="Submit answers and essay" type="submit"></p>
 <h2 id="using-the-inputs">Using the inputs</h2>
 <p>Hello Eric! You are on page /examples/forms.mary</p>
+<p>Wrong, the right number was 8. Better luck next time!</p>
 </form>
 </body>
 </html>
