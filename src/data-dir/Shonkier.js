@@ -374,8 +374,11 @@ function Use(v) {
 function Handle(c,i,as,k) {
     return {tag: 1, cmd: c, inx: i, args: as, cont: k};
 };
+function RequestAtomic(a,as) {
+    return Handle(a,0,as,null);
+};
 function Complain(c,as) {
-    return Handle(c,0,as,null);
+    return RequestAtomic(c,as);
 };
 // push states, ie those which grow ctx
 function Eval(rho, t) {
@@ -751,9 +754,39 @@ function shonkier(glob,inputs,t) {
         };
     };
 
+    function handleInputs(a, vs, k) {
+        if (hasLength(vs) && vs.length == 1 && stringy(vs[0].literal)) {
+            var f = vs[0].literal;
+            // preprocess the array key depending on the effect
+            switch (a) {
+            case "POST":
+                f = "POST_" + f;
+                break;
+            case "GET":
+                f = "GET_" + f;
+                break;
+            }
+            var v = inputs[f];
+            if (v != undefined) {
+                kpush(k);
+                return Use(Lit(v));
+            } else { return Complain("UnknownInput", state.args); }
+        } else {return Complain("IncorrectInputRequest", state.args); }
+    }
+
     var state = Eval({},t);
-    while (state.tag > 1 || !(done())) // done when ctx is null in a pop state
+    while (true) // returns when conditions in `if`s are true (ctx is null in a pop state)
     {
+        if (state.tag == 0 && done()) { return Value(state.val); };
+        if (state.tag == 1 && done()) {
+            //unhandled request for the world; some the world can handle
+            if (["POST", "GET", "meta"].indexOf(state.cmd) != -1) {
+                state = handleInputs(state.cmd, state.args, state.cont);
+                continue;
+            }
+            return Request(state.cmd,state.args,state.cont);
+        }
+
         switch (state.tag) {
         case 0: // Use
             pop();
@@ -963,7 +996,7 @@ function shonkier(glob,inputs,t) {
             switch (state.fun.tag) {
             case "Atom":
                 for (i = 0; i < args.length; i++) { args[i] = args[i].value; }
-                state = Complain(state.fun.atom,args);
+                state = RequestAtomic(state.fun.atom,args);
                 continue;
             case "VPrim":
                 state = prim(state.fun.prim, args);
@@ -1001,9 +1034,6 @@ function shonkier(glob,inputs,t) {
             continue;
         };
     };
-    if (state.tag==0) { return Value(state.val); }
-    if (state.tag==1) { return Request(state.cmd,state.args,state.cont); }
-    return null;
 };
 
 function renderList(a,b) {

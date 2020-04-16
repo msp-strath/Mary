@@ -33,8 +33,7 @@ abort = complain abortA []
 -- how to complain
 
 complain :: String -> [Value] -> Shonkier Computation
-complain a vs = handle (a, vs) CnNil
-
+complain c vs = request c vs
 
 -- environments
 
@@ -269,7 +268,7 @@ app f cz rho = \case
       -- Atomic functions i.e. requests only ever offer
       -- to handle the empty list of requests.
       let vs = map unsafeComToValue (cz <>> []) in
-      complain a vs
+      request a vs
     FPrim p         -> prim p (cz <>> [])
     FFun {-frs-} sig cs -> {- do cont frs -}
                           call sig cs (cz <>> [])
@@ -287,15 +286,16 @@ unsafeComToValue = \case
 handleInput :: Request -> Continuation -> Shonkier Computation
 handleInput (a, vs) k = case vs of
   [VString _ f] -> do
+    -- preprocess the array key depending on the effect
     let f' = case a of
           "POST" -> "POST_" <> f
           "GET" -> "GET_"  <> f
           _       -> f
     inputLookup f' >>= \case
-      Nothing -> complain "UnknownInput" vs
       Just v -> do
         cont k
         use v
+      Nothing -> complain "UnknownInput" vs
   _             -> complain "IncorrectInputRequest" vs
 
 handle :: Request
@@ -322,6 +322,11 @@ handle r@(a, _) k = go (Right k) 0 where
           else go (Left hs) (i - 1)
       Masking b | a == b -> go (Left hs) (i + 1)
       _ -> go (Left hs) i
+
+-- used for atomic requests
+request :: String -> [Value] -> Shonkier Computation
+request a vs = handle (a, vs) CnNil
+
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
 call rho []                cs = abort

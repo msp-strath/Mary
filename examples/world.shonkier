@@ -1,0 +1,6 @@
+// we can handle effects before they get to the world
+catchPOST('POST):
+catchPOST({'POST(f) -> k}) -> catchPOST(k("Moon"))
+catchPOST(x) -> x
+
+main() -> catchPOST(["Hello" 'POST("World")])
