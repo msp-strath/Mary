@@ -21,6 +21,8 @@ gamma('OutOfScope):
 gamma({'OutOfScope(x) -> k}) -> gamma(k('mungo(x) ?> 'bungo(x)))
 gamma(x) -> x
 
+// under k-use, this aborts
+// under k-eval, this gives [12 13]
 main() -> [ mungo(bungo(gamma(moo + boo ?> 13)))
             mungo(bungo(gamma(moo + foo ?> 13)))
           ]
