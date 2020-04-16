@@ -1,11 +1,14 @@
-{-# LANGUAGE MultiWayIf            #-}
-{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE MultiWayIf           #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shonkier.Pretty where
 
 import Data.Char
 import Data.Foldable
 import Data.Function
+import qualified Data.Map as Map
 import Data.List (isPrefixOf, intersperse, groupBy, stripPrefix)
 import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
@@ -14,6 +17,7 @@ import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
 import qualified Data.Text.Prettyprint.Doc as P
 
+import Shonkier.FreeVars
 import Shonkier.Syntax
 import Shonkier.Value
 import Utils.List
@@ -126,11 +130,19 @@ ppFun hs [cl] = enclose lbrace rbrace $ pretty cl
 ppFun hs cls  = hang 0 $ enclose lbrace rbrace
               $ (hang 0 $ pretty cls) <> line
 
-ppClause :: (Pretty v, InfixHuh v) => Clause' String v -> Doc
+ppMatch :: (Pretty a, Pretty b) => WhereAmI -> a -> b -> Doc
+ppMatch w p t = parensIf pamaFax w $
+  pretty p <+> assignment <+> prettyPrec (RightOf :^: pamaFax) t
+
+ppSemi :: (Pretty a, Pretty b) => WhereAmI -> a -> b -> Doc
+ppSemi w l r = parensIf semiFax w $
+  prettyPrec (LeftOf :^: semiFax) l <> semi <+> prettyPrec (RightOf :^: semiFax) r
+
+ppClause :: (FreeVars v, Pretty v, InfixHuh v) => Clause' String v -> Doc
 ppClause ([], [Nothing :?> t])  = pretty t
 ppClause (ps, rs) = hsep (pretty <$> ps) <+> ppRights rs
 
-ppRights :: (Pretty v, InfixHuh v) => [Rhs' String v] -> Doc
+ppRights :: (FreeVars v, Pretty v, InfixHuh v) => [Rhs' String v] -> Doc
 ppRights [Nothing :?> t] = hsep [arrow, pretty t]
 ppRights rs              = hsep (map pretty rs)
 
@@ -198,7 +210,7 @@ instance Pretty ScopedVariable where
     OutOfScope         -> annotate AnnError $ pretty x
     InvalidNamespace _ -> annotate AnnError $ pretty x
 
-instance (Pretty v, InfixHuh v) => Pretty (Term' String v) where
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' String v) where
   pretty = prettyPrec Utopia
   prettyPrec w t = case listView t of
     ([], Just _) -> case t of
@@ -221,23 +233,20 @@ instance (Pretty v, InfixHuh v) => Pretty (Term' String v) where
              annotate AnnOperator (pretty o)
              <+> prettyPrec (RightOf :^: f) r
         _ -> ppApp (prettyPrec (LeftOf :^: applFax) f) ts
-      Semi l r      -> parensIf semiFax w $
-        prettyPrec (LeftOf :^: semiFax) l <> semi <+> prettyPrec (RightOf :^: semiFax) r
+      Semi l r      -> ppSemi w l r
       Prio l r      -> parensIf prioFax w $
         prettyPrec (LeftOf :^: prioFax) l <+> prioritize <+> prettyPrec (RightOf :^:prioFax) r
       Fun hs cls    -> ppFun hs cls
-      Match p t     -> parensIf pamaFax w $
-        pretty p <+> assignment <+> prettyPrec (RightOf :^: pamaFax) t
+      Match p t     -> ppMatch w p t
       Mask a t      -> parensIf maskFax w $
         ppAtom a <+> mask <+> prettyPrec (RightOf :^: maskFax) t
     it -> ppList it
 
-instance (Pretty v, InfixHuh v) => Pretty (Clause' String v) where
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Clause' String v) where
   pretty = ppClause
-
   prettyList = vcat . map pretty
 
-instance (Pretty v, InfixHuh v) => Pretty (Rhs' String v) where
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Rhs' String v) where
   pretty (mg :?> t) = hsep (pipe : foldMap (pure . pretty) mg ++ [arrow, pretty t])
 
 instance Pretty PValue where
@@ -259,25 +268,44 @@ instance Pretty PComputation where
     PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, arrow, pretty v]
     PThunk v           -> braces $ pretty v
 
-instance Pretty Value where
-  pretty v = case listView v of
+data VMatch' a v = VMatch Variable (Value' a v)
+
+instance (FreeVars v, SelfListView (Value' String v), Pretty v, InfixHuh v) =>
+         Pretty (VMatch' String v) where
+  pretty = prettyPrec Utopia
+  prettyPrec w (VMatch k v) = ppMatch w k v
+
+instance (FreeVars v, Pretty v, SelfListView (Value' String v), InfixHuh v) =>
+         Pretty ([VMatch' String v], Term' String v) where
+  pretty = prettyPrec Utopia
+  prettyPrec w ([], t)    = prettyPrec w t
+  prettyPrec w (kv:kvs,t) = ppSemi w kv (kvs, t)
+
+instance (SelfListView (Value' String v), FreeVars v, Pretty v, InfixHuh v) =>
+         Pretty (Value' String v) where
+  pretty = prettyPrec Utopia
+  prettyPrec w v = case listView v of
     ([], Just _) -> case v of
-      VAtom a          -> ppAtom a
-      VLit l           -> pretty l
-      VString k t      -> ppStringLit k t
-      VPrim f _        -> pretty f
-      VNil             -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
-      VCell a b        -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      VFun _ _ hs cls  -> ppFun hs cls
-      VThunk c         -> braces $ pretty c
+      VAtom a           -> ppAtom a
+      VLit l            -> pretty l
+      VString k t       -> ppStringLit k t
+      VPrim f _         -> pretty f
+      VNil              -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
+      VCell a b         -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
+      VFun _ rho hs cls ->
+        let plocal = Map.toList $ Map.restrictKeys rho (freeVars cls)
+        in prettyPrec w (uncurry VMatch <$> plocal, Fun hs cls)
+      VThunk c          -> braces $ pretty c
     it -> ppList it
 
-instance Pretty Computation where
+instance (SelfListView (Value' String v), FreeVars v, Pretty v, InfixHuh v) =>
+         Pretty (Computation' String v) where
   pretty = \case
     Value v             -> pretty v
     Request (a, vs) frs -> ppApp (ppAtom a) vs
 
-instance (Pretty v, InfixHuh v) => Pretty (String, Either [[String]] (Clause' String v)) where
+instance (FreeVars v, Pretty v, InfixHuh v) =>
+         Pretty (String, Either [[String]] (Clause' String v)) where
   prettyList = vcat
              . intersperse ""
              . map (vcat . map pretty)
@@ -295,7 +323,7 @@ instance Pretty (FilePath, Maybe Namespace) where
     annotate AnnKeyword "import" <+> pretty fp
     <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
-instance (Pretty v, InfixHuh v) => Pretty (Module' String v) where
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Module' String v) where
   pretty (is, p) = pretty is <> pretty p
 
 

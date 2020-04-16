@@ -1,3 +1,5 @@
+{-# LANGUAGE ConstraintKinds #-}
+
 module Utils.List where
 
 import Control.Arrow
@@ -27,6 +29,8 @@ class HasListView a la where
     ItsNil       -> ([], Nothing)
     ItsCons x xs -> first (x :) $ listView xs
     ItsNot       -> ([], Just seed)
+
+type SelfListView la = HasListView la la
 
 longestCommonPrefix :: Eq a => [[a]] -> [a]
 longestCommonPrefix [] = []
