@@ -2,11 +2,12 @@
 
 module Shonkier.ShonkierJS where
 
+import Data.Char
 import Data.Text (Text, pack)
 import qualified Data.Text as T
 import Data.List
 import Data.Ratio
-import Data.Map (foldMapWithKey)
+import Data.Map (Map, foldMapWithKey)
 
 import Shonkier.Syntax
 import Shonkier.Value
@@ -82,13 +83,23 @@ instance JS (PValue' String) where
 
 jsText :: Text -> [Text]
 jsText t
-  | T.any (`elem` ['"', '\\']) t = [T.pack (show t)]
+  | T.any (\ z -> z `elem` ['"', '\\'] || isControl z) t = [T.pack (show t)]
   | otherwise = ["\"", t, "\""]
 
 jsStringy :: JS x => [(Text, x)] -> Text -> [Text]
 jsStringy []             u = jsText u
 jsStringy ((t, x) : txs) u =
   ["Strunk("] ++ jsText t ++ [","] ++ js x ++ [","] ++ jsStringy txs u ++ [")"]
+
+jsInputs :: Map Text Text -> [Text]
+jsInputs inp =
+  "var inputs = {};\n" :
+  ((`foldMapWithKey` inp) $ \ field val ->
+    pure $ T.concat $ ["inputs["] ++
+                      jsText field ++
+                      ["] = "] ++
+                      jsText val ++
+                      [";\n"])
 
 jsGlobalEnv :: GlobalEnv -> [Text]
 jsGlobalEnv gl =
@@ -108,4 +119,4 @@ jsGlobalEnv gl =
     _ -> [])
 
 jsRun :: Term -> [Text]
-jsRun t = [ "console.log(render(shonkier(globalEnv,"] ++ js t ++ [")));"]
+jsRun t = [ "console.log(render(shonkier(globalEnv,inputs,"] ++ js t ++ [")));"]

@@ -47,6 +47,7 @@ process doc0@(Pandoc meta docs) = do
            $ doc1
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
+       . setMeta "jsInputs" (fromList $ Str <$> jsInputs inputs)
        $ doc2
 
   where

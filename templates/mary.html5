@@ -33,6 +33,12 @@ $if(jsGlobalEnv)$
   $jsGlobalEnv$
   </script>
 $endif$
+$if(jsInputs)$
+  <script>
+  $jsInputs$
+  </script>
+$endif$
+
 </head>
 <body>
 <form method="post">
