@@ -15,7 +15,7 @@
   globalEnv["concat"] = {};
   globalEnv["concat"]["."] = VFun(null,{},[],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]);
   globalEnv["greet"] = {};
-  globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("field"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("param"),[Stringy("page")]),Nil()))))))]);
+  globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("POST"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("GET"),[Stringy("page")]),Nil()))))))]);
   globalEnv["numberGame"] = {};
   globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(OutOfScope(),"primNumAdd"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
   globalEnv["primInfixAnd"] = {};

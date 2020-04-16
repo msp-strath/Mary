@@ -20,13 +20,13 @@ greet()
 ```
 
 ```mary
-numberGame('field(concat("num","ber")))
+numberGame('POST(concat("num","ber")))
 ```
 
 ```mary-def
 concat(x, y) -> "`x``y`"
 
-greet() -> ['Para "Hello " 'field("name") "! You are on page " 'param("page")]
+greet() -> ['Para "Hello " 'POST("name") "! You are on page " 'GET("page")]
 numberGame(guess) ->
   ['Para "Wrong, the right number was "
          primNumToString(primNumAdd(primStringToNum(guess),1))

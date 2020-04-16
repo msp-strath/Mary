@@ -287,8 +287,8 @@ handleInput :: Request -> Continuation -> Shonkier Computation
 handleInput (a, vs) k = case vs of
   [VString _ f] -> do
     let f' = case a of
-          "field" -> "POST_" <> f
-          "param" -> "GET_"  <> f
+          "POST" -> "POST_" <> f
+          "GET" -> "GET_"  <> f
           _       -> f
     inputLookup f' >>= \case
       Nothing -> complain "UnknownInput" vs
@@ -304,7 +304,7 @@ handle r@(a, _) k = go (Right k) 0 where
   -- do we get away with not making the number part of the request?
   go x i = leap x >>= \case
     Left k
-      | a `elem` ["field", "param", "meta"] && i == 0 -> handleInput r k
+      | a `elem` ["POST", "GET", "meta"] && i == 0 -> handleInput r k
       | otherwise -> return (Request r k)
     Right (hs, (fr, k)) -> case fr of
       AppR f cz (es, rho) as | a `elem` es ->
