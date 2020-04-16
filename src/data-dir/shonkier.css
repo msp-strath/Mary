@@ -13,6 +13,10 @@
     color: #008b8b;
 }
 
+.shonkier-pretty .shonkier-boolean {
+    color: #008b8b;
+}
+
 .shonkier-pretty .shonkier-error {
     background-color: red;
 }
@@ -35,6 +39,10 @@
 
 .shonkier-pretty .shonkier-primitive {
     color: #483d8b;
+}
+
+.shonkier-pretty .shonkier-splice {
+    color: black;
 }
 
 .shonkier-pretty .shonkier-string {
