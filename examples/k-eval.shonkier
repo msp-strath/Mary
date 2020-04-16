@@ -1,0 +1,28 @@
+// mungo provides the service 'mungo which offers to look up things but might fail
+// mungo knows moo is 5
+// if mungo doesn't know what the thing is, it sends an 'abort to its continuation
+mungo('mungo):
+mungo({'mungo("moo") -> k}) -> mungo(k(5))
+mungo({'mungo(_) -> k}) -> mungo(k('abort()))
+mungo(x) -> x
+
+// bungo provides the service 'bungo which offers to look up things but might fail
+// bungo knows boo is 7
+// bungo also sends aborts
+bungo('bungo):
+bungo({'bungo("boo") -> k}) -> bungo(k(7))
+bungo({'bungo(_) -> k}) -> bungo(k('abort()))
+bungo(x) -> x
+
+// gamma handles the eval-generated 'OutOfScope effect by asking mungo then bungo:
+// under k-eval semantics, gamma's ?> will handle any 'abort received by 'mungo's
+// continuation
+gamma('OutOfScope):
+gamma({'OutOfScope(x) -> k}) -> gamma(k('mungo(x) ?> 'bungo(x)))
+gamma(x) -> x
+
+// under k-use, this aborts
+// under k-eval, this gives [12 13]
+main() -> [ mungo(bungo(gamma(moo + boo ?> 13)))
+            mungo(bungo(gamma(moo + foo ?> 13)))
+          ]
