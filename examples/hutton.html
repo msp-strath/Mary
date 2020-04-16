@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
   <script>
   var globalEnv = {};
+  globalEnv["atom"] = {};
+  globalEnv["atom"]["."] = VFun(null,{},[],[Clause([],App(Atom("choice"),[Var(GlobalVar(false,"."),"number"),Fun([],[Clause([],App(Var(GlobalVar(false,"."),"parens"),[Var(GlobalVar(false,"."),"plus")]))])]))]);
   globalEnv["chain"] = {};
   globalEnv["chain"]["."] = VFun(null,{},[],[Clause([Value("i"),Value("c"),Value("a")],App(Var(GlobalVar(false,"."),"reduce"),[App(Var(LocalVar(),"i"),[]),App(Var(GlobalVar(false,"."),"many"),[Fun([],[Clause([],Cell(App(Var(LocalVar(),"c"),[]),Cell(App(Var(LocalVar(),"a"),[]),Nil())))])])]))]);
   globalEnv["convert"] = {};
@@ -20,22 +22,22 @@
   globalEnv["digit"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"satisfy"),[Var(GlobalVar(false,"."),"isDigit")]))]);
   globalEnv["hutton"] = {};
   globalEnv["hutton"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"plus"),[]))]);
+  globalEnv["is"] = {};
+  globalEnv["is"]["."] = VFun(null,{},[],[Clause([Value("c")],App(Var(GlobalVar(false,"."),"satisfy"),[Fun([],[Clause([Value("d")],App(Var(GlobalVar(false,"."),"primInfixEquals"),[Var(LocalVar(),"c"),Var(LocalVar(),"d")]))])]))]);
   globalEnv["isDigit"] = {};
   globalEnv["isDigit"]["."] = VFun(null,{},[],[Clause([Value(Stringy("0"))],Lit(LitNum(0,1))),Clause([Value(Stringy("1"))],Lit(LitNum(1,1))),Clause([Value(Stringy("2"))],Lit(LitNum(2,1))),Clause([Value(Stringy("3"))],Lit(LitNum(3,1))),Clause([Value(Stringy("4"))],Lit(LitNum(4,1))),Clause([Value(Stringy("5"))],Lit(LitNum(5,1))),Clause([Value(Stringy("6"))],Lit(LitNum(6,1))),Clause([Value(Stringy("7"))],Lit(LitNum(7,1))),Clause([Value(Stringy("8"))],Lit(LitNum(8,1))),Clause([Value(Stringy("9"))],Lit(LitNum(9,1)))]);
-  globalEnv["isOperator"] = {};
-  globalEnv["isOperator"]["."] = VFun(null,{},[],[Clause([Value(Lit(LitNum(0,1))),Value(Stringy("*"))],Atom("Mult")),Clause([Value(Lit(LitNum(1,1))),Value(Stringy("+"))],Atom("Plus"))]);
   globalEnv["main"] = {};
-  globalEnv["main"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"."),"primStringConcat"),[App(Var(GlobalVar(false,"."),"printTree"),[App(Var(GlobalVar(false,"."),"runParser"),[Stringy("31*13+24*42"),App(Var(GlobalVar(false,"."),"hutton"),[])])])]),Nil())))]);
+  globalEnv["main"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"."),"printTree"),[App(Var(GlobalVar(false,"."),"runParser"),[Stringy("31*(13+7*2)+24*42"),App(Var(GlobalVar(false,"."),"hutton"),[])])]),Nil())))]);
   globalEnv["many"] = {};
   globalEnv["many"]["."] = VFun(null,{},[],[Clause([Value("p")],App(Atom("choice"),[Fun([],[Clause([],App(Var(GlobalVar(false,"."),"some"),[Var(LocalVar(),"p")]))]),Fun([],[Clause([],Nil())])]))]);
   globalEnv["mult"] = {};
-  globalEnv["mult"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"chain"),[Var(GlobalVar(false,"."),"number"),Fun([],[Clause([],App(Var(GlobalVar(false,"."),"operator"),[Lit(LitNum(0,1))]))]),Var(GlobalVar(false,"."),"number")]))]);
+  globalEnv["mult"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"chain"),[Var(GlobalVar(false,"."),"atom"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"."),"is"),[Stringy("*")]),Atom("Mult")))]),Var(GlobalVar(false,"."),"atom")]))]);
   globalEnv["number"] = {};
   globalEnv["number"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"convert"),[App(Var(GlobalVar(false,"."),"reverse"),[App(Var(GlobalVar(false,"."),"some"),[Var(GlobalVar(false,"."),"digit")])])]))]);
-  globalEnv["operator"] = {};
-  globalEnv["operator"]["."] = VFun(null,{},[],[Clause([Value("k")],App(Var(GlobalVar(false,"."),"satisfy"),[Fun([],[Clause([Value("c")],App(Var(GlobalVar(false,"."),"isOperator"),[Var(LocalVar(),"k"),Var(LocalVar(),"c")]))])]))]);
+  globalEnv["parens"] = {};
+  globalEnv["parens"]["."] = VFun(null,{},[],[Clause([Value("p")],App(Fun([],[Clause([Value(Cell(PWild,Cell("v",Cell(PWild,Nil()))))],Var(LocalVar(),"v"))]),[Cell(App(Var(GlobalVar(false,"."),"is"),[Stringy("(")]),Cell(App(Var(LocalVar(),"p"),[]),Cell(App(Var(GlobalVar(false,"."),"is"),[Stringy(")")]),Nil())))]))]);
   globalEnv["plus"] = {};
-  globalEnv["plus"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"chain"),[Var(GlobalVar(false,"."),"mult"),Fun([],[Clause([],App(Var(GlobalVar(false,"."),"operator"),[Lit(LitNum(1,1))]))]),Var(GlobalVar(false,"."),"mult")]))]);
+  globalEnv["plus"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"chain"),[Var(GlobalVar(false,"."),"mult"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"."),"is"),[Stringy("+")]),Atom("Plus")))]),Var(GlobalVar(false,"."),"mult")]))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -69,7 +71,7 @@
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
   globalEnv["printTree"] = {};
-  globalEnv["printTree"]["."] = VFun(null,{},[],[Clause([Value(Cell(Atom("Plus"),Cell("s",Cell("t",Nil()))))],Cell(Stringy("['Plus "),Cell(App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"s")]),Cell(Stringy(" "),Cell(App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"t")]),Cell(Stringy("]"),Nil())))))),Clause([Value(Cell(Atom("Mult"),Cell("s",Cell("t",Nil()))))],Cell(Stringy("['Mult "),Cell(App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"s")]),Cell(Stringy(" "),Cell(App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"t")]),Cell(Stringy("]"),Nil())))))),Clause([Value("n")],App(Var(GlobalVar(false,"."),"primNumToString"),[Var(LocalVar(),"n")]))]);
+  globalEnv["printTree"]["."] = VFun(null,{},[],[Clause([Value(Cell(Atom("Plus"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Plus ",App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value(Cell(Atom("Mult"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Mult ",App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"."),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value("n")],App(Var(GlobalVar(false,"."),"primNumToString"),[Var(LocalVar(),"n")]))]);
   globalEnv["reduce"] = {};
   globalEnv["reduce"]["."] = VFun(null,{},[],[Clause([Value("v"),Value(Nil())],Var(LocalVar(),"v")),Clause([Value("v"),Value(Cell(Cell("c",Cell("a",Nil())),"xs"))],Cell(Var(LocalVar(),"c"),Cell(Var(LocalVar(),"v"),Cell(App(Var(GlobalVar(false,"."),"reduce"),[Var(LocalVar(),"a"),Var(LocalVar(),"xs")]),Nil()))))]);
   globalEnv["reverse"] = {};
@@ -88,11 +90,10 @@
 <form method="post">
 <h1 id="huttons-razor">Hutton’s razor</h1>
 <p>The following AST</p>
-['Plus ['Mult 31 13] ['Mult 24 42]]
+['Plus ['Mult 31 ['Plus 13 ['Mult 7 2]]] ['Mult 24 42]]
 <p>is obtained by running the following program</p>
 <div class="shonkier-pretty">
-<span class="shonkier-function">main</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Plain</span><br />
- <span class="shonkier-primitive">primStringConcat</span>(printTree(runParser(<span class="shonkier-string">"31*13+24*42"</span>, hutton())))]
+<span class="shonkier-function">main</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Plain</span> printTree(runParser(<span class="shonkier-string">"31*(13+7*2)+24*42"</span>, hutton()))]
 </div>
 <p>using the following auxiliary definitions.</p>
 <div class="shonkier-pretty">
@@ -105,6 +106,8 @@
 <span class="shonkier-function">runParser</span>(cs, v) <span class="shonkier-operator">-&gt;</span> [v cs]<br />
 <br />
 <span class="shonkier-function">satisfy</span>(p) <span class="shonkier-operator">-&gt;</span> p(<span class="shonkier-atom">'getChar</span>())<br />
+<br />
+<span class="shonkier-function">is</span>(c) <span class="shonkier-operator">-&gt;</span> satisfy({d <span class="shonkier-operator">-&gt;</span> c <span class="shonkier-operator">==</span> d})<br />
 <br />
 <span class="shonkier-function">some</span>(p) <span class="shonkier-operator">-&gt;</span> [p()|many(p)]<br />
 <br />
@@ -133,24 +136,23 @@
 <span class="shonkier-function">convert</span>([]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-numeric">0</span><br />
 <span class="shonkier-function">convert</span>([d|ds]) <span class="shonkier-operator">-&gt;</span> d <span class="shonkier-operator">+</span> <span class="shonkier-numeric">10</span> <span class="shonkier-operator">*</span> convert(ds)<br />
 <br />
-<span class="shonkier-function">isOperator</span>(<span class="shonkier-numeric">0</span>, <span class="shonkier-string">"*"</span>) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-atom">'Mult</span><br />
-<span class="shonkier-function">isOperator</span>(<span class="shonkier-numeric">1</span>, <span class="shonkier-string">"+"</span>) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-atom">'Plus</span><br />
-<br />
-<span class="shonkier-function">operator</span>(k) <span class="shonkier-operator">-&gt;</span> satisfy({c <span class="shonkier-operator">-&gt;</span> isOperator(k, c)})<br />
+<span class="shonkier-function">parens</span>(p) <span class="shonkier-operator">-&gt;</span> {[_ v _] <span class="shonkier-operator">-&gt;</span> v}([is(<span class="shonkier-string">"("</span>) p() is(<span class="shonkier-string">")"</span>)])<br />
 <br />
 <span class="shonkier-function">chain</span>(i, c, a) <span class="shonkier-operator">-&gt;</span> reduce(i(), many({[c() a()]}))<br />
 <br />
 <span class="shonkier-function">reduce</span>(v, []) <span class="shonkier-operator">-&gt;</span> v<br />
 <span class="shonkier-function">reduce</span>(v, [[c a]|xs]) <span class="shonkier-operator">-&gt;</span> [c v reduce(a, xs)]<br />
 <br />
-<span class="shonkier-function">mult</span>() <span class="shonkier-operator">-&gt;</span> chain(number, {operator(<span class="shonkier-numeric">0</span>)}, number)<br />
+<span class="shonkier-function">atom</span>() <span class="shonkier-operator">-&gt;</span> <span class="shonkier-atom">'choice</span>(number, {parens(plus)})<br />
 <br />
-<span class="shonkier-function">plus</span>() <span class="shonkier-operator">-&gt;</span> chain(mult, {operator(<span class="shonkier-numeric">1</span>)}, mult)<br />
+<span class="shonkier-function">mult</span>() <span class="shonkier-operator">-&gt;</span> chain(atom, {is(<span class="shonkier-string">"*"</span>)<span class="shonkier-operator">;</span> <span class="shonkier-atom">'Mult</span>}, atom)<br />
+<br />
+<span class="shonkier-function">plus</span>() <span class="shonkier-operator">-&gt;</span> chain(mult, {is(<span class="shonkier-string">"+"</span>)<span class="shonkier-operator">;</span> <span class="shonkier-atom">'Plus</span>}, mult)<br />
 <br />
 <span class="shonkier-function">hutton</span>() <span class="shonkier-operator">-&gt;</span> plus()<br />
 <br />
-<span class="shonkier-function">printTree</span>([<span class="shonkier-atom">'Plus</span> s t]) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-string">"['Plus "</span> printTree(s) <span class="shonkier-string">" "</span> printTree(t) <span class="shonkier-string">"]"</span>]<br />
-<span class="shonkier-function">printTree</span>([<span class="shonkier-atom">'Mult</span> s t]) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-string">"['Mult "</span> printTree(s) <span class="shonkier-string">" "</span> printTree(t) <span class="shonkier-string">"]"</span>]<br />
+<span class="shonkier-function">printTree</span>([<span class="shonkier-atom">'Plus</span> s t]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-string">"['Plus <span class="shonkier-splice">`printTree(s)`</span> <span class="shonkier-splice">`printTree(t)`</span>]"</span><br />
+<span class="shonkier-function">printTree</span>([<span class="shonkier-atom">'Mult</span> s t]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-string">"['Mult <span class="shonkier-splice">`printTree(s)`</span> <span class="shonkier-splice">`printTree(t)`</span>]"</span><br />
 <span class="shonkier-function">printTree</span>(n) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-primitive">primNumToString</span>(n)
 </div>
 </form>

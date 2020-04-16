@@ -9,7 +9,7 @@ main()
 is obtained by running the following program
 
 ```{ .mary-def .keep }
-main() -> ['Plain primStringConcat(printTree(runParser("31*13+24*42", hutton())))]
+main() -> ['Plain printTree(runParser("31*(13+7*2)+24*42", hutton()))]
 ```
 
 using the following auxiliary definitions.
@@ -23,6 +23,7 @@ runParser(""        , v)                   -> v
 runParser(cs        , v)                   -> [v cs]
 
 satisfy(p) -> p('getChar())
+is(c) -> satisfy({ d -> c == d })
 
 // Lists of parsed values
 some(p) -> [p()|many(p)]
@@ -50,22 +51,21 @@ reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
 convert([])     -> 0
 convert([d|ds]) -> d + 10 * convert(ds)
 
-isOperator(0,"*") -> 'Mult
-isOperator(1,"+") -> 'Plus
 
-operator(k) -> satisfy({c -> isOperator(k,c)})
+parens(p) -> { [_ v _] -> v }([is("(") p() is(")")])
 
 chain(i,c,a) -> reduce(i(),many({[c() a()]}))
 
 reduce(v,[])         -> v
 reduce(v,[[c a]|xs]) -> [c v reduce(a,xs)]
 
-mult() -> chain(number,{operator(0)},number)
-plus() -> chain(mult,{operator(1)},mult)
+atom() -> 'choice(number,{parens(plus)})
+mult() -> chain(atom,{is("*"); 'Mult},atom)
+plus() -> chain(mult,{is("+"); 'Plus},mult)
 
 hutton() -> plus()
 
-printTree(['Plus s t]) -> ["['Plus " printTree(s) " " printTree(t) "]"]
-printTree(['Mult s t]) -> ["['Mult " printTree(s) " " printTree(t) "]"]
+printTree(['Plus s t]) -> "['Plus `printTree(s)` `printTree(t)`]"
+printTree(['Mult s t]) -> "['Mult `printTree(s)` `printTree(t)`]"
 printTree(n)           -> primNumToString(n)
 ```
