@@ -96,17 +96,17 @@ snarfMaryDef c@(Div (a , b, kvs) p)
     Null <$ tell [DivTemplate decl attr p]
 snarfMaryDef b = return b
 
-evalMary :: FromValue b => [Import] -> Env -> Text -> b -> b
-evalMary is env e abort =
+evalMary :: FromValue b => [Import] -> Env -> Text -> b
+evalMary is env e =
   case parseOnly (term <* endOfInput) e of
-    Left _ -> abort
+    Left err -> error err
     Right t -> case rawShonkier is env t of
       Value v -> fromValue v
-      Request r _ -> fromValue $ VString "" $ T.pack $ show r -- abort
+      Request r _ -> error (show r)
 
 evalMaryBlock :: [Import] -> Env -> Block -> Block
 evalMaryBlock is env (CodeBlock (_, cs, _) e) | "mary" `elem` cs
-  = evalMary is env e Null
+  = evalMary is env e
 evalMaryBlock is (env, inputs) (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set
@@ -116,7 +116,7 @@ evalMaryBlock _ _ b = b
 
 evalMaryInline :: [Import] -> Env -> Text -> Inline -> Inline
 evalMaryInline is env page (Code (_, cs, _) e) | "mary" `elem` cs =
-  evalMary is env e Space
+  evalMary is env e
 evalMaryInline is (env,inputs) page (Code a@(_, cs, _) t) | "input" `elem` cs =
   RawInline (Format "html") (makeInputForm inputs False a t)
 evalMaryInline _ _ page (Link attrs is target) =

@@ -773,9 +773,10 @@ function shonkier(glob,t) {
                         continue;
                     };
                     break;
+                case "VFun":
+                    kpush(state.val.cont);
                 case "Atom":
                 case "VPrim":
-                case "VFun":
                 case "VThunk":
                     state = Apply(state.val,null,fr.env,0,fhandles(state.val),fr.args);
                     continue;
@@ -968,7 +969,7 @@ function shonkier(glob,t) {
                 state = prim(state.fun.prim, args);
                 continue;
             case "VFun":
-                kpush(state.fun.cont);
+                // kpush(state.fun.cont);
                 state = Call(state.fun.env,state.fun.clauses,0,args);
                 continue;
             case "VThunk":

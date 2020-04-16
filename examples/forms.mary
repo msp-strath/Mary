@@ -29,6 +29,6 @@ concat(x, y) -> "`x``y`"
 greet() -> ['Para "Hello " 'POST("name") "! You are on page " 'GET("page")]
 numberGame(guess) ->
   ['Para "Wrong, the right number was "
-         primNumToString(primNumAdd(primStringToNum(guess),1))
+         primNumToString(primStringToNum(guess) + 1)
          ". Better luck next time!"]
 ```

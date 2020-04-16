@@ -164,7 +164,7 @@ cnFlat (Cn fz hs) = fz <>> foldr (\ (f, fz) fs -> f : fz <>> fs) [] hs
 data Funy' a v
   = FAtom a
   | FPrim Primitive
-  | FFun (Continuation' a v) (LocalEnv' a v) [Clause' a v]
+  | FFun {-(Continuation' a v)-} (LocalEnv' a v) [Clause' a v]
   deriving (Show, Functor)
 type Funy = Funy' String ScopedVariable
 

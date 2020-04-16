@@ -15,41 +15,30 @@ main() -> ['Plain primStringConcat(printTree(runParser("31*13+24*42", hutton()))
 using the following auxiliary definitions.
 
 ``` { .mary-def .keep }
-runFail('fail,):
-runFail({'fail() -> _}, k) -> k()
-runFail(v, _) -> v
-
 runParser(,'getChar 'choice):
-runParser("`[c|cs]`", {'getChar()   -> k}) -> runParser(cs,k({c}))
-runParser(""        , {'getChar()   -> k}) -> k('fail)
-runParser(cs        , {'choice(a,b) -> k}) -> runFail(runParser(cs,k(a())),{runParser(cs,k(b()))})
+runParser("`[c|cs]`", {'getChar()   -> k}) -> runParser(cs,k(c))
+runParser(""        , {'getChar()   -> k}) -> k('abort())
+runParser(cs        , {'choice(a,b) -> k}) -> runParser(cs,k(a())) ?> runParser(cs,k(b()))
 runParser(""        , v)                   -> v
 runParser(cs        , v)                   -> [v cs]
 
-anyChar() -> 'getChar()()
-
-// Conditional parse of a character
-fromJust([n]) -> n
-fromJust([])  -> 'fail()
-
-satisfy(p) -> fromJust(p(anyChar()))
+satisfy(p) -> p('getChar())
 
 // Lists of parsed values
 some(p) -> [p()|many(p)]
 many(p) -> 'choice({some(p)},{[]})
 
 // Digits
-isDigit("0") -> [0]
-isDigit("1") -> [1]
-isDigit("2") -> [2]
-isDigit("3") -> [3]
-isDigit("4") -> [4]
-isDigit("5") -> [5]
-isDigit("6") -> [6]
-isDigit("7") -> [7]
-isDigit("8") -> [8]
-isDigit("9") -> [9]
-isDigit(_)   -> []
+isDigit("0") -> 0
+isDigit("1") -> 1
+isDigit("2") -> 2
+isDigit("3") -> 3
+isDigit("4") -> 4
+isDigit("5") -> 5
+isDigit("6") -> 6
+isDigit("7") -> 7
+isDigit("8") -> 8
+isDigit("9") -> 9
 
 digit()  -> satisfy(isDigit)
 number() -> convert(reverse(some(digit)))
@@ -59,11 +48,10 @@ reverseAcc(acc,[])     -> acc
 reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
 
 convert([])     -> 0
-convert([d|ds]) -> primNumAdd(d, primNumMult(10,convert(ds)))
+convert([d|ds]) -> d + 10 * convert(ds)
 
-isOperator(0,"*") -> ['Mult]
-isOperator(1,"+") -> ['Plus]
-isOperator(_,_)   -> []
+isOperator(0,"*") -> 'Mult
+isOperator(1,"+") -> 'Plus
 
 operator(k) -> satisfy({c -> isOperator(k,c)})
 

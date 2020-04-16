@@ -233,9 +233,10 @@ use v = pop >>= \case
       VPrim f hs          ->
         let cs = zip (hs ++ repeat []) as
         in app (FPrim f) B0 rho cs
-      VFun frs sig hs cls ->
+      VFun frs sig hs cls -> do
         let cs = zip (hs ++ repeat []) as
-        in app (FFun frs sig cls) B0 rho cs
+        cont frs
+        app (FFun {-frs-} sig cls) B0 rho cs
       VThunk c -> case as of
         [] -> case c of
           Value v      -> use v
@@ -270,7 +271,7 @@ app f cz rho = \case
       let vs = map unsafeComToValue (cz <>> []) in
       complain a vs
     FPrim p         -> prim p (cz <>> [])
-    FFun frs sig cs -> do cont frs
+    FFun {-frs-} sig cs -> {- do cont frs -}
                           call sig cs (cz <>> [])
   ((hs, a) : as) -> do push (AppR f cz (hs, rho) as)
                        eval (rho, a)
