@@ -1,0 +1,13 @@
+andLazy(e1,e2) -> e1(); e2() ?> '0
+orLazy(e1,e2)  -> e1(); '1 ?> e2()
+
+main() ->
+  [ andLazy({'0},{'0})
+    andLazy({'0},{'1})
+    andLazy({'1},{'0})
+    andLazy({'1},{'1})
+    orLazy({'0},{'0})
+    orLazy({'0},{'1})
+    orLazy({'1},{'0})
+    orLazy({'1},{'1})
+  ]

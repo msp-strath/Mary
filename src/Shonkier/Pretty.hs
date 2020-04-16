@@ -8,8 +8,8 @@ module Shonkier.Pretty where
 import Data.Char
 import Data.Foldable
 import Data.Function
-import Data.List (isPrefixOf, intersperse, groupBy)
 import qualified Data.Map as Map
+import Data.List (isPrefixOf, intersperse, groupBy, stripPrefix)
 import Data.Ratio
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
@@ -36,15 +36,21 @@ data Annotation
 
 type Doc = P.Doc Annotation
 
+
 class Pretty t where
   pretty     :: t -> Doc
   prettyList :: [t] -> Doc
+  prettyPrec :: WhereAmI -> t -> Doc
 
   default pretty :: P.Pretty t => t -> Doc
   pretty = P.pretty
 
   default prettyList :: Pretty t => [t] -> Doc
   prettyList = list . map pretty
+
+  -- by default, ignore precedence
+  default prettyPrec :: Pretty t => WhereAmI -> t -> Doc
+  prettyPrec _ = pretty
 
 instance Pretty Integer
 instance Pretty Text
@@ -59,16 +65,24 @@ instance Pretty a => Pretty [a] where
   pretty = prettyList
 
 instance Pretty Rational where
-  pretty = pretty . ppRational
+  pretty = prettyPrec Utopia
+  prettyPrec z r = pretty (ppRational z r)
 
-ppRational :: Rational -> Text
-ppRational p = T.pack $
+parensIf :: OpFax -> WhereAmI -> Doc -> Doc
+parensIf o w = if needParens o w then parens else id
+
+ppRational :: WhereAmI -> Rational -> Text
+ppRational w p = T.pack $
     let n = numerator p; d = denominator p in
     if | d == 1    -> show n
        | d == 2    -> show (n `div` 2) <> ".5"
        | d == 4    -> show (n `div` 4)
                       <> if n `mod` 4 == 1 then ".25" else ".75"
-       | otherwise -> show n <> "/" <> show d
+       | otherwise -> par w $ show n <> "/" <> show d
+  where
+    par w s
+      | needParens overFax w = "(" <> s <> ")"
+      | otherwise            = s
 
 ppAtom :: String -> Doc
 ppAtom str = annotate AnnAtom $ case str of
@@ -82,6 +96,12 @@ arobase = annotate AnnOperator "@"
 
 assignment :: Doc
 assignment = annotate AnnOperator ":="
+
+prioritize :: Doc
+prioritize = annotate AnnOperator "?>"
+
+mask :: Doc
+mask = annotate AnnOperator "^"
 
 semi :: Doc
 semi = annotate AnnOperator P.semi
@@ -105,25 +125,26 @@ ppList (as, m) = encloseSep lbracket closing space $ pretty <$> as
 ppApp :: Pretty a => Doc -> [a] -> Doc
 ppApp f ts = f <> tupled (pretty <$> ts)
 
-ppFun :: ( Pretty a, Pretty b, Pretty v
-         , FreeVars b, FreeVars v
-         , SelfListView (Value' String v)
-         ) => LocalEnv' String v -> [[a]] -> [b] -> Doc
-ppFun rho hs cls =
- let local  = Map.restrictKeys rho (freeVars cls)
-     plocal = Map.foldMapWithKey (\ k v -> pure (ppMatch k v)) local
-  in case cls of
-    [cl] -> sep (plocal ++ [enclose lbrace rbrace $ pretty cl])
-    _    -> (case plocal of [] -> mempty; _ -> sep plocal <> line)
-         <> hang 0 (enclose lbrace rbrace
-                   ((hang 0 $ pretty cls) <> line))
+ppFun :: (Pretty a, Pretty b) => [[a]] -> [b] -> Doc
+ppFun hs [cl] = enclose lbrace rbrace $ pretty cl
+ppFun hs cls  = hang 0 $ enclose lbrace rbrace
+              $ (hang 0 $ pretty cls) <> line
 
-ppMatch :: (Pretty a, Pretty b) => a -> b -> Doc
-ppMatch p t = parens $ pretty p <+> assignment <+> pretty t
+ppMatch :: (Pretty a, Pretty b) => WhereAmI -> a -> b -> Doc
+ppMatch w p t = parensIf pamaFax w $
+  pretty p <+> assignment <+> prettyPrec (RightOf :^: pamaFax) t
 
-ppClause :: (FreeVars v, Pretty v) => Clause' String v -> Doc
-ppClause ([], t) = pretty t
-ppClause (ps, t) = hsep (pretty <$> ps) <+> arrow <+> pretty t
+ppSemi :: (Pretty a, Pretty b) => WhereAmI -> a -> b -> Doc
+ppSemi w l r = parensIf semiFax w $
+  prettyPrec (LeftOf :^: semiFax) l <> semi <+> prettyPrec (RightOf :^: semiFax) r
+
+ppClause :: (FreeVars v, Pretty v, InfixHuh v) => Clause' String v -> Doc
+ppClause ([], [Nothing :?> t])  = pretty t
+ppClause (ps, rs) = hsep (pretty <$> ps) <+> ppRights rs
+
+ppRights :: (FreeVars v, Pretty v, InfixHuh v) => [Rhs' String v] -> Doc
+ppRights [Nothing :?> t] = hsep [arrow, pretty t]
+ppRights rs              = hsep (map pretty rs)
 
 ppSplice :: Pretty a => Keyword -> [(Text, a)] -> Text -> Doc
 ppSplice k tas u = annotate AnnString $
@@ -171,8 +192,9 @@ mkKeyword k ts = pretty $ case maximum (maximum ((-2):occ) : qso) of
     ds -> read ds
 
 instance Pretty Literal where
-  pretty = \case
-    Num r        -> annotate AnnNumeric $ pretty r
+  pretty = prettyPrec Utopia
+  prettyPrec w = \case
+    Num r        -> annotate AnnNumeric $ prettyPrec w r
     Boolean b
       | b         -> annotate AnnBoolean "'1"
       | otherwise -> annotate AnnBoolean "'0"
@@ -188,25 +210,44 @@ instance Pretty ScopedVariable where
     OutOfScope         -> annotate AnnError $ pretty x
     InvalidNamespace _ -> annotate AnnError $ pretty x
 
-instance (FreeVars v, Pretty v) => Pretty (Term' String v) where
-  pretty t = case listView t of
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' String v) where
+  pretty = prettyPrec Utopia
+  prettyPrec w t = case listView t of
     ([], Just _) -> case t of
       Atom a        -> ppAtom a
-      Lit l         -> pretty l
+      Lit l         -> prettyPrec w l
       String k ps t -> ppSplice k ps t
       Var v         -> pretty v
       Nil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      App f ts      -> ppApp (pretty f) ts
-      Semi l r      -> pretty l <> semi <+> pretty r
-      Fun hs cls    -> ppFun (mempty :: LocalEnv) hs cls
-      Match p t     -> ppMatch p t
+      App f ts      -> case (f, ts) of
+        (Var v, [l, r])
+          | Just (o, f) <- infixHuh v
+          -> parensIf f w $
+             prettyPrec (LeftOf :^: f) l
+             <+> annotate AnnOperator (pretty o)
+             <+> prettyPrec (RightOf :^: f) r
+        (Var v, [r])
+          | Just (o, f) <- prefixHuh v
+          -> parensIf f w $
+             annotate AnnOperator (pretty o)
+             <+> prettyPrec (RightOf :^: f) r
+        _ -> ppApp (prettyPrec (LeftOf :^: applFax) f) ts
+      Semi l r      -> ppSemi w l r
+      Prio l r      -> parensIf prioFax w $
+        prettyPrec (LeftOf :^: prioFax) l <+> prioritize <+> prettyPrec (RightOf :^:prioFax) r
+      Fun hs cls    -> ppFun hs cls
+      Match p t     -> ppMatch w p t
+      Mask a t      -> parensIf maskFax w $
+        ppAtom a <+> mask <+> prettyPrec (RightOf :^: maskFax) t
     it -> ppList it
 
-instance (FreeVars v, Pretty v) => Pretty (Clause' String v) where
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Clause' String v) where
   pretty = ppClause
-
   prettyList = vcat . map pretty
+
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Rhs' String v) where
+  pretty (mg :?> t) = hsep (pipe : foldMap (pure . pretty) mg ++ [arrow, pretty t])
 
 instance Pretty PValue where
   pretty p = case listView p of
@@ -227,9 +268,23 @@ instance Pretty PComputation where
     PRequest (a, vs) v -> braces $ hsep [ppApp (ppAtom a) vs, arrow, pretty v]
     PThunk v           -> braces $ pretty v
 
-instance (SelfListView (Value' String v), FreeVars v, Pretty v) =>
+data VMatch' a v = VMatch Variable (Value' a v)
+
+instance (FreeVars v, SelfListView (Value' String v), Pretty v, InfixHuh v) =>
+         Pretty (VMatch' String v) where
+  pretty = prettyPrec Utopia
+  prettyPrec w (VMatch k v) = ppMatch w k v
+
+instance (FreeVars v, Pretty v, SelfListView (Value' String v), InfixHuh v) =>
+         Pretty ([VMatch' String v], Term' String v) where
+  pretty = prettyPrec Utopia
+  prettyPrec w ([], t)    = prettyPrec w t
+  prettyPrec w (kv:kvs,t) = ppSemi w kv (kvs, t)
+
+instance (SelfListView (Value' String v), FreeVars v, Pretty v, InfixHuh v) =>
          Pretty (Value' String v) where
-  pretty v = case listView v of
+  pretty = prettyPrec Utopia
+  prettyPrec w v = case listView v of
     ([], Just _) -> case v of
       VAtom a           -> ppAtom a
       VLit l            -> pretty l
@@ -237,17 +292,20 @@ instance (SelfListView (Value' String v), FreeVars v, Pretty v) =>
       VPrim f _         -> pretty f
       VNil              -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       VCell a b         -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
-      VFun _ rho hs cls -> ppFun rho hs cls
+      VFun _ rho hs cls ->
+        let plocal = Map.toList $ Map.restrictKeys rho (freeVars cls)
+        in prettyPrec w (uncurry VMatch <$> plocal, Fun hs cls)
       VThunk c          -> braces $ pretty c
     it -> ppList it
 
-instance (SelfListView (Value' String v), FreeVars v, Pretty v) =>
+instance (SelfListView (Value' String v), FreeVars v, Pretty v, InfixHuh v) =>
          Pretty (Computation' String v) where
   pretty = \case
     Value v             -> pretty v
     Request (a, vs) frs -> ppApp (ppAtom a) vs
 
-instance (FreeVars v, Pretty v) => Pretty (String, Either [[String]] (Clause' String v)) where
+instance (FreeVars v, Pretty v, InfixHuh v) =>
+         Pretty (String, Either [[String]] (Clause' String v)) where
   prettyList = vcat
              . intersperse ""
              . map (vcat . map pretty)
@@ -255,8 +313,8 @@ instance (FreeVars v, Pretty v) => Pretty (String, Either [[String]] (Clause' St
 
   pretty (fun, decl) =
     (annotate AnnFunction (pretty fun) <>) $ case decl of
-      Left hs       -> tupled $ map (hsep . map pretty) hs
-      Right (ps, t) -> tupled (pretty <$> ps) <+> arrow <+> pretty t
+      Left hs        -> tupled $ map (hsep . map pretty) hs
+      Right (ps, rs) -> tupled (pretty <$> ps) <+> ppRights rs
 
 instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty
@@ -265,5 +323,37 @@ instance Pretty (FilePath, Maybe Namespace) where
     annotate AnnKeyword "import" <+> pretty fp
     <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
-instance (FreeVars v, Pretty v) => Pretty (Module' String v) where
+instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Module' String v) where
   pretty (is, p) = pretty is <> pretty p
+
+
+------------------------------------------------------------------------------
+-- can tell if it's infix
+
+class InfixHuh v where
+  infixHuh :: v -> Maybe (String, OpFax)
+  prefixHuh :: v -> Maybe (String, OpFax)
+
+instance InfixHuh Variable where
+  infixHuh x
+    | Just i <- stripPrefix "primInfix" x
+    , [x] <- [x | x@(_, y) <- infixOpFax, spell y == i]
+    = Just x
+    | otherwise = Nothing
+  prefixHuh x
+    | Just i <- stripPrefix "primPrefix" x
+    , [x] <- [x | x@(_, y) <- prefixOpFax, spell y == i]
+    = Just x
+    | otherwise = Nothing
+
+instance InfixHuh ScopedVariable where
+  infixHuh (_ :.: x) = infixHuh x        -- ORLY?
+  prefixHuh (_ :.: x) = prefixHuh x        -- ORLY?
+
+instance InfixHuh RawVariable where
+  infixHuh (Nothing, x) = infixHuh x        -- ORLY?
+  infixHuh _ = Nothing
+  prefixHuh (Nothing, x) = prefixHuh x        -- ORLY?
+  prefixHuh _ = Nothing
+
+

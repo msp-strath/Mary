@@ -65,6 +65,9 @@ instance FreeVars (PComputation' a) where
 instance FreeVars v => FreeVars (Clause' a v) where
   freeVars (ps, t) = Set.difference (freeVars t) (freeVars ps)
 
+instance FreeVars v => FreeVars (Rhs' a v) where
+  freeVars (gd :?> tm) = Set.union (freeVars gd) (freeVars tm)
+
 instance FreeVars v => FreeVars (Value' a v) where
   freeVars = \case
     VAtom{}          -> Set.empty

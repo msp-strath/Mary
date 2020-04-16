@@ -99,18 +99,24 @@ instance ScopeCheck RawTerm Term where
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts
     Semi l r  -> Semi <$> scopeCheck local l <*> scopeCheck local r
+    Prio l r  -> Prio <$> scopeCheck local l <*> scopeCheck local r
     Fun hs cs -> Fun hs <$> traverse (scopeCheck local) cs
     String k sts u ->
       String k
         <$> traverse (traverse (scopeCheck local)) sts
         <*> pure u
     Match p t -> Match p <$> scopeCheck local t  -- for now
+    Mask a t -> Mask a <$> scopeCheck local t
 
 instance ScopeCheck RawClause Clause where
   scopeCheck local (ps, t) = do
     locals <- mapM (scopeCheck local) ps
     let new = fold (local : locals)
-    (ps,) <$> scopeCheck new t
+    (ps,) <$> traverse (scopeCheck new) t
+
+instance ScopeCheck RawRhs Rhs where
+  scopeCheck local (mg :?> t) =
+    (:?>) <$> traverse (scopeCheck local) mg <*> scopeCheck local t
 
 instance ScopeCheck PComputation LocalScope where
   scopeCheck local (PValue v) = scopeCheck local v

@@ -1,0 +1,17 @@
+mathErr('divByZero):
+mathErr(x) -> x
+mathErr({'divByZero() -> k}) -> 'abort()
+
+foo(k) -> [k k()]
+
+main() ->
+  [ foo({2 + 2})
+    foo({7 - 2 + 4})
+    foo({3 * 3 + 4 * 4})
+    foo({60 / 5 / 3})
+    foo({mathErr(10 / 0) ?> 'phew})
+    foo({2 + 2 == 4})
+    foo({5 < 3 \/ 7 >= 6 /\ 5 != 3})
+    foo({! 12 == 13})
+  ]
+  

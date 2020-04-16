@@ -37,10 +37,10 @@ instance JS Scoping where
 instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
-instance (JS v, JSAtom a) => JS (Clause' a v) where
-  js (qs, t) = ["Clause("] ++ js qs ++ [","] ++ js t ++ [")"]
+instance (JS v) => JS (Clause' String v) where
+  js (qs, r) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term r) ++ [")"] where
 
-instance (JS v, JSAtom a) => JS (Term' a v) where
+instance (JS v) => JS (Term' String v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]
   js (Lit l)         = ["Lit("] ++ js l ++ [")"]
   js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
@@ -49,10 +49,12 @@ instance (JS v, JSAtom a) => JS (Term' a v) where
   js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js (App f as)      = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
   js (Semi l r)      = ["Semi("] ++ js l ++ [","] ++ js r ++ [")"]
+  js (Prio l r)      = ["Prio("] ++ js l ++ [","] ++ js r ++ [")"]
   js (Fun hs cs)     = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
                     ++ js cs
                     ++ [")"]
   js (Match p t)     = ["Match("] ++ js p ++ [","] ++ js t ++ [")"]
+  js (Mask a t)      = ["Mask(", jsAtom a, ","] ++ js t ++ [")"]
 
 instance JS Literal where
   js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
@@ -62,13 +64,13 @@ instance JS Bool where
   js True  = ["true"]
   js False = ["false"]
 
-instance JSAtom a => JS (PComputation' a) where
+instance JS (PComputation' String) where
   js (PValue p) = ["Value("] ++ js p ++ [")"]
   js (PRequest (a, ps) k) =
     ["Request(", jsAtom a] ++ [","] ++ js ps ++ [",\"", maybe "_" pack k, "\")"]
   js (PThunk x) = ["\"",pack x,"\""]
 
-instance JSAtom a => JS (PValue' a) where
+instance JS (PValue' String) where
   js (PAtom a)        = ["Atom(", jsAtom a, ")"]
   js (PLit l)         = ["Lit("] ++ js l ++ [")"]
   js (PString _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
@@ -94,7 +96,7 @@ jsGlobalEnv gl =
   ((`foldMapWithKey` gl) $ \ x loc ->
     ((T.concat [ "globalEnv[", jsAtom x, "] = {};\n"]) :) $
     flip foldMapWithKey loc $ \ fp -> \case
-    VFun [] _ hs cs -> pure $ T.concat $
+    VFun CnNil _ hs cs -> pure $ T.concat $
       ["globalEnv[", jsAtom x, "][", jsAtom fp ,"] = VFun(null,{},"]
       ++ js (fmap (fmap jsAtom) hs) ++ [","]
       ++ js cs

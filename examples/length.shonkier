@@ -1,7 +1,7 @@
 import "examples/list.shonkier"
 import "examples/append.shonkier"
 
-suc(_,x)   -> primNumAdd(1,x)
+suc(_,x)   -> primInfixPlus(1,x)
 length(xs) -> fold(suc,0,xs)
 
 const(_) -> '1

@@ -19,10 +19,21 @@ import Shonkier.Primitives (prim)
 import Utils.List
 
 
--- how to signal a failure
+
+---------------------------------------------------------------------------
+-- EXCEPTIONS (ESPECIALLY ABORT)
+---------------------------------------------------------------------------
+
+-- Shonkier.Value defines abortA
 
 abort :: Shonkier Computation
-abort = handle ("abort", []) []
+abort = complain abortA []
+
+
+-- how to complain
+
+complain :: String -> [Value] -> Shonkier Computation
+complain a vs = handle (a, vs) CnNil
 
 
 -- environments
@@ -50,7 +61,9 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
   return $ merge rho $ case k of
     Nothing -> mempty
     Just k  -> singleton k $
-      VFun frs mempty [] [([PValue (PBind "_return")], Var (LocalVar :.: "_return"))]
+      VFun frs mempty []
+        [([PValue (PBind "_return")],
+          [Nothing :?> Var (LocalVar :.: "_return")])]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
@@ -104,7 +117,7 @@ matches :: (a -> b -> Maybe (LocalEnv' c d))
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 
--- Evaluation contexts
+-- entry points
 
 runShonkier :: Shonkier a -> Env -> Context -> (a, Context)
 runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
@@ -116,25 +129,13 @@ execShonkier :: Shonkier a -> Env -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
 shonkier :: Env -> Term -> Computation
-shonkier rho t = evalShonkier (eval (mempty, t)) rho B0
+shonkier rho t = evalShonkier (eval (mempty, t)) rho CxNil
 
 rawShonkier :: [Import] -> Env -> RawTerm -> Computation
 rawShonkier is env@(gl, ins) t =
   let scope = fmap keysSet gl
       term  = checkRaw "." is scope t
   in shonkier env term
-
-push :: Frame -> Shonkier ()
-push fr = modify (:< fr)
-
-pop :: Shonkier (Maybe Frame)
-pop = do
-  x <- get
-  case x of
-    B0        -> return Nothing
-    ctx :< fr -> do
-      put ctx
-      return (Just fr)
 
 globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
 globalLookup fp x = do
@@ -166,9 +167,9 @@ eval (rho, t) = case t of
         use (fromMaybe theIMPOSSIBLE v)
 
       -- error cases
-      OutOfScope         -> handle ("OutOfScope", [vVar x']) []
-      AmbiguousVar _     -> handle ("AmbiguousVar", [vVar x']) []
-      InvalidNamespace _ -> handle ("InvalidNamespace", [vVar x']) []
+      OutOfScope         -> complain "OutOfScope" [vVar x']
+      AmbiguousVar _     -> complain "AmbiguousVar" [vVar x']
+      InvalidNamespace _ -> complain "InvalidNamespace" [vVar x']
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
@@ -180,7 +181,9 @@ eval (rho, t) = case t of
   Semi l r  -> do -- push (SemiL rho r)
                   push (AppL rho [r])
                   eval (rho, l)
-  Fun es cs -> use (VFun [] rho es cs)
+  Prio l r  -> do push (PrioL rho r)
+                  eval (rho, l)
+  Fun es cs -> use (VFun CnNil rho es cs)
   String k sts u -> case sts of
     []           -> use (VString k u)
     (s, t) : sts -> do
@@ -188,6 +191,18 @@ eval (rho, t) = case t of
       eval (rho, t)
   Match p t -> do
     push (MatchR p)
+    eval (rho, t)
+  -- premature optimization is the root of all evil
+  Mask "abort" t -> do
+    gets cxHand >>= \case
+      Right (ctx@(Cx hz fz), fr, gz)
+        | case fr of { PrioL _ _ -> True ; Clauses{} -> True ; _ -> False }
+        -> put (Cx hz (fz <> gz))
+      _ -> push (Masking "abort")
+    eval (rho, t)
+  -- back to the usual
+  Mask a t -> do
+    push (Masking a)
     eval (rho, t)
 
   where
@@ -207,7 +222,7 @@ use v = pop >>= \case
       VLit (Boolean b)
         | b -> case as of
             [t] -> eval (rho, t)
-            _   -> handle ("GuardsAreUnary", []) []
+            _   -> complain "GuardsAreUnary" []
         | otherwise -> abort
       VAtom f ->
         -- Here we are enforcing the invariant:
@@ -223,14 +238,15 @@ use v = pop >>= \case
         in app (FFun frs sig cls) B0 rho cs
       VThunk c -> case as of
         [] -> case c of
-          Value v       -> use v
-          Request r frs -> handle r frs
-        _  -> handle ("ThunksAreNullary", [v]) []
+          Value v      -> use v
+          Request r k  -> handle r k
+        _  -> complain "ThunksAreNullary" [v]
       v -> case as of
         [t] -> eval (merge rho (value2Env v), t)
-        _   -> handle ("EnvironmentsAreUnary", []) []
+        _   -> complain "EnvironmentsAreUnary" []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)
+    PrioL _ _ -> use v
     StringLR p rho sts u -> case sts of
       [] -> glom (VCell p (VCell v (VString "" u)))
       ((s, t) : sts) -> do
@@ -239,6 +255,8 @@ use v = pop >>= \case
     MatchR p -> case vmatch p v of
       Nothing  -> abort
       Just sig -> use (env2value sig)
+    Masking _ -> use v
+    Clauses{} -> use v
 
 app :: Funy
     -> Bwd Computation -> LocalEnv -> [([String],Term)]
@@ -250,9 +268,9 @@ app f cz rho = \case
       -- Atomic functions i.e. requests only ever offer
       -- to handle the empty list of requests.
       let vs = map unsafeComToValue (cz <>> []) in
-      handle (a, vs) []
+      complain a vs
     FPrim p         -> prim p (cz <>> [])
-    FFun frs sig cs -> do traverse push frs
+    FFun frs sig cs -> do cont frs
                           call sig cs (cz <>> [])
   ((hs, a) : as) -> do push (AppR f cz (hs, rho) as)
                        eval (rho, a)
@@ -265,33 +283,52 @@ unsafeComToValue = \case
     , show r
     ]
 
-handleInput :: Request -> Shonkier Computation
-handleInput (a, vs) = case vs of
+handleInput :: Request -> Continuation -> Shonkier Computation
+handleInput (a, vs) k = case vs of
   [VString _ f] -> do
     let f' = case a of
           "field" -> "POST_" <> f
           "param" -> "GET_"  <> f
           _       -> f
-    mv <- inputLookup f'
-    maybe (handle ("UnknownInput", vs) []) use mv
-  _             -> handle ("IncorrectInputRequest", vs) []
+    inputLookup f' >>= \case
+      Nothing -> complain "UnknownInput" vs
+      Just v -> do
+        cont k
+        use v
+  _             -> complain "IncorrectInputRequest" vs
 
-handle :: Request -> [Frame]
+handle :: Request
+       -> Continuation
        -> Shonkier Computation
-handle r@(a, _) _ | a `elem` ["field", "param", "meta"] = handleInput r
-handle r@(a, vs) frs = pop >>= \case
-  Nothing         -> return (Request r frs)
-  Just fr -> case fr of
-    AppR f cz (hs, rho) as | a `elem` hs ->
-      app f (cz :< Request r frs) rho as
-    _ -> handle r (fr : frs)
-
+handle r@(a, _) k = go (Right k) 0 where
+  -- do we get away with not making the number part of the request?
+  go x i = leap x >>= \case
+    Left k
+      | a `elem` ["field", "param", "meta"] && i == 0 -> handleInput r k
+      | otherwise -> return (Request r k)
+    Right (hs, (fr, k)) -> case fr of
+      AppR f cz (es, rho) as | a `elem` es ->
+        if i == 0
+          then app f (cz :< Request r k) rho as
+          else go (Left hs) (i - 1)
+      PrioL rho r | a == "abort" ->
+        if (i == 0)
+          then eval (rho, r)
+          else go (Left hs) (i - 1)
+      Clauses rho cls cs | a == "abort" ->
+        if (i == 0)
+          then call rho cls cs
+          else go (Left hs) (i - 1)
+      Masking b | a == b -> go (Left hs) (i + 1)
+      _ -> go (Left hs) i
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
 call rho []                cs = abort
 call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
-  Just sig -> eval (merge rho sig, rhs)
+  Just sig -> do
+    push (Clauses rho cls cs)
+    eval (merge rho sig, rhs2Term rhs)
 
 
 ---------------------------------------------------------------------------
@@ -307,4 +344,4 @@ glom v = go Nothing B0 [v] where
     VAtom _     : vs -> go mk tz vs
     VNil        : vs -> go mk tz vs
     VString k t : vs -> go (mk <|> pure k) (tz :< t) vs
-    v           : _  -> handle ("Invalid_StringConcat_ArgType", [v]) []
+    v           : _  -> complain "Invalid_StringConcat_ArgType" [v]
