@@ -47,6 +47,7 @@ process doc0@(Pandoc meta docs) = do
            $ doc1
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
+       . setMeta "jsInputs" (fromList $ Str <$> jsInputs inputs)
        $ doc2
 
   where
@@ -57,14 +58,20 @@ process doc0@(Pandoc meta docs) = do
 metaToInputValues :: Meta -> Map Text Text
 metaToInputValues (Meta m) = M.map extract m where
   extract (MetaInlines xs) = T.concat $ L.map inlineToString xs
-  extract (MetaString s)        = s
-  extract x                     = error $ "IMPOSSIBLE non-string meta value " ++ show x
+  extract (MetaBlocks xs)  = T.concat $ L.map blockToString xs
+  extract (MetaString s)   = s
+  extract x                = error $ "IMPOSSIBLE non-string meta value " ++ show x
 
   inlineToString (Str s)   = s
   inlineToString Space     = " "
   inlineToString SoftBreak = "\n"
   inlineToString LineBreak = "\n"
   inlineToString x         =  error $ "IMPOSSIBLE non-string inline " ++ show x
+
+  blockToString (Plain xs)      = T.concat $ L.map inlineToString xs
+  blockToString (Para xs)       = T.concat $ L.map inlineToString xs
+  blockToString (LineBlock xss) = T.concat $ L.concatMap (L.map inlineToString) xss
+  blockToString x               =  error $ "IMPOSSIBLE non-string block " ++ show x
 
 getGET :: Map Text Text -> Text -> Maybe Text
 getGET inputs x = M.lookup ("GET_" <> x) inputs

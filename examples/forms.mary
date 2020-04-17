@@ -12,6 +12,7 @@ essay
 
 `Submit answers and essay`{.input type=submit}
 
+Here is a form which is being submitted empty: `empty`{.input type=text size=1}
 
 ## Using the inputs
 

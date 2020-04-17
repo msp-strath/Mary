@@ -32,7 +32,7 @@ interpretShonkier = onShonkierModule $ \ _ gl body ->
 
 -- no support for imports here yet!
 compileShonkier :: FilePath -> FilePath -> IO Text
-compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ (env,_) body -> do
+compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ (env,inputs) body -> do
   -- Couldn't figure how to import in node so I just concat the
   -- whole interpreter defined 'Shonkier.js' on top
   interpreter <- TIO.readFile shonkierjs
@@ -41,6 +41,7 @@ compileShonkier shonkierjs fp = (`onShonkierModule` fp) $ \ _ (env,_) body -> do
                             , " "
                             , T.pack (replicate (72 - 10 - T.length txt) '*')
                             , "*/\n\n"]
-  pure $ T.concat $ [interpreter, header "Global env"]
-                  ++ jsGlobalEnv env
-                  ++ [header "Main"] ++ jsRun body
+  pure $ T.concat $ [interpreter]
+                  ++ (header "Global env"):(jsGlobalEnv env)
+                  ++ (header "Form data"):(jsInputs inputs)
+                  ++ (header "Main"):(jsRun body)
