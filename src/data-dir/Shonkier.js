@@ -727,7 +727,7 @@ function shonkier(glob,inputs,t) {
         };
         fr = lox.top; lox = lox.pop;
     };
-    function kpush(k) {
+    function cont(k) {
         while (k != null) {
             if (k.tag) {
                 hox = {hox: hox, lox: lox, hand: k.hand};
@@ -768,10 +768,10 @@ function shonkier(glob,inputs,t) {
             }
             var v = inputs[f];
             if (v != undefined) {
-                kpush(k);
+                cont(k);
                 return Use(Lit(v));
-            } else { return Complain("UnknownInput", state.args); }
-        } else {return Complain("IncorrectInputRequest", state.args); }
+            } else { cont(k); return Complain("UnknownInput", vs); }
+        } else { cont(k); return Complain("IncorrectInputRequest", vs); }
     }
 
     var state = Eval({},t);
@@ -807,7 +807,7 @@ function shonkier(glob,inputs,t) {
                     };
                     break;
                 case "VFun":
-                    kpush(state.val.cont);
+                    cont(state.val.cont);
                 case "Atom":
                 case "VPrim":
                 case "VThunk":
@@ -1002,7 +1002,7 @@ function shonkier(glob,inputs,t) {
                 state = prim(state.fun.prim, args);
                 continue;
             case "VFun":
-                // kpush(state.fun.cont);
+                // cont(state.fun.cont);
                 state = Call(state.fun.env,state.fun.clauses,0,args);
                 continue;
             case "VThunk":

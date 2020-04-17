@@ -3,4 +3,11 @@ catchPOST('POST):
 catchPOST({'POST(f) -> k}) -> catchPOST(k("Moon"))
 catchPOST(x) -> x
 
-main() -> catchPOST(["Hello" 'POST("World")])
+// recovering from unknown inputs
+failGracefully('UnknownInput):
+failGracefully({'UnknownInput(n) -> _}) -> ""
+failGracefully(v) -> v
+
+main() -> [ catchPOST(["Hello" 'POST("World")])
+            failGracefully('GET("fieldDoesNotExist"))
+          ]
