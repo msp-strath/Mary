@@ -295,8 +295,8 @@ handleInput (a, vs) k = case vs of
       Just v -> do
         cont k
         use v
-      Nothing -> complain "UnknownInput" vs
-  _             -> complain "IncorrectInputRequest" vs
+      Nothing -> do cont k; complain "UnknownInput" vs
+  _             -> do cont k; complain "IncorrectInputRequest" vs
 
 handle :: Request
        -> Continuation
