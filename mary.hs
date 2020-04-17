@@ -6,7 +6,7 @@ import Data.List as L
 import Data.Maybe
 import Data.Semigroup ((<>))
 import Data.Text
-import Data.Text.IO as TIO
+import qualified Data.Text.IO as TIO
 
 import Text.Pandoc.JSON (toJSONFilter)
 
@@ -20,8 +20,9 @@ import Shonkier
 import Mary.Pandoc
 import Mary.ServePage
 import Mary.Find
+import Mary.Version
 
-import Paths_mary
+import Paths_mary (getDataFileName)
 
 defaultUser :: IO String
 defaultUser = do
@@ -31,6 +32,7 @@ defaultUser = do
 main :: IO ()
 main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
   Pandoc              -> toJSONFilter process
+  Version             -> putStrLn version
   Shonkier filename   -> interpretShonkier filename
   Shonkierjs filename -> do
     shonkierjs <- getDataFileName "src/data-dir/Shonkier.js"
@@ -58,6 +60,7 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
 
 data Options
   = Pandoc
+  | Version
   | Shonkier   { filename :: String }
   | Shonkierjs { filename :: String }
   | Page       { filename :: String
@@ -76,6 +79,9 @@ optsParser = subparser
   ( command' "pandoc"
              (pure Pandoc)
              "Act as a Pandoc filter"
+ <> command' "version"
+             (pure Version)
+             "Print version and exit"
  <> command' "shonkier"
              (Shonkier <$> strArgument
                 (metavar "FILE" <> action "file" <> help "Input Shonkier program."))
