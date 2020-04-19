@@ -13,14 +13,20 @@ import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 import Data.Text.IO as TIO
 import Data.Text.Encoding
+
+import Network.URI.Encode as URI
+
 import System.FilePath
 import System.Directory
 import System.Process
 
+
 postText :: Text -> PHPSessionValue -> Y.Value
 postText prefix (PHPSessionValueArray kvs) = object
-  [ ((prefix <> "_" <> decodeUtf8 (B.toStrict k)) .= decodeUtf8 (B.toStrict v))
+  [ (key .= value)
   | (PHPSessionValueString k, PHPSessionValueString v) <- kvs
+  , let key = prefix <> "_" <> decodeUtf8 (B.toStrict k)
+  , let value = "`" <> (URI.encodeText $ decodeUtf8 $ B.toStrict v) <> "`{=html}"
   ]
 postText _ _ = Y.Null
 

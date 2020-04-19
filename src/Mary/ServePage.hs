@@ -13,7 +13,7 @@ import Data.Text.IO as TIO
 
 import Data.PHPSession
 
-import Network.URI.Encode
+import Network.URI.Encode as URI
 
 import System.Process
 import System.IO
@@ -44,7 +44,7 @@ servePage Config{..} post get file =
                      }) $ \ _ (Just hpandoc) _ _ ->
       TIO.hGetContents hpandoc
   where
-    encString = PHPSessionValueString . B.fromStrict . encodeUtf8 . decodeText
+    encString = PHPSessionValueString . B.fromStrict . encodeUtf8 . URI.decodeText
     phpify a = encodePHPSessionValue $ PHPSessionValueArray $
                  fmap (encString *** encString) a
 

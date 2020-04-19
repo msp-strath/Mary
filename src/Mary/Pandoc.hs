@@ -14,6 +14,8 @@ import Data.Monoid (First(..))
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 
+import Network.URI.Encode as URI
+
 import Text.Pandoc.Builder
 import Text.Pandoc.Walk
 
@@ -58,20 +60,27 @@ process doc0@(Pandoc meta docs) = do
 metaToInputValues :: Meta -> Map Text Text
 metaToInputValues (Meta m) = M.map extract m where
   extract (MetaInlines xs) = T.concat $ L.map inlineToString xs
+  extract x                                          = error $
+    "IMPOSSIBLE non-string meta value " ++ show x
+
+  inlineToString (RawInline (Format "html") s)   = URI.decodeText s
+  inlineToString (Str s)                        = s
+  inlineToString x         =  error $
+    "IMPOSSIBLE non-string inline " ++ show x
+
+{-
   extract (MetaBlocks xs)  = T.concat $ L.map blockToString xs
   extract (MetaString s)   = s
-  extract x                = error $ "IMPOSSIBLE non-string meta value " ++ show x
 
-  inlineToString (Str s)   = s
   inlineToString Space     = " "
   inlineToString SoftBreak = "\n"
   inlineToString LineBreak = "\n"
-  inlineToString x         =  error $ "IMPOSSIBLE non-string inline " ++ show x
 
   blockToString (Plain xs)      = T.concat $ L.map inlineToString xs
   blockToString (Para xs)       = T.concat $ L.map inlineToString xs
   blockToString (LineBlock xss) = T.concat $ L.concatMap (L.map inlineToString) xss
   blockToString x               =  error $ "IMPOSSIBLE non-string block " ++ show x
+-}
 
 getGET :: Map Text Text -> Text -> Maybe Text
 getGET inputs x = M.lookup ("GET_" <> x) inputs
