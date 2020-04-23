@@ -14,7 +14,9 @@ if (filter_has_var(INPUT_GET, "page")) {
      2 => array("file", "/tmp/error-output.txt", "a") // stderr is a file to write to
   );
 
-  $cmd = "./mary find --user=$user_id $site_root $page_id | ./pandoc --data-dir=data --standalone -f markdown --filter=marypandoc.sh -t html --template templates/mary.html5 2>&1";
+  if (empty($user_id)) { $userarg = ""; } else { $userarg = "--user=$user_id"; }
+
+  $cmd = "./mary find $userarg $site_root $page_id | ./pandoc --data-dir=data --standalone -f markdown --filter=marypandoc.sh -t html --template templates/mary.html5 2>&1";
 
   $cwd = NULL;
   $env = NULL;
