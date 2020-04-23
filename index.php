@@ -2,10 +2,17 @@
 
 $site_root = "../MarySites/";
 
-if (filter_has_var(INPUT_GET, "page")) {
+if (isset($_GET["page"])) {
 
-  $user_id = escapeshellarg($_SERVER['HTTP_CIS_REMOTE_USER']);
   $page_id = escapeshellarg($_GET["page"]);
+
+  if (isset($_SERVER['HTTP_CIS_REMOTE_USER'])) {
+    $user_id = escapeshellarg($_SERVER['HTTP_CIS_REMOTE_USER']);
+    $userarg = "--user=$user_id";
+  } else {
+    $user_id = "";
+    $userarg;
+  }
 
 
   $descriptorspec = array(
@@ -13,8 +20,6 @@ if (filter_has_var(INPUT_GET, "page")) {
      1 => array("pipe", "w"),  // stdout is a pipe that the child will write to
      2 => array("file", "/tmp/error-output.txt", "a") // stderr is a file to write to
   );
-
-  if (empty($user_id)) { $userarg = ""; } else { $userarg = "--user=$user_id"; }
 
   $cmd = "./mary find $userarg $site_root $page_id | ./pandoc --data-dir=data --standalone -f markdown --filter=marypandoc.sh -t html --template templates/mary.html5 2>&1";
 
@@ -41,7 +46,7 @@ if (filter_has_var(INPUT_GET, "page")) {
       $return_value = proc_close($process);
   }
 }
-elseif (filter_has_var(INPUT_GET, "pub")) {
+elseif (isset($_GET["pub"])) {
   $pub_id = filter_input(INPUT_GET, 'pub', FILTER_SANITIZE_SPECIAL_CHARS);
   $target = realpath($site_root . "/" . $pub_id);
   if (!$target) {
