@@ -11,7 +11,7 @@ if (isset($_GET["page"])) {
     $userarg = "--user=$user_id";
   } else {
     $user_id = "";
-    $userarg;
+    $userarg = "";
   }
 
 
