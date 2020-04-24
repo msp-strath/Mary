@@ -20,7 +20,6 @@ import System.FilePath
 import System.Directory
 import System.Process
 
-
 postText :: Text -> PHPSessionValue -> Y.Value
 postText prefix (PHPSessionValueArray kvs) = object
   [ (key .= value)
@@ -35,10 +34,11 @@ outputMeta d@(Y.Object o) | not (H.null o) = TIO.putStr (decodeUtf8 (Y.encode d)
 outputMeta _                               =  return ()
 
 maryFind :: FilePath   -- what is the site root?
-         -> String     -- username
+         -> String   -- what is the base URL?
+         -> Maybe String     -- username
          -> FilePath   -- page
          -> IO ()      -- PHP $POST $GET -[mary find user site page>- --- YAML ... markdown
-maryFind sitesRoot user page = do
+maryFind sitesRoot baseURL user page = do
   pbs <- B.getContents
   -- the inputs are serialised PHP objects representing post and get data, respectively
   let mpost = L.unfoldr decodePartialPHPSessionValue pbs
@@ -64,8 +64,12 @@ maryFind sitesRoot user page = do
         else do
             -- serve the metadata
             TIO.putStrLn "---"
-            TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack user])))
+            case user of
+              Nothing -> pure ()
+              Just u -> TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack u])))
+            TIO.putStr (decodeUtf8 (Y.encode (object ["baseURL" .= T.pack baseURL])))
             -- TIO.putStr (decodeUtf8 (Y.encode (object ["sitesRoot" .= T.pack sitesRoot])))
+
             outputMeta postData
             outputMeta getData
             TIO.putStrLn "..."

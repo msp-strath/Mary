@@ -2,7 +2,6 @@ module Main where
 
 import Control.Exception as E
 
-import Data.List as L
 import Data.Maybe
 import Data.Semigroup ((<>))
 import Data.Text
@@ -37,20 +36,18 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
   Shonkierjs filename -> do
     shonkierjs <- getDataFileName "src/data-dir/Shonkier.js"
     compileShonkier shonkierjs filename >>= TIO.putStrLn
-  Page filename postString getString siteRoot username -> do
+  Page filename postString getString siteRoot baseURL user -> do
     let postArray = parseRequests (pack postString)
     let getArray' = parseRequests (pack getString)
     -- make sure there is a page
     let getArray = case lookup "page" getArray' of
           Just _  -> getArray'
           Nothing -> ("page", pack filename):getArray'
-    user <- if L.null username then defaultUser else pure username
     let mary = "mary"
     let pandoc = "pandoc"
     servePage Config{..} postArray getArray filename >>= TIO.putStrLn
   Find{..}            -> do
-    user' <- if L.null user then defaultUser else pure user
-    maryFind sitesRoot user' page
+    maryFind sitesRoot baseURL user page
   where
     pp = prefs showHelpOnEmpty
     opts = info (optsParser <**> helper)
@@ -64,13 +61,15 @@ data Options
   | Shonkier   { filename :: String }
   | Shonkierjs { filename :: String }
   | Page       { filename :: String
+               , baseURL  :: String
                , postArray :: String
                , getArray :: String
                , siteRoot :: String
-               , user     :: String
+               , user     :: Maybe String
                }
-  | Find       { user      :: String
+  | Find       { user      :: Maybe String
                , sitesRoot :: String
+               , baseURL  :: String
                , page      :: String
                }
 
@@ -92,19 +91,21 @@ optsParser = subparser
              "Compile shonkier program to javascript"
  <> command' "page"
              (Page <$> strArgument (metavar "FILE" <> action "file" <> help "Input Mary file")
+                   <*> strArgument (metavar "URL" <> help "Base URL")
                    <*> option str (long "post" <> value ""
                                      <> metavar "STRING" <> help "POST input string (&-separated)")
                    <*> option str (long "get" <> value ""
                                     <> metavar "STRING" <> help "GET input string (&-separated)")
                    <*> option str (long "siteRoot" <> value "."
                                     <> metavar "STRING" <> action "directory" <> help "Site root.")
-                   <*> option str (long "user" <> value ""
-                                     <> metavar "STRING" <> action "user" <> help "Username"))
+                   <*> (optional $ strOption (long "user"
+                                     <> metavar "STRING" <> action "user" <> help "Username")))
              "Generate HTML from Mary file"
  <> command' "find"
-             (Find <$> option str (long "user" <> value ""
-                                               <> metavar "STRING" <> action "user" <> help "Username.")
+             (Find <$> (optional $ strOption (long "user"
+                                     <> metavar "STRING" <> action "user" <> help "Username."))
                    <*> strArgument (metavar "ROOT" <> action "directory" <> help "Path to site root.")
+                   <*> strArgument (metavar "URL" <> help "Base URL.")
                    <*> strArgument (metavar "PAGE" <> action "file" <> help "Page to serve."))
              "Find webpage and output markdown")
   where

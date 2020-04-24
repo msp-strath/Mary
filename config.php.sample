@@ -1,0 +1,6 @@
+<?php
+
+$site_root = "../MarySites/";
+$base_URL = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/"
+
+?>
