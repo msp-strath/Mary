@@ -42,8 +42,10 @@ instance FreeVars v => FreeVars (Term' a v) where
     -- To be exact we would need to subtract the variables bound in `f`
     -- if it is a `Match`. At the moment we generate an over-approximation.
     Semi a b       -> freeVars [a, b]
+    Prio a b       -> freeVars [a, b]
     Fun _ cls      -> freeVars cls
     Match p e      -> freeVars e
+    Mask a t       -> freeVars t
 
 instance FreeVars (PValue' a) where
   freeVars = \case

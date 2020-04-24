@@ -114,7 +114,7 @@ snarfMaryDef b = return b
 
 evalMary :: FromValue b => [Import] -> Env -> Text -> b
 evalMary is env e =
-  case parseOnly (term <* endOfInput) e of
+  case parseOnly (topTerm <* endOfInput) e of
     Left err -> error err
     Right t -> case rawShonkier is env t of
       Value v -> fromValue v
