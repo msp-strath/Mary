@@ -147,7 +147,6 @@ data OpFax = OpFax
   , spell :: String
   } deriving (Show, Eq)
 
-
 data Dir = LeftOf | RightOf deriving (Show, Eq)
 data WhereAmI
   = Utopia
@@ -201,3 +200,4 @@ prefixOpFax :: [(String, OpFax)]
 prefixOpFax =
   [ ("!", OpFax {tight = Nega, assoc = RAsso, spell = "Not"})
   ]
+

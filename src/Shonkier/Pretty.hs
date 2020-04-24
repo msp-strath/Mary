@@ -203,6 +203,7 @@ instance Pretty RawVariable where
   pretty (mns, v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
 
 instance Pretty ScopedVariable where
+  pretty (LocalVar :.: ('_' : _)) = pretty ("_" :: Variable)
   pretty (sco :.: x) = case sco of
     LocalVar           -> pretty x
     GlobalVar b _      -> if b then ppGlobalVar x else pretty x
@@ -236,11 +237,17 @@ instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' String v) where
       Semi l r      -> ppSemi w l r
       Prio l r      -> parensIf prioFax w $
         prettyPrec (LeftOf :^: prioFax) l <+> prioritize <+> prettyPrec (RightOf :^:prioFax) r
-      Fun hs cls    -> ppFun hs cls
+      Fun hs cls    -> ppFun hs (squinch cls)
       Match p t     -> ppMatch w p t
       Mask a t      -> parensIf maskFax w $
         ppAtom a <+> mask <+> prettyPrec (RightOf :^: maskFax) t
     it -> ppList it
+   where
+    squinch cls = case traverse pinch cls of
+      Nothing  -> cls
+      Just cls -> squinch cls
+    pinch (PValue (PBind ('_' : _)) : ps, rs) = Just (ps, rs)
+    pinch _ = Nothing
 
 instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Clause' String v) where
   pretty = ppClause

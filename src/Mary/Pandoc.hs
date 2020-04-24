@@ -139,7 +139,7 @@ readPage = asks page
 
 evalMary :: FromValue b => Text -> EnvReader b
 evalMary e =
-  case parseOnly (term <* endOfInput) e of
+  case parseOnly (topTerm <* endOfInput) e of
     Left err -> error err
     Right t -> do
       is <- readImports
