@@ -46,8 +46,7 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
     let mary = "mary"
     let pandoc = "pandoc"
     servePage Config{..} postArray getArray filename >>= TIO.putStrLn
-  Find{..}            -> do
-    maryFind sitesRoot baseURL user page
+  Find{..}            -> maryFind sitesRoot baseURL user page
   where
     pp = prefs showHelpOnEmpty
     opts = info (optsParser <**> helper)
@@ -98,12 +97,12 @@ optsParser = subparser
                                     <> metavar "STRING" <> help "GET input string (&-separated)")
                    <*> option str (long "siteRoot" <> value "."
                                     <> metavar "STRING" <> action "directory" <> help "Site root.")
-                   <*> (optional $ strOption (long "user"
-                                     <> metavar "STRING" <> action "user" <> help "Username")))
+                   <*> optional (strOption (long "user"
+                                    <> metavar "STRING" <> action "user" <> help "Username")))
              "Generate HTML from Mary file"
  <> command' "find"
-             (Find <$> (optional $ strOption (long "user"
-                                     <> metavar "STRING" <> action "user" <> help "Username."))
+             (Find <$> optional (strOption (long "user"
+                                    <> metavar "STRING" <> action "user" <> help "Username."))
                    <*> strArgument (metavar "ROOT" <> action "directory" <> help "Path to site root.")
                    <*> strArgument (metavar "URL" <> help "Base URL.")
                    <*> strArgument (metavar "PAGE" <> action "file" <> help "Page to serve."))

@@ -156,7 +156,7 @@ evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set
   = let textarea = "type" `notElem` L.map fst as in
-    RawBlock (Format "html") <$> (makeInputForm textarea a t)
+    RawBlock (Format "html") <$> makeInputForm textarea a t
 evalMaryBlock b = pure b
 
 evalMaryInline :: Inline -> EnvReader Inline
