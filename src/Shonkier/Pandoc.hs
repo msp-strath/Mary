@@ -69,7 +69,7 @@ instance ToRawTerm Block where
     LineBlock ps      -> toListy "LineBlock" ps
     CodeBlock a@(b, cs, d) e
       | "mary" `elem` cs
-      , Right t <- parseOnly term e
+      , Right t <- parseOnly topTerm e
         -> toAfter1Listy "Div" (a, filter ("mary" /=) cs, d) [t]
       | otherwise
         -> toTakes2 "Code" a e
@@ -93,7 +93,7 @@ instance ToRawTerm Inline where
     SmallCaps is   -> toListy "SmallCaps" is
     Code a@(b, cs, d) e
       | "mary" `elem` cs
-      , Right t <- parseOnly term e
+      , Right t <- parseOnly topTerm e
         -> toAfter1Listy "Span" (b, filter ("mary" /=) cs, d) [t]
       | otherwise
         -> toTakes2 "Code" a e
