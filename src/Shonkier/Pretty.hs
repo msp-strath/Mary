@@ -203,6 +203,7 @@ instance Pretty RawVariable where
   pretty (mns, v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
 
 instance Pretty ScopedVariable where
+  -- deal with variables on rhs introduced by brace sections
   pretty (LocalVar :.: ('_' : _)) = pretty ("_" :: Variable)
   pretty (sco :.: x) = case sco of
     LocalVar           -> pretty x
@@ -219,6 +220,7 @@ instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' String v) where
       Lit l         -> prettyPrec w l
       String k ps t -> ppSplice k ps t
       Var v         -> pretty v
+      Blank         -> pretty ("_" :: Variable)
       Nil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
       App f ts      -> case (f, ts) of
@@ -243,6 +245,7 @@ instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' String v) where
         ppAtom a <+> mask <+> prettyPrec (RightOf :^: maskFax) t
     it -> ppList it
    where
+    -- deal with variables on the lhs introduced by brace sections
     squinch cls = case traverse pinch cls of
       Nothing  -> cls
       Just cls -> squinch cls

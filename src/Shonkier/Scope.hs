@@ -95,6 +95,7 @@ instance ScopeCheck RawTerm Term where
     Atom a -> pure (Atom a)
     Lit l  -> pure (Lit l)
     Var v  -> Var <$> scopeCheck local v
+    Blank  -> pure Blank
     Nil    -> pure Nil
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b
     App f ts  -> App <$> scopeCheck local f <*> mapM (scopeCheck local) ts

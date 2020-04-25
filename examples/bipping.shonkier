@@ -1,7 +1,6 @@
 pipe('send,'recv):
 pipe({'send(x) -> ks},{'recv() -> kr}) -> pipe(ks([]),kr(x))
 pipe({s},v) -> v
-pipe(v,{r}) -> 'abort()
 
 runState(, 'get 'put):
 runState(s, v) -> v

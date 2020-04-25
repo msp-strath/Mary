@@ -1,4 +1,8 @@
+{-# LANGUAGE RankNTypes, FlexibleContexts #-}
+
 module Shonkier.Syntax where
+
+import Control.Monad.State
 
 import Data.Text
 import Utils.List
@@ -35,6 +39,7 @@ data Term' a v
   | Lit Literal
   | String Keyword [(Text, Term' a v)] Text
   | Var v
+  | Blank  -- for brace sections
   | Cell (Term' a v) (Term' a v)
   | App (Term' a v) [Term' a v]
   | Semi (Term' a v) (Term' a v)
@@ -200,4 +205,36 @@ prefixOpFax :: [(String, OpFax)]
 prefixOpFax =
   [ ("!", OpFax {tight = Nega, assoc = RAsso, spell = "Not"})
   ]
+
+
+---------------------------------------------------------------------------
+-- BRACE SECTIONS
+---------------------------------------------------------------------------
+
+class Vary v where
+  varOf :: Variable -> v
+
+instance Vary Variable where
+  varOf = id
+instance Vary RawVariable where
+  varOf = (Nothing,)
+instance Vary ScopedVariable where
+  varOf = (LocalVar :.:)  -- you better know what you're doing
+
+braceFun :: Vary v => [Clause' a v] -> [Clause' a v]
+braceFun cs = cs' where
+  uv :: forall w. Vary w => Int -> w
+  uv i = varOf $ "_" ++ show i
+  (cs', n) = runState (traverse mangle cs) 0
+  ups = [PValue (PBind (uv i)) | i <- [0..(n - 1)]]
+  mangle (ps, rs) = (ups ++ ps,) <$> traverse wrangle rs
+  wrangle (g :?> t) = (:?>) <$> traverse tangle g <*> tangle t
+  tangle Blank = get >>= \ i -> Var (uv i) <$ put (i + 1)
+  tangle (String k ws z) = String k <$> traverse (traverse tangle) ws <*> pure z
+  tangle (Cell s t) = Cell <$> tangle s <*> tangle t
+  tangle (App f as) = App <$> tangle f <*> traverse tangle as
+  tangle (Semi s t) = Semi <$> tangle s <*> tangle t
+  tangle (Prio s t) = Prio <$> tangle s <*> tangle t
+  tangle (Match p t) = Match p <$> tangle t
+  tangle t = pure t
 

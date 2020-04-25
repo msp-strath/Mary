@@ -35,6 +35,7 @@ instance FreeVars v => FreeVars (Term' a v) where
     Atom{}         -> Set.empty
     Lit{}          -> Set.empty
     Nil{}          -> Set.empty
+    Blank          -> Set.empty
     String _ tes _ -> foldMap (freeVars . snd) tes
     Var v          -> freeVars v
     Cell a b       -> freeVars [a, b]
