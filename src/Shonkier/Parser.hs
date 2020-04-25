@@ -5,7 +5,6 @@ module Shonkier.Parser where
 import Control.Applicative
 import Control.Arrow (first)
 import Control.Monad
-import Control.Monad.State
 
 import Data.Attoparsec.Text hiding (skipSpace)
 import qualified Data.Attoparsec.Text as Atto
@@ -117,7 +116,7 @@ decl :: Parser [[String]]
 decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> argTuple pcomputation <*> rhs NoBrace
+defn = (,) <$> argTuple pcomputation <*> rhs
 
 punc :: String -> Parser ()
 punc c = () <$ skipSpace <* traverse char c <* skipSpace
@@ -126,10 +125,10 @@ sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
 topTerm :: Parser RawTerm
-topTerm = spaceTerm NoBrace
+topTerm = spaceTerm
 
-spaceTerm :: BraceHuh -> Parser RawTerm
-spaceTerm bh = id <$ skipSpace <*> term bh <* skipSpace
+spaceTerm :: Parser RawTerm
+spaceTerm = id <$ skipSpace <*> term <* skipSpace
 
 ------------------------------------------------------------------------------
 -- NOTA BENE                                                                --
@@ -138,64 +137,62 @@ spaceTerm bh = id <$ skipSpace <*> term bh <* skipSpace
 --                                                                          --
 ------------------------------------------------------------------------------
 
-data BraceHuh = NoBrace | InBrace deriving (Show, Eq)
-
 opok :: OpFax -> WhereAmI -> Parser ()
 opok o w = () <$ guard (not (needParens o w))
 
-term :: BraceHuh -> Parser RawTerm
-term bh = termBut bh Utopia
+term :: Parser RawTerm
+term = termBut Utopia
 
-termBut :: BraceHuh -> WhereAmI -> Parser RawTerm
-termBut bh w = weeTerm bh w >>= moreTerm bh w
+termBut :: WhereAmI -> Parser RawTerm
+termBut w = weeTerm w >>= moreTerm w
 
-weeTerm :: BraceHuh -> WhereAmI -> Parser RawTerm
-weeTerm bh w = choice
+weeTerm :: WhereAmI -> Parser RawTerm
+weeTerm w = choice
   [ Match <$ opok pamaFax w
     <*> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace
-    <*> termBut bh (RightOf :^: pamaFax)
+    <*> termBut (RightOf :^: pamaFax)
   , Atom <$> atom
   , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf (spaceTerm bh)
+  , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
   , Var <$> variable
-  , Var (Nothing, "") <$ char '_' <* guard (bh == InBrace)
-  , uncurry (flip $ foldr Cell) <$> listOf (term bh) Nil
-  , braceFun <$ char '{' <* skipSpace
-    <*> sep skipSpace (clause InBrace) <* skipSpace <* char '}'
-  , id <$ char '(' <*> spaceTerm bh <* char ')'
-  , opCand >>= prefixApp bh w
+  , Blank <$ char '_'
+  , uncurry (flip $ foldr Cell) <$> listOf term Nil
+  , Fun [] <$ char '{' <* skipSpace
+    <*> sep skipSpace clause <* skipSpace <* char '}'
+  , id <$ char '(' <*> spaceTerm <* char ')'
+  , opCand >>= prefixApp w
   ]
 
-moreTerm :: BraceHuh -> WhereAmI -> RawTerm -> Parser RawTerm
-moreTerm bh w t = choice
-  [ App t <$ opok applFax w <*> argTuple (term bh) >>= moreTerm bh w
+moreTerm :: WhereAmI -> RawTerm -> Parser RawTerm
+moreTerm w t = choice
+  [ App t <$ opok applFax w <*> argTuple term >>= moreTerm w
   , Mask <$> tmAtom t <* opok maskFax w <* punc "^"
-    <*> termBut bh (RightOf :^: maskFax) >>= moreTerm bh w
+    <*> termBut (RightOf :^: maskFax) >>= moreTerm w
   , Semi t <$ opok semiFax w <* punc ";"
-    <*> termBut bh (RightOf :^: semiFax) >>= moreTerm bh w
+    <*> termBut (RightOf :^: semiFax) >>= moreTerm w
   , Prio t <$ opok prioFax w <* punc "?>"
-    <*> termBut bh (RightOf :^: prioFax) >>= moreTerm bh w
-  , (skipSpace *> opCand) >>= infixApp bh w t >>= moreTerm bh w
+    <*> termBut (RightOf :^: prioFax) >>= moreTerm w
+  , (skipSpace *> opCand) >>= infixApp w t >>= moreTerm w
   , pure t
   ] where
   tmAtom (Atom a) = pure a
   tmAtom _ = empty
 
-prefixApp :: BraceHuh -> WhereAmI -> String -> Parser RawTerm
-prefixApp bh w p = case lookup p prefixOpFax of
+prefixApp :: WhereAmI -> String -> Parser RawTerm
+prefixApp w p = case lookup p prefixOpFax of
   Nothing -> empty
   Just x  -> App (Var (Nothing, "primPrefix" ++ spell x)) . (:[])
           <$ opok x w
           <* skipSpace
-         <*> termBut bh (RightOf :^: x)
+         <*> termBut (RightOf :^: x)
 
-infixApp :: BraceHuh -> WhereAmI -> RawTerm -> String -> Parser RawTerm
-infixApp bh w l i = case lookup i infixOpFax of
+infixApp :: WhereAmI -> RawTerm -> String -> Parser RawTerm
+infixApp w l i = case lookup i infixOpFax of
   Nothing -> empty
   Just x  -> App (Var (Nothing, "primInfix" ++ spell x)) . (l :) . (:[])
           <$ opok x w
           <* skipSpace
-         <*> termBut bh (RightOf :^: x)
+         <*> termBut (RightOf :^: x)
 
 atom :: Parser String
 atom = id <$ char '\'' <*> identifier
@@ -305,14 +302,14 @@ spaceMaybeComma =
   () <$ skipSpace <* (() <$ char ',' <* skipSpace <|> pure ())
 
 
-clause :: BraceHuh -> Parser RawClause
-clause bh = (,) <$> sep spaceMaybeComma pcomputation <*> rhs bh
-  <|> (,) [] <$> ((:[]) . (Nothing :?>) <$> term bh)
+clause :: Parser RawClause
+clause = (,) <$> sep spaceMaybeComma pcomputation <*> rhs
+  <|> (,) [] <$> ((:[]) . (Nothing :?>) <$> term)
 
-rhs :: BraceHuh -> Parser [RawRhs]
-rhs bh = (:[]) . (Nothing :?>) <$ punc "->" <*> term bh
-  <|> someSp ((:?>) <$ punc "|" <*> (Just <$> term bh <|> pure Nothing)
-                    <* punc "->" <*> term bh)
+rhs :: Parser [RawRhs]
+rhs = (:[]) . (Nothing :?>) <$ punc "->" <*> term
+  <|> someSp ((:?>) <$ punc "|" <*> (Just <$> term <|> pure Nothing)
+                    <* punc "->" <*> term)
 
 pcomputation :: Parser PComputation
 pcomputation
@@ -340,22 +337,6 @@ pvalue = choice
   , uncurry (flip $ foldr PCell) <$> listOf pvalue PNil
   ]
 
-braceFun :: [RawClause] -> RawTerm
-braceFun cs = Fun [] cs' where
-  uv i = "_" ++ show i
-  (cs', n) = runState (traverse mangle cs) 0
-  ups = [PValue (PBind (uv i)) | i <- [0..(n - 1)]]
-  mangle (ps, rs) = (ups ++ ps,) <$> traverse wrangle rs
-  wrangle (g :?> t) = (:?>) <$> traverse tangle g <*> tangle t
-  tangle (Var (Nothing, "")) = get >>= \ i -> Var (Nothing, uv i) <$ put (i + 1)
-  tangle (String k ws z) = String k <$> traverse (traverse tangle) ws <*> pure z
-  tangle (Cell s t) = Cell <$> tangle s <*> tangle t
-  tangle (App f as) = App <$> tangle f <*> traverse tangle as
-  tangle (Semi s t) = Semi <$> tangle s <*> tangle t
-  tangle (Prio s t) = Prio <$> tangle s <*> tangle t
-  tangle (Match p t) = Match p <$> tangle t
-  tangle t = pure t
-
 getMeA :: Parser a -> Text -> a
 getMeA p txt = case parseOnly p txt of
   Left err -> error err
@@ -368,4 +349,4 @@ getMeAProgram :: Text -> RawProgram
 getMeAProgram = getMeA program
 
 getMeATerm :: Text -> RawTerm
-getMeATerm = getMeA (spaceTerm NoBrace <* endOfInput)
+getMeATerm = getMeA (spaceTerm <* endOfInput)

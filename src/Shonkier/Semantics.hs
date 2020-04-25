@@ -173,6 +173,7 @@ eval (rho, t) = case t of
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)
   Nil       -> use VNil
+  Blank     -> complain "UnboundBlank" []
   Cell a b  -> do push (CellL rho b)
                   eval (rho, a)
   App f as  -> do push (AppL rho as)
@@ -182,7 +183,7 @@ eval (rho, t) = case t of
                   eval (rho, l)
   Prio l r  -> do push (PrioL rho r)
                   eval (rho, l)
-  Fun es cs -> use (VFun CnNil rho es cs)
+  Fun es cs -> use (VFun CnNil rho es (braceFun cs))
   String k sts u -> case sts of
     []           -> use (VString k u)
     (s, t) : sts -> do

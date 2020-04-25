@@ -38,21 +38,22 @@ instance JS Scoping where
 instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
-instance (JS v) => JS (Clause' String v) where
+instance (JS v, Vary v) => JS (Clause' String v) where
   js (qs, r) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term r) ++ [")"] where
 
-instance (JS v) => JS (Term' String v) where
+instance (JS v, Vary v) => JS (Term' String v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]
   js (Lit l)         = ["Lit("] ++ js l ++ [")"]
   js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
   js (Var x)         = js x
   js Nil             = ["Nil()"]
+  js Blank           = ["undefined"]
   js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js (App f as)      = ["App("] ++ js f ++ [","] ++ js as ++ [")"]
   js (Semi l r)      = ["Semi("] ++ js l ++ [","] ++ js r ++ [")"]
   js (Prio l r)      = ["Prio("] ++ js l ++ [","] ++ js r ++ [")"]
   js (Fun hs cs)     = ["Fun("] ++ js (fmap (fmap jsAtom) hs) ++ [","]
-                    ++ js cs
+                    ++ js (braceFun cs)
                     ++ [")"]
   js (Match p t)     = ["Match("] ++ js p ++ [","] ++ js t ++ [")"]
   js (Mask a t)      = ["Mask(", jsAtom a, ","] ++ js t ++ [")"]
