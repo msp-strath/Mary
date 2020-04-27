@@ -39,15 +39,16 @@ process doc0@(Pandoc meta docs) = do
                           | ds <- defns
                           , let (is, p) = maryDefinitionToModule ds
                           ]
-  (mod, env) <- loadToplevelModule "." rm
 
-  -- we assume that there is page metadata, put there by mary find
   let inputs = metaToInputValues meta
-  let page = flip fromMaybe (getGET inputs "page")
-               $ error "Meta data 'page' missing!"
-  let baseURL = flip fromMaybe (M.lookup "baseURL" inputs)
-               $ error "Meta data 'baseURL' missing!"
+  -- we assume that certain metadata exists, put there by mary find
+  let page = errorOnFail (getGET inputs) "page"
+  let sitesRoot = errorOnFail (`M.lookup` inputs) "sitesRoot"
+  let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
   let user = M.lookup "user" inputs
+
+  let fp = T.unpack sitesRoot </> T.unpack page
+  (mod, env) <- loadToplevelModule fp rm
   let envdata = EnvData is (env, inputs) baseURL page user
   let doc2 = runReader (walkM evalMaryBlock  doc1) envdata
   let doc3 = runReader (walkM evalMaryInline doc2) envdata
@@ -60,6 +61,7 @@ process doc0@(Pandoc meta docs) = do
   h1 :: Block -> Maybe Inlines
   h1 (Header 1 _ is) = Just (fromList is)
   h1 _ = Nothing
+  errorOnFail f x = fromMaybe (error "Meta data '" <> x <> "' missing!") (f x)
 
 metaToInputValues :: Meta -> Map Text Text
 metaToInputValues (Meta m) = M.map extract m where

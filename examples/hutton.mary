@@ -9,55 +9,13 @@ main()
 is obtained by running the following program
 
 ```{ .mary-def .keep }
-main() -> ['Plain printTree(runParser("31*(13+7*2)+24*42", hutton()))]
+main() -> ['Plain printTree(parse("31*(13+7*2)+24*42", hutton))]
 ```
 
 using the following auxiliary definitions.
 
 ``` { .mary-def .keep }
-runParser(,'getChar 'choice):
-runParser("`[c|cs]`", {'getChar()   -> k}) -> runParser(cs,k(c))
-runParser(""        , {'getChar()   -> k}) -> k('abort())
-runParser(cs        , {'choice(a,b) -> k}) -> runParser(cs,k(a())) ?> runParser(cs,k(b()))
-runParser(""        , v)                   -> v
-runParser(cs        , v)                   -> [v cs]
-
-satisfy(p) -> p('getChar())
-is(c) -> satisfy({ d -> c == d })
-
-// Lists of parsed values
-some(p) -> [p()|many(p)]
-many(p) -> 'choice({some(p)},{[]})
-
-// Digits
-isDigit("0") -> 0
-isDigit("1") -> 1
-isDigit("2") -> 2
-isDigit("3") -> 3
-isDigit("4") -> 4
-isDigit("5") -> 5
-isDigit("6") -> 6
-isDigit("7") -> 7
-isDigit("8") -> 8
-isDigit("9") -> 9
-
-digit()  -> satisfy(isDigit)
-number() -> convert(reverse(some(digit)))
-
-reverse(xs) -> reverseAcc([],xs)
-reverseAcc(acc,[])     -> acc
-reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
-
-convert([])     -> 0
-convert([d|ds]) -> d + 10 * convert(ds)
-
-
-parens(p) -> { ['1 v '1] -> v }([is("(") p() is(")")])
-
-chain(i,c,a) -> reduce(i(),many({[c() a()]}))
-
-reduce(v,[])         -> v
-reduce(v,[[c a]|xs]) -> [c v reduce(a,xs)]
+import "examples/parser.shonkier"
 
 atom() -> 'choice(number,{parens(plus)})
 mult() -> chain(atom,{is("*"); 'Mult},atom)
