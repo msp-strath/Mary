@@ -43,11 +43,11 @@ process doc0@(Pandoc meta docs) = do
   let inputs = metaToInputValues meta
   -- we assume that certain metadata exists, put there by mary find
   let page = errorOnFail (getGET inputs) "page"
-  let sitesRoot = errorOnFail (flip M.lookup inputs) "sitesRoot"
-  let baseURL = errorOnFail (flip M.lookup inputs) "baseURL"
+  let sitesRoot = errorOnFail (`M.lookup` inputs) "sitesRoot"
+  let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
   let user = M.lookup "user" inputs
 
-  let fp = (T.unpack sitesRoot) </> (T.unpack page)
+  let fp = T.unpack sitesRoot </> T.unpack page
   (mod, env) <- loadToplevelModule fp rm
   let envdata = EnvData is (env, inputs) baseURL page user
   let doc2 = runReader (walkM evalMaryBlock  doc1) envdata
