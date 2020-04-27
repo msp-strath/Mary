@@ -1,0 +1,52 @@
+parse(cs,p) -> [v ""] := runParser(cs,p()); v
+
+catchAbort('abort,):
+catchAbort({'abort() -> _}, _, k) -> k()
+catchAbort([a cs], k, _) -> runParser(cs,k(a))
+
+runParser(,'abort 'getChar 'choice):
+runParser("`[c|cs]`", {'getChar()   -> k}) -> runParser(cs,k(c))
+runParser(""        , {'getChar()   -> k}) -> k('abort())
+runParser(cs        , {'choice(a,b) -> k})
+  -> catchAbort(runParser(cs,a()), k, {catchAbort(runParser(cs,b()),k,'abort)})
+runParser(cs        , v)                   -> [v cs]
+
+satisfy(p) -> p('getChar())
+is(c) -> satisfy({ d -> c == d })
+
+// Lists of parsed values
+some(p) -> [p()|many(p)]
+many(p) -> 'choice({some(p)},{[]})
+
+// Digits
+isDigit("0") -> 0
+isDigit("1") -> 1
+isDigit("2") -> 2
+isDigit("3") -> 3
+isDigit("4") -> 4
+isDigit("5") -> 5
+isDigit("6") -> 6
+isDigit("7") -> 7
+isDigit("8") -> 8
+isDigit("9") -> 9
+
+digit()  -> satisfy(isDigit)
+number() -> convert(reverse(some(digit)))
+
+reverse(xs) -> reverseAcc([],xs)
+reverseAcc(acc,[])     -> acc
+reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
+
+convert([])     -> 0
+convert([d|ds]) -> d + 10 * convert(ds)
+
+parens(p) -> { ['1 v '1] -> v }([is("(") p() is(")")])
+
+chain(i,c,a) -> reduce(i(),many({[c() a()]}))
+
+reduce(v,[])         -> v
+reduce(v,[[c a]|xs]) -> [c v reduce(a,xs)]
+
+main() -> [ parse("", {'choice('abort,{1}) ?> 2})
+            parse("1,23,75", {[number()|many({is(",");number()})]})
+          ]
