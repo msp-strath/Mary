@@ -68,7 +68,7 @@ maryFind sitesRoot baseURL user page = do
               Nothing -> pure ()
               Just u -> TIO.putStr (decodeUtf8 (Y.encode (object ["user" .= T.pack u])))
             TIO.putStr (decodeUtf8 (Y.encode (object ["baseURL" .= T.pack baseURL])))
-            -- TIO.putStr (decodeUtf8 (Y.encode (object ["sitesRoot" .= T.pack sitesRoot])))
+            TIO.putStr (decodeUtf8 (Y.encode (object ["sitesRoot" .= T.pack sitesRoot])))
 
             outputMeta postData
             outputMeta getData
