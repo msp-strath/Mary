@@ -5,6 +5,8 @@ import Data.List as L
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
+
 import Test.Utils
 import Test.Tasty (TestTree)
 
