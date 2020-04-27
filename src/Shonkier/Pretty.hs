@@ -334,7 +334,8 @@ instance Pretty (FilePath, Maybe Namespace) where
     <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
 instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Module' String v) where
-  pretty (is, p) = pretty is <> pretty p
+  pretty ([], p) = pretty p
+  pretty (is, p) = vsep [pretty is, pretty p]
 
 
 ------------------------------------------------------------------------------

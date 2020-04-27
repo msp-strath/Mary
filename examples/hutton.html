@@ -109,7 +109,8 @@
 </div>
 <p>using the following auxiliary definitions.</p>
 <div class="shonkier-pretty">
-<span class="shonkier-keyword">import</span> examples/parser.shonkier <span class="shonkier-keyword"></span> <span class="shonkier-function">atom</span>() <span class="shonkier-operator">-&gt;</span> <span class="shonkier-atom">'choice</span>(number, {parens(plus)})<br />
+<span class="shonkier-keyword">import</span> examples/parser.shonkier <span class="shonkier-keyword"></span> <br />
+<span class="shonkier-function">atom</span>() <span class="shonkier-operator">-&gt;</span> <span class="shonkier-atom">'choice</span>(number, {parens(plus)})<br />
 <br />
 <span class="shonkier-function">mult</span>() <span class="shonkier-operator">-&gt;</span> chain(atom, {is(<span class="shonkier-string">"*"</span>)<span class="shonkier-operator">;</span> <span class="shonkier-atom">'Mult</span>}, atom)<br />
 <br />
