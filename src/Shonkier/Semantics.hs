@@ -130,10 +130,10 @@ execShonkier m gl s = snd $ runShonkier m gl s
 shonkier :: Env -> Term -> Computation
 shonkier rho t = evalShonkier (eval (mempty, t)) rho CxNil
 
-rawShonkier :: [Import] -> Env -> RawTerm -> Computation
-rawShonkier is env@(gl, ins) t =
+rawShonkier :: [Import] -> FilePath -> Env -> RawTerm -> Computation
+rawShonkier is fp env@(gl, ins) t =
   let scope = fmap keysSet gl
-      term  = checkRaw "." is scope t
+      term  = checkRaw fp is scope t
   in shonkier env term
 
 globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
@@ -160,10 +160,10 @@ eval (rho, t) = case t of
     Just v  -> use v
     Nothing -> case sco of
       -- successes
-      LocalVar       -> theIMPOSSIBLE
+      LocalVar       -> theIMPOSSIBLE "LocalVar"
       GlobalVar _ fp -> do
         v <- globalLookup fp x'
-        use (fromMaybe theIMPOSSIBLE v)
+        use (fromMaybe (theIMPOSSIBLE "GlobalVar") v)
 
       -- error cases
       OutOfScope         -> complain "OutOfScope" [vVar x']
@@ -206,7 +206,7 @@ eval (rho, t) = case t of
     eval (rho, t)
 
   where
-    theIMPOSSIBLE = error "The IMPOSSIBLE happened!"
+    theIMPOSSIBLE x = error $ "The IMPOSSIBLE happened! " ++ x
     vVar x = VString "" $ T.pack x
 
 use :: Value -> Shonkier Computation

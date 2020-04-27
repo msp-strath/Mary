@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Mary.Pandoc where
 
+import Control.Arrow
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Control.Monad.Reader (Reader, runReader, asks)
 import Control.Newtype
@@ -20,6 +21,7 @@ import Network.URI.Encode as URI
 import Text.Pandoc.Builder
 import Text.Pandoc.Walk
 
+import System.Directory
 import System.FilePath
 
 import Shonkier.Import
@@ -47,9 +49,9 @@ process doc0@(Pandoc meta docs) = do
   let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
   let user = M.lookup "user" inputs
 
-  let fp = T.unpack sitesRoot </> T.unpack page
-  (mod, env) <- loadToplevelModule fp rm
-  let envdata = EnvData is (env, inputs) baseURL page user
+  fp <- makeAbsolute (T.unpack sitesRoot </> T.unpack page)
+  (_, env, lcp) <- loadToplevelModule fp rm
+  let envdata = EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
   let doc2 = runReader (walkM evalMaryBlock  doc1) envdata
   let doc3 = runReader (walkM evalMaryInline doc2) envdata
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
@@ -119,6 +121,8 @@ snarfMaryDef c@(Div (a , b, kvs) p)
 snarfMaryDef b = return b
 
 data EnvData = EnvData { imps        :: [Import]
+                       , filename    :: FilePath
+                       , prefix      :: String
                        , environment :: Env
                        , baseURL     :: Text
                        , page        :: Text
@@ -139,18 +143,30 @@ readBaseURL = asks baseURL
 readPage :: EnvReader Text
 readPage = asks page
 
+readFilename :: EnvReader FilePath
+readFilename = asks filename
+
+readPrefixToStrip :: EnvReader FilePath
+readPrefixToStrip = asks prefix
+
+
 evalMary :: FromValue b => Text -> EnvReader b
 evalMary e =
   case parseOnly (topTerm <* endOfInput) e of
     Left err -> error err
     Right t -> do
       is <- readImports
+      fp <- readFilename
       env <- readEnv
-      case rawShonkier is env t of
+      -- we need to strip off the common var prefix from our term
+      lcp <- readPrefixToStrip
+      let t' = fmap (stripVarPrefix lcp) t
+      case rawShonkier is fp env t' of
         Value v -> pure $ fromValue v
         Request r _ -> error (show r)
-
-
+  where
+    stripVarPrefix :: String -> RawVariable -> RawVariable
+    stripVarPrefix lcp = first (fmap $ stripPrefixButDot lcp)
 
 evalMaryBlock :: Block -> EnvReader Block
 evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs = evalMary e
@@ -165,8 +181,8 @@ evalMaryInline :: Inline -> EnvReader Inline
 evalMaryInline (Code (_, cs, _) e) | "mary" `elem` cs = evalMary e
 evalMaryInline (Code a@(_, cs, _) t) | "input" `elem` cs =
   RawInline (Format "html") <$> makeInputForm False a t
-evalMaryInline (Link attrs is target)  = Link attrs is <$> makeAbsolute target
-evalMaryInline (Image attrs is target) = Image attrs is <$> makeAbsolute target
+evalMaryInline (Link attrs is target)  = Link attrs is <$> makeAbsRef target
+evalMaryInline (Image attrs is target) = Image attrs is <$> makeAbsRef target
 evalMaryInline b = pure b
 
 
@@ -188,8 +204,8 @@ makeInputForm textarea a@(i, cs, as) p = do
       T.concat (if textarea then [">", fromMaybe "" mval , "</textarea>"]
                else [ T.concat [" value=\"", fromJust mval, "\""] | isJust mval] ++  [">"])
 
-makeAbsolute :: Target -> EnvReader Target
-makeAbsolute (url, title) = do
+makeAbsRef :: Target -> EnvReader Target
+makeAbsRef (url, title) = do
   absUrl <- if isAbsolute url then pure url -- keep it as is
     else do
       baseURL <- readBaseURL

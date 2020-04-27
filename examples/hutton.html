@@ -13,36 +13,36 @@
   <script>
   var globalEnv = {};
   globalEnv["atom"] = {};
-  globalEnv["atom"]["/examples/hutton.mary"] = VFun(null,{},[],[Clause([],App(Atom("choice"),[Var(GlobalVar(false,"examples/parser.shonkier"),"number"),Fun([],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"parens"),[Var(GlobalVar(false,"/examples/hutton.mary"),"plus")]))])]))]);
+  globalEnv["atom"]["hutton.mary"] = VFun(null,{},[],[Clause([],App(Atom("choice"),[Var(GlobalVar(false,"parser.shonkier"),"number"),Fun([],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"parens"),[Var(GlobalVar(false,"hutton.mary"),"plus")]))])]))]);
   globalEnv["catchAbort"] = {};
-  globalEnv["catchAbort"]["examples/parser.shonkier"] = VFun(null,{},[["abort"],[]],[Clause([Request("abort",[],"_"),Value(PWild),Value("k")],App(Var(LocalVar(),"k"),[])),Clause([Value(Cell("a",Cell("cs",Nil()))),Value("k"),Value(PWild)],App(Var(GlobalVar(false,"examples/parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"k"),[Var(LocalVar(),"a")])]))]);
+  globalEnv["catchAbort"]["parser.shonkier"] = VFun(null,{},[["abort"],[]],[Clause([Request("abort",[],"_"),Value(PWild),Value("k")],App(Var(LocalVar(),"k"),[])),Clause([Value(Cell("a",Cell("cs",Nil()))),Value("k"),Value(PWild)],App(Var(GlobalVar(false,"parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"k"),[Var(LocalVar(),"a")])]))]);
   globalEnv["chain"] = {};
-  globalEnv["chain"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("i"),Value("c"),Value("a")],App(Var(GlobalVar(false,"examples/parser.shonkier"),"reduce"),[App(Var(LocalVar(),"i"),[]),App(Var(GlobalVar(false,"examples/parser.shonkier"),"many"),[Fun([],[Clause([],Cell(App(Var(LocalVar(),"c"),[]),Cell(App(Var(LocalVar(),"a"),[]),Nil())))])])]))]);
+  globalEnv["chain"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("i"),Value("c"),Value("a")],App(Var(GlobalVar(false,"parser.shonkier"),"reduce"),[App(Var(LocalVar(),"i"),[]),App(Var(GlobalVar(false,"parser.shonkier"),"many"),[Fun([],[Clause([],Cell(App(Var(LocalVar(),"c"),[]),Cell(App(Var(LocalVar(),"a"),[]),Nil())))])])]))]);
   globalEnv["convert"] = {};
-  globalEnv["convert"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value(Nil())],Lit(LitNum(0,1))),Clause([Value(Cell("d","ds"))],App(Var(GlobalVar(false,"."),"primInfixPlus"),[Var(LocalVar(),"d"),App(Var(GlobalVar(false,"."),"primInfixTimes"),[Lit(LitNum(10,1)),App(Var(GlobalVar(false,"examples/parser.shonkier"),"convert"),[Var(LocalVar(),"ds")])])]))]);
+  globalEnv["convert"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value(Nil())],Lit(LitNum(0,1))),Clause([Value(Cell("d","ds"))],App(Var(GlobalVar(false,"."),"primInfixPlus"),[Var(LocalVar(),"d"),App(Var(GlobalVar(false,"."),"primInfixTimes"),[Lit(LitNum(10,1)),App(Var(GlobalVar(false,"parser.shonkier"),"convert"),[Var(LocalVar(),"ds")])])]))]);
   globalEnv["digit"] = {};
-  globalEnv["digit"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"satisfy"),[Var(GlobalVar(false,"examples/parser.shonkier"),"isDigit")]))]);
+  globalEnv["digit"]["parser.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"satisfy"),[Var(GlobalVar(false,"parser.shonkier"),"isDigit")]))]);
   globalEnv["hutton"] = {};
-  globalEnv["hutton"]["/examples/hutton.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"/examples/hutton.mary"),"plus"),[]))]);
+  globalEnv["hutton"]["hutton.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"hutton.mary"),"plus"),[]))]);
   globalEnv["is"] = {};
-  globalEnv["is"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("c")],App(Var(GlobalVar(false,"examples/parser.shonkier"),"satisfy"),[Fun([],[Clause([Value("d")],App(Var(GlobalVar(false,"."),"primInfixEquals"),[Var(LocalVar(),"c"),Var(LocalVar(),"d")]))])]))]);
+  globalEnv["is"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("c")],App(Var(GlobalVar(false,"parser.shonkier"),"satisfy"),[Fun([],[Clause([Value("d")],App(Var(GlobalVar(false,"."),"primInfixEquals"),[Var(LocalVar(),"c"),Var(LocalVar(),"d")]))])]))]);
   globalEnv["isDigit"] = {};
-  globalEnv["isDigit"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value(Stringy("0"))],Lit(LitNum(0,1))),Clause([Value(Stringy("1"))],Lit(LitNum(1,1))),Clause([Value(Stringy("2"))],Lit(LitNum(2,1))),Clause([Value(Stringy("3"))],Lit(LitNum(3,1))),Clause([Value(Stringy("4"))],Lit(LitNum(4,1))),Clause([Value(Stringy("5"))],Lit(LitNum(5,1))),Clause([Value(Stringy("6"))],Lit(LitNum(6,1))),Clause([Value(Stringy("7"))],Lit(LitNum(7,1))),Clause([Value(Stringy("8"))],Lit(LitNum(8,1))),Clause([Value(Stringy("9"))],Lit(LitNum(9,1)))]);
+  globalEnv["isDigit"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value(Stringy("0"))],Lit(LitNum(0,1))),Clause([Value(Stringy("1"))],Lit(LitNum(1,1))),Clause([Value(Stringy("2"))],Lit(LitNum(2,1))),Clause([Value(Stringy("3"))],Lit(LitNum(3,1))),Clause([Value(Stringy("4"))],Lit(LitNum(4,1))),Clause([Value(Stringy("5"))],Lit(LitNum(5,1))),Clause([Value(Stringy("6"))],Lit(LitNum(6,1))),Clause([Value(Stringy("7"))],Lit(LitNum(7,1))),Clause([Value(Stringy("8"))],Lit(LitNum(8,1))),Clause([Value(Stringy("9"))],Lit(LitNum(9,1)))]);
   globalEnv["main"] = {};
-  globalEnv["main"]["/examples/hutton.mary"] = VFun(null,{},[],[Clause([],Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"/examples/hutton.mary"),"printTree"),[App(Var(GlobalVar(false,"examples/parser.shonkier"),"parse"),[Stringy("31*(13+7*2)+24*42"),Var(GlobalVar(false,"/examples/hutton.mary"),"hutton")])]),Nil())))]);
-  globalEnv["main"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([],Cell(App(Var(GlobalVar(false,"examples/parser.shonkier"),"parse"),[Stringy(""),Fun([],[Clause([],Prio(App(Atom("choice"),[Atom("abort"),Fun([],[Clause([],Lit(LitNum(1,1)))])]),Lit(LitNum(2,1))))])]),Cell(App(Var(GlobalVar(false,"examples/parser.shonkier"),"parse"),[Stringy("1,23,75"),Fun([],[Clause([],Cell(App(Var(GlobalVar(false,"examples/parser.shonkier"),"number"),[]),App(Var(GlobalVar(false,"examples/parser.shonkier"),"many"),[Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"examples/parser.shonkier"),"is"),[Stringy(",")]),App(Var(GlobalVar(false,"examples/parser.shonkier"),"number"),[])))])])))])]),Nil())))]);
+  globalEnv["main"]["hutton.mary"] = VFun(null,{},[],[Clause([],Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[App(Var(GlobalVar(false,"parser.shonkier"),"parse"),[Stringy("31*(13+7*2)+24*42"),Var(GlobalVar(false,"hutton.mary"),"hutton")])]),Nil())))]);
+  globalEnv["main"]["parser.shonkier"] = VFun(null,{},[],[Clause([],Cell(App(Var(GlobalVar(false,"parser.shonkier"),"parse"),[Stringy(""),Fun([],[Clause([],Prio(App(Atom("choice"),[Atom("abort"),Fun([],[Clause([],Lit(LitNum(1,1)))])]),Lit(LitNum(2,1))))])]),Cell(App(Var(GlobalVar(false,"parser.shonkier"),"parse"),[Stringy("1,23,75"),Fun([],[Clause([],Cell(App(Var(GlobalVar(false,"parser.shonkier"),"number"),[]),App(Var(GlobalVar(false,"parser.shonkier"),"many"),[Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"parser.shonkier"),"is"),[Stringy(",")]),App(Var(GlobalVar(false,"parser.shonkier"),"number"),[])))])])))])]),Nil())))]);
   globalEnv["many"] = {};
-  globalEnv["many"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],App(Atom("choice"),[Fun([],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"some"),[Var(LocalVar(),"p")]))]),Fun([],[Clause([],Nil())])]))]);
+  globalEnv["many"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],App(Atom("choice"),[Fun([],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"some"),[Var(LocalVar(),"p")]))]),Fun([],[Clause([],Nil())])]))]);
   globalEnv["mult"] = {};
-  globalEnv["mult"]["/examples/hutton.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"chain"),[Var(GlobalVar(false,"/examples/hutton.mary"),"atom"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"examples/parser.shonkier"),"is"),[Stringy("*")]),Atom("Mult")))]),Var(GlobalVar(false,"/examples/hutton.mary"),"atom")]))]);
+  globalEnv["mult"]["hutton.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"chain"),[Var(GlobalVar(false,"hutton.mary"),"atom"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"parser.shonkier"),"is"),[Stringy("*")]),Atom("Mult")))]),Var(GlobalVar(false,"hutton.mary"),"atom")]))]);
   globalEnv["number"] = {};
-  globalEnv["number"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"convert"),[App(Var(GlobalVar(false,"examples/parser.shonkier"),"reverse"),[App(Var(GlobalVar(false,"examples/parser.shonkier"),"some"),[Var(GlobalVar(false,"examples/parser.shonkier"),"digit")])])]))]);
+  globalEnv["number"]["parser.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"convert"),[App(Var(GlobalVar(false,"parser.shonkier"),"reverse"),[App(Var(GlobalVar(false,"parser.shonkier"),"some"),[Var(GlobalVar(false,"parser.shonkier"),"digit")])])]))]);
   globalEnv["parens"] = {};
-  globalEnv["parens"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],App(Fun([],[Clause([Value(Cell(Lit(true),Cell("v",Cell(Lit(true),Nil()))))],Var(LocalVar(),"v"))]),[Cell(App(Var(GlobalVar(false,"examples/parser.shonkier"),"is"),[Stringy("(")]),Cell(App(Var(LocalVar(),"p"),[]),Cell(App(Var(GlobalVar(false,"examples/parser.shonkier"),"is"),[Stringy(")")]),Nil())))]))]);
+  globalEnv["parens"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],App(Fun([],[Clause([Value(Cell(Lit(true),Cell("v",Cell(Lit(true),Nil()))))],Var(LocalVar(),"v"))]),[Cell(App(Var(GlobalVar(false,"parser.shonkier"),"is"),[Stringy("(")]),Cell(App(Var(LocalVar(),"p"),[]),Cell(App(Var(GlobalVar(false,"parser.shonkier"),"is"),[Stringy(")")]),Nil())))]))]);
   globalEnv["parse"] = {};
-  globalEnv["parse"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("cs"),Value("p")],Semi(Match(Cell("v",Cell(Stringy(""),Nil())),App(Var(GlobalVar(false,"examples/parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"p"),[])])),Var(OutOfScope(),"v")))]);
+  globalEnv["parse"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("cs"),Value("p")],Semi(Match(Cell("v",Cell(Stringy(""),Nil())),App(Var(GlobalVar(false,"parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"p"),[])])),Var(OutOfScope(),"v")))]);
   globalEnv["plus"] = {};
-  globalEnv["plus"]["/examples/hutton.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"chain"),[Var(GlobalVar(false,"/examples/hutton.mary"),"mult"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"examples/parser.shonkier"),"is"),[Stringy("+")]),Atom("Plus")))]),Var(GlobalVar(false,"/examples/hutton.mary"),"mult")]))]);
+  globalEnv["plus"]["hutton.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"chain"),[Var(GlobalVar(false,"hutton.mary"),"mult"),Fun([],[Clause([],Semi(App(Var(GlobalVar(false,"parser.shonkier"),"is"),[Stringy("+")]),Atom("Plus")))]),Var(GlobalVar(false,"hutton.mary"),"mult")]))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -76,23 +76,23 @@
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
   globalEnv["printTree"] = {};
-  globalEnv["printTree"]["/examples/hutton.mary"] = VFun(null,{},[],[Clause([Value(Cell(Atom("Plus"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Plus ",App(Var(GlobalVar(false,"/examples/hutton.mary"),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"/examples/hutton.mary"),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value(Cell(Atom("Mult"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Mult ",App(Var(GlobalVar(false,"/examples/hutton.mary"),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"/examples/hutton.mary"),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value("n")],App(Var(GlobalVar(false,"."),"primNumToString"),[Var(LocalVar(),"n")]))]);
+  globalEnv["printTree"]["hutton.mary"] = VFun(null,{},[],[Clause([Value(Cell(Atom("Plus"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Plus ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value(Cell(Atom("Mult"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Mult ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value("n")],App(Var(GlobalVar(false,"."),"primNumToString"),[Var(LocalVar(),"n")]))]);
   globalEnv["reduce"] = {};
-  globalEnv["reduce"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("v"),Value(Nil())],Var(LocalVar(),"v")),Clause([Value("v"),Value(Cell(Cell("c",Cell("a",Nil())),"xs"))],Cell(Var(LocalVar(),"c"),Cell(Var(LocalVar(),"v"),Cell(App(Var(GlobalVar(false,"examples/parser.shonkier"),"reduce"),[Var(LocalVar(),"a"),Var(LocalVar(),"xs")]),Nil()))))]);
+  globalEnv["reduce"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("v"),Value(Nil())],Var(LocalVar(),"v")),Clause([Value("v"),Value(Cell(Cell("c",Cell("a",Nil())),"xs"))],Cell(Var(LocalVar(),"c"),Cell(Var(LocalVar(),"v"),Cell(App(Var(GlobalVar(false,"parser.shonkier"),"reduce"),[Var(LocalVar(),"a"),Var(LocalVar(),"xs")]),Nil()))))]);
   globalEnv["reverse"] = {};
-  globalEnv["reverse"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("xs")],App(Var(GlobalVar(false,"examples/parser.shonkier"),"reverseAcc"),[Nil(),Var(LocalVar(),"xs")]))]);
+  globalEnv["reverse"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("xs")],App(Var(GlobalVar(false,"parser.shonkier"),"reverseAcc"),[Nil(),Var(LocalVar(),"xs")]))]);
   globalEnv["reverseAcc"] = {};
-  globalEnv["reverseAcc"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("acc"),Value(Nil())],Var(LocalVar(),"acc")),Clause([Value("acc"),Value(Cell("x","xs"))],App(Var(GlobalVar(false,"examples/parser.shonkier"),"reverseAcc"),[Cell(Var(LocalVar(),"x"),Var(LocalVar(),"acc")),Var(LocalVar(),"xs")]))]);
+  globalEnv["reverseAcc"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("acc"),Value(Nil())],Var(LocalVar(),"acc")),Clause([Value("acc"),Value(Cell("x","xs"))],App(Var(GlobalVar(false,"parser.shonkier"),"reverseAcc"),[Cell(Var(LocalVar(),"x"),Var(LocalVar(),"acc")),Var(LocalVar(),"xs")]))]);
   globalEnv["runParser"] = {};
-  globalEnv["runParser"]["examples/parser.shonkier"] = VFun(null,{},[[],["abort","getChar","choice"]],[Clause([Value(Stringy(Strunk("",Cell("c","cs"),""))),Request("getChar",[],"k")],App(Var(GlobalVar(false,"examples/parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"k"),[Var(LocalVar(),"c")])])),Clause([Value(Stringy("")),Request("getChar",[],"k")],App(Var(LocalVar(),"k"),[App(Atom("abort"),[])])),Clause([Value("cs"),Request("choice",["a","b"],"k")],App(Var(GlobalVar(false,"examples/parser.shonkier"),"catchAbort"),[App(Var(GlobalVar(false,"examples/parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"a"),[])]),Var(LocalVar(),"k"),Fun([],[Clause([],App(Var(GlobalVar(false,"examples/parser.shonkier"),"catchAbort"),[App(Var(GlobalVar(false,"examples/parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"b"),[])]),Var(LocalVar(),"k"),Atom("abort")]))])])),Clause([Value("cs"),Value("v")],Cell(Var(LocalVar(),"v"),Cell(Var(LocalVar(),"cs"),Nil())))]);
+  globalEnv["runParser"]["parser.shonkier"] = VFun(null,{},[[],["abort","getChar","choice"]],[Clause([Value(Stringy(Strunk("",Cell("c","cs"),""))),Request("getChar",[],"k")],App(Var(GlobalVar(false,"parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"k"),[Var(LocalVar(),"c")])])),Clause([Value(Stringy("")),Request("getChar",[],"k")],App(Var(LocalVar(),"k"),[App(Atom("abort"),[])])),Clause([Value("cs"),Request("choice",["a","b"],"k")],App(Var(GlobalVar(false,"parser.shonkier"),"catchAbort"),[App(Var(GlobalVar(false,"parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"a"),[])]),Var(LocalVar(),"k"),Fun([],[Clause([],App(Var(GlobalVar(false,"parser.shonkier"),"catchAbort"),[App(Var(GlobalVar(false,"parser.shonkier"),"runParser"),[Var(LocalVar(),"cs"),App(Var(LocalVar(),"b"),[])]),Var(LocalVar(),"k"),Atom("abort")]))])])),Clause([Value("cs"),Value("v")],Cell(Var(LocalVar(),"v"),Cell(Var(LocalVar(),"cs"),Nil())))]);
   globalEnv["satisfy"] = {};
-  globalEnv["satisfy"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],App(Var(LocalVar(),"p"),[App(Atom("getChar"),[])]))]);
+  globalEnv["satisfy"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],App(Var(LocalVar(),"p"),[App(Atom("getChar"),[])]))]);
   globalEnv["some"] = {};
-  globalEnv["some"]["examples/parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],Cell(App(Var(LocalVar(),"p"),[]),App(Var(GlobalVar(false,"examples/parser.shonkier"),"many"),[Var(LocalVar(),"p")])))]);
+  globalEnv["some"]["parser.shonkier"] = VFun(null,{},[],[Clause([Value("p")],Cell(App(Var(LocalVar(),"p"),[]),App(Var(GlobalVar(false,"parser.shonkier"),"many"),[Var(LocalVar(),"p")])))]);
   </script>
   <script>
   var inputs = {};
-  inputs["GET_page"] = "/examples/hutton.mary";
+  inputs["GET_page"] = "examples/hutton.mary";
   inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
   inputs["sitesRoot"] = ".";
   inputs["user"] = "testymctestyface";
@@ -103,6 +103,7 @@
 <form method="post">
 <h1 id="huttons-razor">Hutton’s razor</h1>
 <p>The following AST</p>
+['Plus ['Mult 31 ['Plus 13 ['Mult 7 2]]] ['Mult 24 42]]
 <p>is obtained by running the following program</p>
 <div class="shonkier-pretty">
 <span class="shonkier-function">main</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Plain</span> printTree(parse(<span class="shonkier-string">"31*(13+7*2)+24*42"</span>, hutton))]

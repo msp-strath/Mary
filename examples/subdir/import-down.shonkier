@@ -1,4 +1,6 @@
 import "examples/list.shonkier"
 import "list.shonkier" // it's okay to import the same file again
 
-main() -> map({x -> primInfixPlus(x,1)},[1 2 3])
+main() -> map({x -> x + 1},[1 2 3])
+
+greeting() -> "Hello"
