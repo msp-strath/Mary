@@ -15,6 +15,10 @@ CABAL_INSTALL = \
 install: $(SOURCE)
 	$(CABAL_INSTALL)
 	cp ~/.cabal/bin/mary .
+ifeq ("$(wildcard ./config.php)","")
+	@echo "No config.php found, creating one from config.php.sample"
+	cp ./config.php.sample ./config.php
+endif
 
 clean:
 	rm -rf dist dist-newstyle TAGS

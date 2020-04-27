@@ -1,6 +1,5 @@
 <?php
-
-$site_root = "../MarySites/";
+require_once 'config.php';
 
 if (isset($_GET["page"])) {
 
@@ -21,7 +20,7 @@ if (isset($_GET["page"])) {
      2 => array("file", "/tmp/error-output.txt", "a") // stderr is a file to write to
   );
 
-  $cmd = "./mary find $userarg $site_root $page_id | ./pandoc --data-dir=data --standalone -f markdown --filter=marypandoc.sh -t html --template templates/mary.html5 2>&1";
+  $cmd = "./mary find $userarg $site_root $base_URL $page_id | ./pandoc --data-dir=data --standalone -f markdown --filter=marypandoc.sh -t html --template templates/mary.html5 2>&1";
 
   $cwd = NULL;
   $env = NULL;

@@ -21,8 +21,9 @@ import System.IO
 data Config = Config
   { mary   :: FilePath
   , pandoc :: FilePath
-  , user   :: String
+  , user   :: Maybe String
   , siteRoot :: String
+  , baseURL :: String
   }
 
 servePage :: Config
@@ -30,8 +31,9 @@ servePage :: Config
           -> [(Text, Text)]  -- GET  data (URL-encoded)
           -> FilePath        -- input file
           -> IO Text
-servePage Config{..} post get file =
-  withCreateProcess ((proc mary ["find", "--user", user, siteRoot, file])
+servePage Config{..} post get file = do
+  let userarg = maybe [] (\ u -> ["--user", u]) user
+  withCreateProcess ((proc mary $ ["find"] ++ userarg ++ [siteRoot, baseURL, file])
                      { std_in  = CreatePipe
                      , std_out = CreatePipe
                      }) $ \ (Just hin) (Just hmaryfind) _ _ -> do

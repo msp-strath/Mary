@@ -19,7 +19,8 @@ testConfig :: Config
 testConfig = Config
   { mary   = "mary"
   , pandoc = "pandoc"
-  , user   = "testymctestyface"
+  , user   = Just "testymctestyface"
+  , baseURL = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/"
   , siteRoot = "."
   }
 
