@@ -5,6 +5,8 @@ import Data.List as L
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
+
 import Test.Utils
 import Test.Tasty (TestTree)
 
@@ -29,9 +31,9 @@ testConfig = Config
 
 maryRunner :: FilePath -> IO Text
 maryRunner inp = do
-  let page = case L.stripPrefix (siteRoot testConfig) inp of
+  let page = case L.stripPrefix (siteRoot testConfig <> "/") inp of
         Just p -> T.pack p
-        Nothing -> T.pack inp -- WARNING
+        Nothing -> error "Trying to get page outside of siteRoot"
   let inputFile = replaceExtension inp ".input"
   inputExists <- doesFileExist inputFile
   (post:get:_) <- if inputExists then
