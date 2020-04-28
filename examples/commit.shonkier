@@ -30,9 +30,13 @@ eat("`[c|cs]`") -> c == 'getChar(); eat(cs)
 
 number() -> convert(reverse(some({digit('getChar())})))
 
-grow(v, m) -> 'choice({grow(m(v),m)},{v})
+grow(v, m) -> 'choice({grow(m(v),m)}, {v})
 
-addition() -> grow(number(),{x -> eat("+"); commit({['Plus x number()]})})
+parens(p) -> eat("("); x := p(); eat(")"); x
+
+wee() -> 'choice(number, {parens(addition)})
+
+addition() -> grow(wee(), {x -> eat("+"); commit({['Plus x wee()]})})
 
 reverse(xs) -> reverseAcc([],xs)
 reverseAcc(acc,[])     -> acc
@@ -41,4 +45,10 @@ reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
 convert([])     -> 0
 convert([d|ds]) -> d + 10 * convert(ds)
 
-main() -> parse("42+37+5", addition)
+tree() -> 'choice({eat("N"); commit({[tree() tree()]})}, {eat("L"); []})
+
+main() -> [
+  parse("42+37+5", addition)
+  parse("42+(37+5)", addition)
+  parse("NNLLNLL", tree)
+  ]
