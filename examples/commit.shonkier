@@ -1,4 +1,5 @@
 parse(cs, p) -> prefer(supply(cs, p()))
+parses(cs, p) -> collect(supply(cs, p()))
 
 supply(,'getChar):
 supply("`[c|cs]`", {'getChar()   -> k}) -> supply(cs,k(c))
@@ -8,6 +9,14 @@ supply("", v) -> v
 prefer('choice):
 prefer({'choice(a, b) -> k}) -> prefer(k(a())) ?> prefer(k(b()))
 prefer(v) -> v
+
+append([],     ys) -> ys
+append([x|xs], ys) -> [x|append(xs,ys)]
+
+collect('choice,'abort):
+collect({'choice(a, b) -> k}) -> append(collect(k(a())), collect(k(b())))
+collect({'abort() -> k}) -> []
+collect(v) -> [v]
 
 commit(p) -> 'abort ^ p()
 
@@ -25,10 +34,10 @@ digit("7") -> 7
 digit("8") -> 8
 digit("9") -> 9
 
-map(f,[]) -> []
+map(f,[])     -> []
 map(f,[x|xs]) -> [f(x)|map(f,xs)]
 
-unpack("") -> []
+unpack("")         -> []
 unpack("`[c|cs]`") -> [c|unpack(cs)]
 
 eat(s) -> map({_ == 'getChar(); []}, unpack(s))
@@ -57,4 +66,6 @@ main() -> [
   parse("42+(37+5)", addition)
   parse("NNLLNLL", tree)
   parse("NNLLNLX", tree) ?> 'phew
+  parse("", {'choice('abort, {1}) ?> 2})
+  parses("", {'choice('abort, {1}) ?> 2})
   ]
