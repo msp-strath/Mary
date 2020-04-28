@@ -1,0 +1,44 @@
+parse(cs, p) -> prefer(supply(cs, p()))
+
+supply(,'getChar):
+supply("`[c|cs]`", {'getChar()   -> k}) -> supply(cs,k(c))
+supply(""        , {'getChar()   -> k}) -> k('abort())
+supply("", v) -> v
+
+prefer('choice):
+prefer({'choice(a, b) -> k}) -> prefer(k(a())) ?> prefer(k(b()))
+prefer(v) -> v
+
+commit(p) -> 'abort ^ p()
+
+some(p) -> [p()|many(p)]
+many(p) -> 'choice({[p() | commit({many(p)})]},{[]})
+
+digit("0") -> 0
+digit("1") -> 1
+digit("2") -> 2
+digit("3") -> 3
+digit("4") -> 4
+digit("5") -> 5
+digit("6") -> 6
+digit("7") -> 7
+digit("8") -> 8
+digit("9") -> 9
+
+eat("") -> []
+eat("`[c|cs]`") -> c == 'getChar(); eat(cs)
+
+number() -> convert(reverse(some({digit('getChar())})))
+
+grow(v, m) -> 'choice({grow(m(v),m)},{v})
+
+addition() -> grow(number(),{x -> eat("+"); commit({['Plus x number()]})})
+
+reverse(xs) -> reverseAcc([],xs)
+reverseAcc(acc,[])     -> acc
+reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
+
+convert([])     -> 0
+convert([d|ds]) -> d + 10 * convert(ds)
+
+main() -> parse("42+37+5", addition)
