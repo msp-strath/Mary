@@ -28,10 +28,10 @@ digit("9") -> 9
 map(f,[]) -> []
 map(f,[x|xs]) -> [f(x)|map(f,xs)]
 
-explode("") -> []
-explode("`[c|cs]`") -> [c|explode(cs)]
+unpack("") -> []
+unpack("`[c|cs]`") -> [c|unpack(cs)]
 
-eat(s) -> map({_ == 'getChar()}, explode(s))
+eat(s) -> map({_ == 'getChar()}, unpack(s))
 
 number() -> convert(reverse(some({digit('getChar())})))
 
