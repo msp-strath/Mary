@@ -31,7 +31,7 @@ map(f,[x|xs]) -> [f(x)|map(f,xs)]
 unpack("") -> []
 unpack("`[c|cs]`") -> [c|unpack(cs)]
 
-eat(s) -> map({_ == 'getChar()}, unpack(s))
+eat(s) -> map({_ == 'getChar(); []}, unpack(s))
 
 number() -> convert(reverse(some({digit('getChar())})))
 
@@ -56,4 +56,5 @@ main() -> [
   parse("42+37+5", addition)
   parse("42+(37+5)", addition)
   parse("NNLLNLL", tree)
+  parse("NNLLNLX", tree) ?> 'phew
   ]
