@@ -1,10 +1,14 @@
-```mary-def
-append([],ys) -> ys
-append([x|xs],ys) -> [x|append(xs,ys)]
+# Inline SVG
+
+Using the following program:
+
+```{ .mary-def .keep }
+import "list.shonkier"
 
 render(n,['Node nm a b]) ->
   append([ ['node n ["label" nm]]
-           ['edge n "`n`0" "`n`1"]
+           ['edge [n 'sw] "`n`0"]
+           ['edge [n 'se] "`n`1"]
          ]
          ,append(render("`n`0",a), render("`n`1",b))
          )
@@ -17,7 +21,7 @@ test() -> pretty(['Node "+" ['Node "*" ['Leaf "17"]
                             ['Leaf "3"]])
 ```
 
-Generating some dot code:
+we can generate a tree:
 
 ```mary
 test()

@@ -1,5 +1,6 @@
 module Shonkier.Dot where
 
+import qualified Data.Text as T
 import Dot.Types
 
 import Shonkier.Value
@@ -33,18 +34,16 @@ instance FromValue CardinalDirection where
     _    -> Left v
   fromValue v = Left v
 
-instance FromValue Port where
-  fromValue (VCell a b) = do
-    id   <- fromValue a
-    card <- fromValue b
-    pure $ Port id (Just card)
-  fromValue v = Port <$> fromValue v <*> pure Nothing
-
 instance FromValue NodeId where
-  fromValue (VCell a b) = do
-    id   <- fromValue a
-    port <- fromValue b
-    pure $ NodeId id (Just port)
+  fromValue (VCell a (VCell b (VCell c VNil))) =
+    NodeId <$> fromValue a
+           <*> fmap Just (Port <$> fromValue b
+                               <*> fmap Just (fromValue c))
+  fromValue (VCell a (VCell b@(VAtom tag) VNil)) = do
+    a <- fromValue a
+    -- hack due to https://github.com/andrewthad/dot/issues/3
+    b <- fromValue b :: Either Value CardinalDirection
+    pure $ NodeId a $ Just (Port (Id (T.pack tag)) Nothing)
   fromValue v = NodeId <$> fromValue v <*> pure Nothing
 
 instance FromValue Statement where

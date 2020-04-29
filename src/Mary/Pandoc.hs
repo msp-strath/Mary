@@ -2,8 +2,9 @@
 module Mary.Pandoc where
 
 import Control.Arrow
+import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Writer (Writer, runWriter, tell)
-import Control.Monad.Reader (MonadReader, runReader, asks)
+import Control.Monad.Reader (MonadReader, runReader, runReaderT, asks)
 import Control.Newtype
 
 import Data.Attoparsec.Text
@@ -25,6 +26,7 @@ import Text.Pandoc.Walk
 
 import System.Directory
 import System.FilePath
+import System.Process
 
 import Shonkier.Import
 import Shonkier.Parser as SP
@@ -54,7 +56,7 @@ process doc0@(Pandoc meta docs) = do
   fp <- makeAbsolute (T.unpack sitesRoot </> T.unpack page)
   (_, env, lcp) <- loadToplevelModule fp rm
   let envdata = EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
-  let doc2 = runReader (walkM evalMaryBlock  doc1) envdata
+  doc2 <- runReaderT (walkM evalMaryBlock  doc1) envdata
   let doc3 = runReader (walkM evalMaryInline doc2) envdata
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
@@ -178,7 +180,10 @@ evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
 evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
   evalMary e >>= \case
     ResultPandoc p -> pure p
-    ResultDot dot -> pure $ CodeBlock ("dot", [], []) (Dot.encode dot)
+    ResultDot dot -> do
+      let code = Dot.encode dot
+      svg <- liftIO $ readProcess "dot" ["-Tsvg"] (T.unpack code)
+      pure $ Div ("mary-svg", [], []) [RawBlock "html" (T.pack svg)]
 evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set

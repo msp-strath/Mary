@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Title TBA</title>
+  <title>Inline SVG</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/shonkier.css" />
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
@@ -13,9 +13,15 @@
   <script>
   var globalEnv = {};
   globalEnv["append"] = {};
-  globalEnv["append"]["."] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"."),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
+  globalEnv["append"]["list.shonkier"] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
+  globalEnv["fold"] = {};
+  globalEnv["fold"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("c"),Value("n"),Value(Nil())],Var(LocalVar(),"n")),Clause([Value("c"),Value("n"),Value(Cell("x","xs"))],App(Var(LocalVar(),"c"),[Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Var(LocalVar(),"c"),Var(LocalVar(),"n"),Var(LocalVar(),"xs")])]))]);
+  globalEnv["main"] = {};
+  globalEnv["main"]["list.shonkier"] = VFun(null,{},[],[Clause([],Nil())]);
+  globalEnv["map"] = {};
+  globalEnv["map"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"list.shonkier"),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
   globalEnv["pretty"] = {};
-  globalEnv["pretty"]["."] = VFun(null,{},[],[Clause([Value("t")],Cell(Atom("DOT"),Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"."),"render"),[Stringy("ND"),Var(LocalVar(),"t")])))))]);
+  globalEnv["pretty"]["dot.mary"] = VFun(null,{},[],[Clause([Value("t")],Cell(Atom("DOT"),Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"render"),[Stringy("ND"),Var(LocalVar(),"t")])))))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -49,9 +55,9 @@
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
   globalEnv["render"] = {};
-  globalEnv["render"]["."] = VFun(null,{},[],[Clause([Value("n"),Value(Cell(Atom("Node"),Cell("nm",Cell("a",Cell("b",Nil())))))],App(Var(GlobalVar(false,"."),"append"),[Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Cell(Cell(Atom("edge"),Cell(Var(LocalVar(),"n"),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Nil())))),Nil())),App(Var(GlobalVar(false,"."),"append"),[App(Var(GlobalVar(false,"."),"render"),[Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Var(LocalVar(),"a")]),App(Var(GlobalVar(false,"."),"render"),[Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Var(LocalVar(),"b")])])])),Clause([Value("n"),Value(Cell(Atom("Leaf"),Cell("nm",Nil())))],Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Nil()))]);
+  globalEnv["render"]["dot.mary"] = VFun(null,{},[],[Clause([Value("n"),Value(Cell(Atom("Node"),Cell("nm",Cell("a",Cell("b",Nil())))))],App(Var(GlobalVar(false,"list.shonkier"),"append"),[Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Cell(Cell(Atom("edge"),Cell(Cell(Var(LocalVar(),"n"),Cell(Atom("sw"),Nil())),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Nil()))),Cell(Cell(Atom("edge"),Cell(Cell(Var(LocalVar(),"n"),Cell(Atom("se"),Nil())),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Nil()))),Nil()))),App(Var(GlobalVar(false,"list.shonkier"),"append"),[App(Var(GlobalVar(false,"dot.mary"),"render"),[Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Var(LocalVar(),"a")]),App(Var(GlobalVar(false,"dot.mary"),"render"),[Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Var(LocalVar(),"b")])])])),Clause([Value("n"),Value(Cell(Atom("Leaf"),Cell("nm",Nil())))],Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Nil()))]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"."),"pretty"),[Cell(Atom("Node"),Cell(Stringy("+"),Cell(Cell(Atom("Node"),Cell(Stringy("*"),Cell(Cell(Atom("Leaf"),Cell(Stringy("17"),Nil())),Cell(Cell(Atom("Leaf"),Cell(Stringy("12"),Nil())),Nil())))),Cell(Cell(Atom("Leaf"),Cell(Stringy("3"),Nil())),Nil()))))]))]);
+  globalEnv["test"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"pretty"),[Cell(Atom("Node"),Cell(Stringy("+"),Cell(Cell(Atom("Node"),Cell(Stringy("*"),Cell(Cell(Atom("Leaf"),Cell(Stringy("17"),Nil())),Cell(Cell(Atom("Leaf"),Cell(Stringy("12"),Nil())),Nil())))),Cell(Cell(Atom("Leaf"),Cell(Stringy("3"),Nil())),Nil()))))]))]);
   </script>
   <script>
   var inputs = {};
@@ -64,16 +70,82 @@
 </head>
 <body>
 <form method="post">
-<p>Generating some dot code:</p>
-<pre id="dot"><code>digraph {
-  ND [label=&quot;+&quot;];
-  ND -&gt; ND0 -&gt; ND1 [];
-  ND0 [label=&quot;*&quot;];
-  ND0 -&gt; ND00 -&gt; ND01 [];
-  ND00 [label=&quot;17&quot;];
-  ND01 [label=&quot;12&quot;];
-  ND1 [label=&quot;3&quot;];
-}</code></pre>
+<h1 id="inline-svg">Inline SVG</h1>
+<p>Using the following program:</p>
+<div class="shonkier-pretty">
+<span class="shonkier-keyword">import</span> list.shonkier <span class="shonkier-keyword"></span> <br />
+<span class="shonkier-function">render</span>(n, [<span class="shonkier-atom">'Node</span> nm a b]) <span class="shonkier-operator">-&gt;</span> append( [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> nm]]<br />
+ [<span class="shonkier-atom">'edge</span> [n <span class="shonkier-atom">'sw</span>] <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span>]<br />
+ [<span class="shonkier-atom">'edge</span> [n <span class="shonkier-atom">'se</span>] <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>1"</span>]]<br />
+, append(render(<span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span>, a), render(<span class="shonkier-string">"<span class="shonkier-splice">`n`</span>1"</span>, b)) )<br />
+<span class="shonkier-function">render</span>(n, [<span class="shonkier-atom">'Leaf</span> nm]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> nm]]]<br />
+<br />
+<span class="shonkier-function">pretty</span>(t) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'DOT</span> <span class="shonkier-atom">'digraph</span> []|render(<span class="shonkier-string">"ND"</span>, t)]<br />
+<br />
+<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> pretty([<span class="shonkier-atom">'Node</span> <span class="shonkier-string">"+"</span> [<span class="shonkier-atom">'Node</span> <span class="shonkier-string">"*"</span> [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"17"</span>] [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"12"</span>]] [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"3"</span>]])
+</div>
+<p>we can generate a tree:</p>
+<div id="mary-svg">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.38.0 (20140413.2041)
+ -->
+<!-- Title: %3 Pages: 1 -->
+<svg width="170pt" height="188pt"
+ viewBox="0.00 0.00 170.00 188.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 184)">
+<title>%3</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-184 166,-184 166,4 -4,4"/>
+<!-- ND -->
+<g id="node1" class="node"><title>ND</title>
+<ellipse fill="none" stroke="black" cx="99" cy="-162" rx="27" ry="18"/>
+<text text-anchor="middle" x="99" y="-158.3" font-family="Times,serif" font-size="14.00">+</text>
+</g>
+<!-- ND0 -->
+<g id="node2" class="node"><title>ND0</title>
+<ellipse fill="none" stroke="black" cx="63" cy="-90" rx="27" ry="18"/>
+<text text-anchor="middle" x="63" y="-86.3" font-family="Times,serif" font-size="14.00">*</text>
+</g>
+<!-- ND&#45;&gt;ND0 -->
+<g id="edge1" class="edge"><title>ND:sw&#45;&gt;ND0</title>
+<path fill="none" stroke="black" d="M84,-146C76.4367,-138.437 71.5478,-127.866 68.4105,-118.011"/>
+<polygon fill="black" stroke="black" points="71.7331,-116.89 65.7366,-108.156 64.9773,-118.723 71.7331,-116.89"/>
+</g>
+<!-- ND1 -->
+<g id="node3" class="node"><title>ND1</title>
+<ellipse fill="none" stroke="black" cx="135" cy="-90" rx="27" ry="18"/>
+<text text-anchor="middle" x="135" y="-86.3" font-family="Times,serif" font-size="14.00">3</text>
+</g>
+<!-- ND&#45;&gt;ND1 -->
+<g id="edge2" class="edge"><title>ND:se&#45;&gt;ND1</title>
+<path fill="none" stroke="black" d="M114,-146C121.563,-138.437 126.452,-127.866 129.589,-118.011"/>
+<polygon fill="black" stroke="black" points="133.023,-118.723 132.263,-108.156 126.267,-116.89 133.023,-118.723"/>
+</g>
+<!-- ND00 -->
+<g id="node4" class="node"><title>ND00</title>
+<ellipse fill="none" stroke="black" cx="27" cy="-18" rx="27" ry="18"/>
+<text text-anchor="middle" x="27" y="-14.3" font-family="Times,serif" font-size="14.00">17</text>
+</g>
+<!-- ND0&#45;&gt;ND00 -->
+<g id="edge3" class="edge"><title>ND0:sw&#45;&gt;ND00</title>
+<path fill="none" stroke="black" d="M48,-74C40.4367,-66.4367 35.5478,-55.8662 32.4105,-46.011"/>
+<polygon fill="black" stroke="black" points="35.7331,-44.8903 29.7366,-36.1557 28.9773,-46.7233 35.7331,-44.8903"/>
+</g>
+<!-- ND01 -->
+<g id="node5" class="node"><title>ND01</title>
+<ellipse fill="none" stroke="black" cx="99" cy="-18" rx="27" ry="18"/>
+<text text-anchor="middle" x="99" y="-14.3" font-family="Times,serif" font-size="14.00">12</text>
+</g>
+<!-- ND0&#45;&gt;ND01 -->
+<g id="edge4" class="edge"><title>ND0:se&#45;&gt;ND01</title>
+<path fill="none" stroke="black" d="M78,-74C85.5633,-66.4367 90.4522,-55.8662 93.5895,-46.011"/>
+<polygon fill="black" stroke="black" points="97.0227,-46.7233 96.2634,-36.1557 90.2669,-44.8903 97.0227,-46.7233"/>
+</g>
+</g>
+</svg>
+
+</div>
 </form>
 </body>
 </html>
