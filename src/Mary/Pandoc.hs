@@ -16,6 +16,8 @@ import Data.Monoid (First(..))
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 
+import qualified Dot.Text as Dot
+
 import Network.URI.Encode as URI
 
 import Text.Pandoc.Builder
@@ -32,7 +34,7 @@ import Shonkier.Semantics
 import Shonkier.ShonkierJS
 import Shonkier.Syntax
 import Shonkier.Value
-import Shonkier.Pandoc()
+import Shonkier.Result
 
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
@@ -175,7 +177,10 @@ evalMary e =
     stripVarPrefix lcp = first (fmap $ stripPrefixButDot lcp)
 
 evalMaryBlock :: Block -> EnvReader Block
-evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs = evalMary e
+evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
+  evalMary e >>= \case
+    ResultPandoc p -> pure p
+    ResultDot dot -> pure $ CodeBlock ("dot", [], []) (Dot.encode dot)
 evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set

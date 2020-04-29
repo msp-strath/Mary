@@ -110,39 +110,6 @@ instance ToRawTerm Inline where
 -- FROMVALUE
 ---------------------------------------------------------------------------
 
-fromListy :: FromValue a => ([a] -> b) -> Value -> Either Value b
-fromListy f = fmap f . fromValue
-
-fromAfter1Listy :: (FromValue a, FromValue b) => (a -> [b] -> c) -> Value -> Either Value c
-fromAfter1Listy c (VCell a b) = c <$> fromValue a <*> fromValue b
-fromAfter1Listy c v = Left v
-
-fromAfter2Listy :: (FromValue a, FromValue b, FromValue c)
-                => (a -> b -> [c] -> d) -> Value -> Either Value d
-fromAfter2Listy c (VCell a bc) = fromValue a >>= \ va -> fromAfter1Listy (c va) bc
-fromAfter2Listy c v = Left v
-
-fromTakes1 :: FromValue a => (a -> b) -> Value -> Either Value b
-fromTakes1 f (VCell a VNil) = f <$> fromValue a
-fromTakes1 f v = Left v
-
-fromTakes2 :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> Either Value c
-fromTakes2 f (VCell a x) = fromValue a >>= \ va -> fromTakes1 (f va) x
-fromTakes2 f v = Left v
-
-fromTakes3 :: (FromValue a, FromValue b, FromValue c)
-       => (a -> b -> c -> d) -> Value -> Either Value d
-fromTakes3 f (VCell a x) = fromValue a >>= \ va -> fromTakes2 (f va) x
-fromTakes3 f v = Left v
-
-instance FromValue Int where
-  fromValue (VNum d) = pure (truncate d) -- TODO: check it is indeed an Int?
-  fromValue v = Left v
-
-instance FromValue Text where
-  fromValue (VString _ s) = pure s
-  fromValue v = Left v
-
 instance FromValue Format where
   fromValue = fmap Format . fromValue
 

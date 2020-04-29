@@ -1,0 +1,24 @@
+```mary-def
+append([],ys) -> ys
+append([x|xs],ys) -> [x|append(xs,ys)]
+
+render(n,['Node nm a b]) ->
+  append([ ['node n ["label" nm]]
+           ['edge n "`n`0" "`n`1"]
+         ]
+         ,append(render("`n`0",a), render("`n`1",b))
+         )
+render(n,['Leaf nm]) -> [['node n ["label" nm]]]
+
+pretty(t) -> ['DOT 'digraph []|render("ND",t)]
+
+test() -> pretty(['Node "+" ['Node "*" ['Leaf "17"]
+                                       ['Leaf "12"]]
+                            ['Leaf "3"]])
+```
+
+Generating some dot code:
+
+```mary
+test()
+```
