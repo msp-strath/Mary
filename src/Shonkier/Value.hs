@@ -296,16 +296,23 @@ instance HasListView Value Value where
 ---------------------------------------------------------------------------
 
 class FromValue t where
-  fromValue :: Value -> t
+  fromValue :: Value -> Either Value t
 
 instance FromValue t => FromValue [t] where
-  fromValue (VCell t ts) = fromValue t : fromValue ts
-  fromValue _ = []
+  fromValue = \case
+    VCell t ts -> (:) <$> fromValue t <*> fromValue ts
+    VNil       -> pure []
+    v          -> Left v
 
 instance (FromValue a, FromValue b) => FromValue (a, b) where
-  fromValue (VCell a b) = (fromValue a, fromValue b)
-  fromValue _ = (fromValue VNil, fromValue VNil)
+  fromValue = \case
+    VCell a b -> (,) <$> fromValue a <*> fromValue b
+    v         -> Left v
 
 instance (FromValue a, FromValue b, FromValue c) => FromValue (a, b, c) where
-  fromValue (VCell a (VCell b c)) = (fromValue a, fromValue b, fromValue c)
-  fromValue _ = (fromValue VNil, fromValue VNil, fromValue VNil)
+  fromValue (VCell a (VCell b c)) = do
+    va <- fromValue a
+    vb <- fromValue b
+    vc <- fromValue c
+    pure (va, vb, vc)
+  fromValue v = Left v

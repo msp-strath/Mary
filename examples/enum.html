@@ -49,7 +49,7 @@
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Stringy("Enums"),Cell(Nil(),Cell(Nil(),App(Var(GlobalVar(false,"."),"enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Nil())),Cell(Stringy("d"),Nil())),Nil()))]))))))]);
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Cell(Stringy("Enums"),Cell(Nil(),Nil())),App(Var(GlobalVar(false,"."),"enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Nil())),Cell(Stringy("d"),Nil())),Nil()))]))))]);
   </script>
   <script>
   var inputs = {};
@@ -64,7 +64,7 @@
 <form method="post">
 <h1 id="recursively-building-content">Recursively building content</h1>
 <p>This is a nested enumeration with concatenated sublists as intermediate items.</p>
-<div>
+<div id="Enums">
 Abcd
 <ul>
 <li>A</li>
@@ -87,7 +87,7 @@ Abcd
 <span class="shonkier-function">enum</span>(xs<span class="shonkier-operator">@</span>[_|_]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
 <span class="shonkier-function">enum</span>(xs) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> xs]]<br />
 <br />
-<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> <span class="shonkier-string">"Enums"</span> [] []|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
+<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> [<span class="shonkier-string">"Enums"</span> []]|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
 </div>
 </form>
 </body>

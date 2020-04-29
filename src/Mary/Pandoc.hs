@@ -162,7 +162,13 @@ evalMary e =
       lcp <- readPrefixToStrip
       let t' = fmap (stripVarPrefix lcp) t
       case rawShonkier is fp env t' of
-        Value v -> pure $ fromValue v
+        Value v -> case fromValue v of
+          Right p  -> pure p
+          Left foc -> error $ L.unlines
+            [ "Invalid value: " ++ show foc
+            , "in result:"
+            , toString v
+            ]
         Request r _ -> error (show r)
   where
     stripVarPrefix :: String -> RawVariable -> RawVariable
