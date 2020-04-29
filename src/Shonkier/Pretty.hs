@@ -16,6 +16,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
 import qualified Data.Text.Prettyprint.Doc as P
+import Data.Text.Prettyprint.Doc.Render.String (renderString)
 
 import Shonkier.FreeVars
 import Shonkier.Syntax
@@ -51,6 +52,11 @@ class Pretty t where
   -- by default, ignore precedence
   default prettyPrec :: Pretty t => WhereAmI -> t -> Doc
   prettyPrec _ = pretty
+
+toString :: Pretty t => t -> String
+toString = renderString . layoutPretty defaultLayoutOptions . pretty
+
+
 
 instance Pretty Integer
 instance Pretty Text
@@ -366,5 +372,3 @@ instance InfixHuh RawVariable where
   infixHuh _ = Nothing
   prefixHuh (Nothing, x) = prefixHuh x        -- ORLY?
   prefixHuh _ = Nothing
-
-

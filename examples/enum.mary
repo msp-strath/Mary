@@ -16,5 +16,5 @@ map(f, [x|xs]) -> [f(x)|map(f, xs)]
 enum(xs@[_|_]) -> [['Plain primStringConcat(xs)] ['BulletList|map(enum,xs)]]
 enum(xs)       -> [['Plain xs]]
 
-test() -> ['Div "Enums" [] []|enum(["A" [["b" "c"] "d"]])]
+test() -> ['Div ["Enums" []|[]]|enum(["A" [["b" "c"] "d"]])]
 ```

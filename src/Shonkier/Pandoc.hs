@@ -19,23 +19,23 @@ instance ToRawTerm t => ToRawTerm [t] where
   toRawTerm = foldr (Cell . toRawTerm) Nil
 
 instance (ToRawTerm a, ToRawTerm b) => ToRawTerm (a, b) where
-  toRawTerm (a, b) = toRawTerm [toRawTerm a, toRawTerm b]
+  toRawTerm (a, b) = Cell (toRawTerm a) (toRawTerm b)
 
 instance (ToRawTerm a, ToRawTerm b, ToRawTerm c) => ToRawTerm (a, b, c) where
-  toRawTerm (a, b, c) = toRawTerm [toRawTerm a, toRawTerm b, toRawTerm c]
+  toRawTerm (a, b, c) = Cell (toRawTerm a) (toRawTerm (b, c))
 
 toListy :: ToRawTerm a => String -> [a] -> RawTerm
 toListy at = Cell (Atom at) . toRawTerm
 
 toTakes1 :: ToRawTerm a => String -> a -> RawTerm
-toTakes1 at = toListy at . pure
+toTakes1 at = Cell (Atom at) . toRawTerm
 
 toTakes2 :: (ToRawTerm a, ToRawTerm b) => String -> a -> b -> RawTerm
-toTakes2 at a b = toListy at [toRawTerm a, toRawTerm b]
+toTakes2 at a b = Cell (Atom at) (toRawTerm (a, b))
 
 toTakes3 :: (ToRawTerm a, ToRawTerm b, ToRawTerm c)
          => String -> a -> b -> c -> RawTerm
-toTakes3 at a b c = toListy at [toRawTerm a, toRawTerm b, toRawTerm c]
+toTakes3 at a b c = Cell (Atom at) (toRawTerm (a, b, c))
 
 toAfter1Listy :: (ToRawTerm a, ToRawTerm b) => String -> a -> [b] -> RawTerm
 toAfter1Listy at a b = Cell (Atom at) (Cell (toRawTerm a) (toRawTerm b))
@@ -70,7 +70,7 @@ instance ToRawTerm Block where
     CodeBlock a@(b, cs, d) e
       | "mary" `elem` cs
       , Right t <- parseOnly topTerm e
-        -> toAfter1Listy "Div" (a, filter ("mary" /=) cs, d) [t]
+        -> toAfter1Listy "Div" (b, filter ("mary" /=) cs, d) [t]
       | otherwise
         -> toTakes2 "Code" a e
     RawBlock a b      -> toTakes2 "RawBlock" a b
@@ -110,65 +110,65 @@ instance ToRawTerm Inline where
 -- FROMVALUE
 ---------------------------------------------------------------------------
 
-fromListy :: (FromValue a) => ([a] -> b) -> Value -> b
-fromListy = (. fromValue)
+fromListy :: FromValue a => ([a] -> b) -> Value -> Either Value b
+fromListy f = fmap f . fromValue
 
-fromAfter1Listy :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> c
-fromAfter1Listy c (VCell a b) = c (fromValue a) (fromValue b)
-fromAfter1Listy c _ = fromAfter1Listy c (VCell VNil VNil)
+fromAfter1Listy :: (FromValue a, FromValue b) => (a -> [b] -> c) -> Value -> Either Value c
+fromAfter1Listy c (VCell a b) = c <$> fromValue a <*> fromValue b
+fromAfter1Listy c v = Left v
 
 fromAfter2Listy :: (FromValue a, FromValue b, FromValue c)
-                => (a -> b -> c -> d) -> Value -> d
-fromAfter2Listy c (VCell a bc) = fromAfter1Listy (c (fromValue a)) bc
-fromAfter2Listy c _ = fromAfter2Listy c (VCell VNil (VCell VNil VNil))
+                => (a -> b -> [c] -> d) -> Value -> Either Value d
+fromAfter2Listy c (VCell a bc) = fromValue a >>= \ va -> fromAfter1Listy (c va) bc
+fromAfter2Listy c v = Left v
 
-fromTakes1 :: FromValue a => (a -> b) -> Value -> b
-fromTakes1 f (VCell a _) = f (fromValue a)
-fromTakes1 f _ = f (fromValue VNil)
+fromTakes1 :: FromValue a => (a -> b) -> Value -> Either Value b
+fromTakes1 f (VCell a VNil) = f <$> fromValue a
+fromTakes1 f v = Left v
 
-fromTakes2 :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> c
-fromTakes2 f (VCell a x) = fromTakes1 (f (fromValue a)) x
-fromTakes2 f v = fromTakes1 (f (fromValue VNil)) v
+fromTakes2 :: (FromValue a, FromValue b) => (a -> b -> c) -> Value -> Either Value c
+fromTakes2 f (VCell a x) = fromValue a >>= \ va -> fromTakes1 (f va) x
+fromTakes2 f v = Left v
 
 fromTakes3 :: (FromValue a, FromValue b, FromValue c)
-       => (a -> b -> c -> d) -> Value -> d
-fromTakes3 f (VCell a x) = fromTakes2 (f (fromValue a)) x
-fromTakes3 f v = fromTakes2 (f (fromValue VNil)) v
+       => (a -> b -> c -> d) -> Value -> Either Value d
+fromTakes3 f (VCell a x) = fromValue a >>= \ va -> fromTakes2 (f va) x
+fromTakes3 f v = Left v
 
 instance FromValue Int where
-  fromValue (VNum d) = truncate d
-  fromValue _ = 0
+  fromValue (VNum d) = pure (truncate d) -- TODO: check it is indeed an Int?
+  fromValue v = Left v
 
 instance FromValue Text where
-  fromValue (VString _ s) = s
-  fromValue _ = ""
+  fromValue (VString _ s) = pure s
+  fromValue v = Left v
 
 instance FromValue Format where
-  fromValue = Format . fromValue
+  fromValue = fmap Format . fromValue
 
 instance FromValue ListNumberDelim where
-  fromValue (VAtom tag) = case tag of
-    "DefaultDelim" -> DefaultDelim
-    "Period"       -> Period
-    "OneParen"     -> OneParen
-    "TwoParens"    -> TwoParens
-    _              -> DefaultDelim
-  fromValue _ = DefaultDelim
+  fromValue v@(VAtom tag) = case tag of
+    "DefaultDelim" -> pure DefaultDelim
+    "Period"       -> pure Period
+    "OneParen"     -> pure OneParen
+    "TwoParens"    -> pure TwoParens
+    _              -> Left v
+  fromValue v = Left v
 
 instance FromValue ListNumberStyle where
-  fromValue (VAtom tag) = case tag of
-    "DefaultStyle" -> DefaultStyle
-    "Example"      -> Example
-    "Decimal"      -> Decimal
-    "LowerRoman"   -> LowerRoman
-    "UpperRoman"   -> UpperRoman
-    "LowerAlpha"   -> LowerAlpha
-    "UpperAlpha"   -> UpperAlpha
-    _              -> DefaultStyle
-  fromValue _ = DefaultStyle
+  fromValue v@(VAtom tag) = case tag of
+    "DefaultStyle" -> pure DefaultStyle
+    "Example"      -> pure Example
+    "Decimal"      -> pure Decimal
+    "LowerRoman"   -> pure LowerRoman
+    "UpperRoman"   -> pure UpperRoman
+    "LowerAlpha"   -> pure LowerAlpha
+    "UpperAlpha"   -> pure UpperAlpha
+    _              -> Left v
+  fromValue v = Left v
 
 instance FromValue Block where
-  fromValue (VCell (VAtom tag) is) = ($ is) $ case tag of
+  fromValue (VCell v@(VAtom tag) is) = ($ is) $ case tag of
     "Plain"          -> fromListy Plain
     "Para"           -> fromListy Para
     "LineBlock"      -> fromListy LineBlock
@@ -179,16 +179,18 @@ instance FromValue Block where
     "BulletList"     -> fromListy BulletList
     "DefinitionList" -> fromListy DefinitionList
     "Header"         -> fromAfter2Listy Header
-    "HorizontalRule" -> const HorizontalRule
     -- TODO: Table
     "Div"            -> fromAfter1Listy Div
-    "Null"           -> const Null
-    _                -> const Null
-  fromValue _ = Null
+    _                -> const (Left v)
+  fromValue v@(VAtom tag) = case tag of
+    "HorizontalRule" -> pure HorizontalRule
+    "Null"           -> pure Null
+    _                -> Left v
+  fromValue v = Left v
 
 instance FromValue Inline where
-  fromValue (VString _ t) = Str t
-  fromValue (VCell (VAtom tag) is) = ($ is) $ case tag of
+  fromValue (VString _ t) = pure (Str t)
+  fromValue (VCell v@(VAtom tag) is) = ($ is) $ case tag of
     "Emph"        -> fromListy Emph
     "Strong"      -> fromListy Strong
     "StrikeOut"   -> fromListy Strikeout
@@ -198,13 +200,16 @@ instance FromValue Inline where
     -- TODO: Quoted
     -- TODO: Cite
     "Code"        -> fromTakes2 Code
-    "SoftBreak"   -> const SoftBreak
-    "LineBreak"   -> const SoftBreak
     -- TODO: Math
     "RawInline"   -> fromTakes2 RawInline
     "Link"        -> fromTakes3 Link
     "Image"       -> fromTakes3 Image
     "Note"        -> fromListy Note
     "Span"        -> fromAfter1Listy Span
-    _             -> const Space
-  fromValue _ = Space
+    _             -> const (Left v)
+  fromValue v@(VAtom tag) = case tag of
+    "Space"       -> pure Space
+    "SoftBreak"   -> pure SoftBreak
+    "LineBreak"   -> pure LineBreak
+    _             -> Left v
+  fromValue v = Left v
