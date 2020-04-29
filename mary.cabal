@@ -115,6 +115,7 @@ library
     -- LANGUAGE extensions used by modules in this package.
   default-extensions:  DefaultSignatures
                      , DeriveTraversable
+                     , FlexibleContexts
                      , FlexibleInstances
                      , GeneralizedNewtypeDeriving
                      , LambdaCase
