@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
   <script>
   var globalEnv = {};
+  globalEnv["append"] = {};
+  globalEnv["append"]["list.shonkier"] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
   globalEnv["cat"] = {};
   globalEnv["cat"]["imports.mary"] = VFun(null,{},[],[Clause([Value(Cell("x",Cell("y",Nil())))],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk(" ",Var(LocalVar(),"y"),""))))]);
   globalEnv["fold"] = {};

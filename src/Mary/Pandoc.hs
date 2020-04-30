@@ -2,8 +2,9 @@
 module Mary.Pandoc where
 
 import Control.Arrow
+import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Writer (Writer, runWriter, tell)
-import Control.Monad.Reader (Reader, runReader, asks)
+import Control.Monad.Reader (MonadReader, runReader, runReaderT, asks)
 import Control.Newtype
 
 import Data.Attoparsec.Text
@@ -16,6 +17,8 @@ import Data.Monoid (First(..))
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 
+import qualified Dot.Text as Dot
+
 import Network.URI.Encode as URI
 
 import Text.Pandoc.Builder
@@ -23,6 +26,7 @@ import Text.Pandoc.Walk
 
 import System.Directory
 import System.FilePath
+import System.Process
 
 import Shonkier.Import
 import Shonkier.Parser as SP
@@ -32,7 +36,7 @@ import Shonkier.Semantics
 import Shonkier.ShonkierJS
 import Shonkier.Syntax
 import Shonkier.Value
-import Shonkier.Pandoc()
+import Shonkier.Result
 
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
@@ -52,7 +56,7 @@ process doc0@(Pandoc meta docs) = do
   fp <- makeAbsolute (T.unpack sitesRoot </> T.unpack page)
   (_, env, lcp) <- loadToplevelModule fp rm
   let envdata = EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
-  let doc2 = runReader (walkM evalMaryBlock  doc1) envdata
+  doc2 <- runReaderT (walkM evalMaryBlock  doc1) envdata
   let doc3 = runReader (walkM evalMaryInline doc2) envdata
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
@@ -129,28 +133,26 @@ data EnvData = EnvData { imps        :: [Import]
                        , user        :: Maybe Text
                        }
 
-type EnvReader a = Reader EnvData a
-
-readImports :: EnvReader [Import]
+readImports :: MonadReader EnvData m => m [Import]
 readImports = asks imps
 
-readEnv :: EnvReader Env
+readEnv :: MonadReader EnvData m => m Env
 readEnv = asks environment
 
-readBaseURL :: EnvReader Text
+readBaseURL :: MonadReader EnvData m => m Text
 readBaseURL = asks baseURL
 
-readPage :: EnvReader Text
+readPage :: MonadReader EnvData m => m Text
 readPage = asks page
 
-readFilename :: EnvReader FilePath
+readFilename :: MonadReader EnvData m => m FilePath
 readFilename = asks filename
 
-readPrefixToStrip :: EnvReader FilePath
+readPrefixToStrip :: MonadReader EnvData m => m FilePath
 readPrefixToStrip = asks prefix
 
 
-evalMary :: FromValue b => Text -> EnvReader b
+evalMary :: (MonadReader EnvData m, FromValue b) => Text -> m b
 evalMary e =
   case parseOnly (topTerm <* endOfInput) e of
     Left err -> error err
@@ -174,8 +176,14 @@ evalMary e =
     stripVarPrefix :: String -> RawVariable -> RawVariable
     stripVarPrefix lcp = first (fmap $ stripPrefixButDot lcp)
 
-evalMaryBlock :: Block -> EnvReader Block
-evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs = evalMary e
+evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
+evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
+  evalMary e >>= \case
+    ResultPandoc p -> pure p
+    ResultDot dot -> do
+      let code = Dot.encode dot
+      svg <- liftIO $ readProcess "dot" ["-Tsvg"] (T.unpack code)
+      pure $ Div ("mary-svg", [], []) [RawBlock "html" (T.pack svg)]
 evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set
@@ -183,7 +191,7 @@ evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     RawBlock (Format "html") <$> makeInputForm textarea a t
 evalMaryBlock b = pure b
 
-evalMaryInline :: Inline -> EnvReader Inline
+evalMaryInline :: MonadReader EnvData m => Inline -> m Inline
 evalMaryInline (Code (_, cs, _) e) | "mary" `elem` cs = evalMary e
 evalMaryInline (Code a@(_, cs, _) t) | "input" `elem` cs =
   RawInline (Format "html") <$> makeInputForm False a t
@@ -192,7 +200,7 @@ evalMaryInline (Image attrs is target) = Image attrs is <$> makeAbsRef target
 evalMaryInline b = pure b
 
 
-makeInputForm :: Bool -> Attr -> Text -> EnvReader Text
+makeInputForm :: MonadReader EnvData m => Bool -> Attr -> Text -> m Text
 makeInputForm _ (_, _, as) p | ("type", "submit") `elem` as
   = pure $ (T.intercalate " " $
       ["<input"] ++
@@ -210,7 +218,7 @@ makeInputForm textarea a@(i, cs, as) p = do
       T.concat (if textarea then [">", fromMaybe "" mval , "</textarea>"]
                else [ T.concat [" value=\"", fromJust mval, "\""] | isJust mval] ++  [">"])
 
-makeAbsRef :: Target -> EnvReader Target
+makeAbsRef :: MonadReader EnvData m => Target -> m Target
 makeAbsRef (url, title) = do
   absUrl <- if isAbsolute url then pure url -- keep it as is
     else do

@@ -1,0 +1,45 @@
+# Inline SVG
+
+Using the following program:
+
+```{ .mary-def .keep }
+import "list.shonkier"
+
+renderTree(n,['Node nm a b]) ->
+  append([ ['node n ["label" nm]]
+           ['edge [n 'sw] "`n`0"]
+           ['edge [n 'se] "`n`1"]
+         ]
+         ,append(renderTree("`n`0",a), renderTree("`n`1",b))
+         )
+renderTree(n,['Leaf nm]) -> [['node n ["label" nm]]]
+
+prettyTree(t) -> ['DOT 'digraph []|renderTree("ND",t)]
+
+testTree() -> prettyTree(['Node "+" ['Node "*" ['Leaf "17"]
+                                               ['Leaf "12"]]
+                                    ['Leaf "3"]])
+
+renderList(n,[x|xs]) -> next := "`n`0";
+                        [['node n ["label" x]]
+                         ['edge n next]
+                         |renderList(next,xs)
+                        ]
+renderList(n,[]) -> [['node n ["label" "[]"]]]
+
+prettyList(xs) -> ['DOT 'digraph []|renderList("ND",xs)]
+
+testList() -> prettyList(["a" "b"])
+```
+
+we can generate a list:
+
+```mary
+testList()
+```
+
+and we can generate a tree:
+
+```mary
+testTree()
+```

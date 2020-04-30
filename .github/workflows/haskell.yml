@@ -46,6 +46,9 @@ jobs:
       with:
         pandoc-version: '2.9'
 
+    - name: Install graphviz
+      run: sudo apt-get install graphviz
+
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
