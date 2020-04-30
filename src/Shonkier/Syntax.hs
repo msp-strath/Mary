@@ -3,9 +3,14 @@
 module Shonkier.Syntax where
 
 import Control.Monad.State
+import Control.Applicative
 
-import Data.Text
+import qualified Data.Text as T
 import Utils.List
+
+import Data.Lisp
+
+type Text = T.Text
 
 type Keyword   = String
 type Primitive = String
@@ -238,3 +243,88 @@ braceFun cs = cs' where
   tangle (Match p t) = Match p <$> tangle t
   tangle t = pure t
 
+
+---------------------------------------------------------------------------
+-- SERIALIZATION
+---------------------------------------------------------------------------
+
+instance LISPY v => LISPY (Term' String v) where
+  toLISP (Atom a)        = ATOM a
+  toLISP Nil             = NIL
+  toLISP (Lit l)         = "Lit" -: [toLISP l]
+  toLISP (String k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
+  toLISP (Var v)         = "Var" -: [toLISP v]
+  toLISP Blank           = "Blank" -: []
+  toLISP (Cell s t)      = "Cell" -: [toLISP s, toLISP t]
+  toLISP (App f as)      = "App" -: map toLISP (f : as)
+  toLISP (Semi s t)      = "Semi" -: [toLISP s, toLISP t]
+  toLISP (Prio s t)      = "Prio" -: [toLISP s, toLISP t]
+  toLISP (Fun hss cs)    = "Fun" -: (toLISP (map (map ATOM) hss) : map toLISP cs)
+  toLISP (Match p t)     = "Match" -: [toLISP p, toLISP t]
+  toLISP (Mask a t)      = "Mask" -: [ATOM a, toLISP t]
+  fromLISP (ATOM a) = Just (Atom a)
+  fromLISP NIL      = Just Nil
+  fromLISP t = spil t >>= \case
+    ("Lit", [l])                -> Lit <$> fromLISP l
+    ("String", [ATOM k, ps, t]) -> String k <$> fromLISP ps <*> fromLISP t
+    ("Var", [v])                -> Var <$> fromLISP v
+    ("Blank", [])               -> pure Blank
+    ("Cell", [s, t])            -> Cell <$> fromLISP s <*> fromLISP t
+    ("App", f : as)             -> App <$> fromLISP f <*> traverse fromLISP as
+    ("Semi", [s, t])            -> Semi <$> fromLISP s <*> fromLISP t
+    ("Prio", [s, t])            -> Prio <$> fromLISP s <*> fromLISP t
+    ("Fun", hss : cs)           -> Fun <$> (fromLISP hss >>= traverse (traverse unatom)) <*> traverse fromLISP cs
+    ("Match", [p, t])           -> Match <$> fromLISP p <*> fromLISP t
+    ("Mask", [ATOM a, t])       -> Mask a <$> fromLISP t
+    _ -> Nothing
+
+unatom :: LISP -> Maybe String
+unatom (ATOM a) = Just a
+unatom _        = Nothing
+
+instance LISPY Literal where
+  toLISP (Num r)     = toLISP r
+  toLISP (Boolean b) = toLISP b
+  fromLISP t = Num <$> fromLISP t <|> Boolean <$> fromLISP t
+
+instance LISPY (PValue' String) where
+  toLISP (PAtom a)        = ATOM a
+  toLISP PNil             = NIL
+  toLISP (PLit l)         = "Lit" -: [toLISP l]
+  toLISP (PString k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
+  toLISP (PBind v)        = "Bind" -: [ATOM v]
+  toLISP PWild            = "Wild" -: []
+  toLISP (PAs v p)        = "As" -: [ATOM v, toLISP p]
+  toLISP (PCell s t)      = "Cell" -: [toLISP s, toLISP t]
+  fromLISP (ATOM a) = pure (PAtom a)
+  fromLISP NIL      = pure PNil
+  fromLISP t = spil t >>= \case
+    ("Lit", [l])                -> PLit <$> fromLISP l
+    ("String", [ATOM k, ps, t]) -> PString k <$> fromLISP ps <*> fromLISP t
+    ("Bind", [ATOM v])          -> pure (PBind v)
+    ("Wild", [])                -> pure PWild
+    ("As", [ATOM v, p])         -> PAs v <$> fromLISP p
+    ("Cell", [s, t])            -> PCell <$> fromLISP s <*> fromLISP t
+    _ -> Nothing
+
+instance LISPY v => LISPY (Rhs' String v) where
+  toLISP (g :?> t) = toLISP (t, g)
+  fromLISP x = do
+    (t, g) <- fromLISP x
+    return (g :?> t)
+
+instance LISPY (PComputation' String) where
+  toLISP (PValue p)                  = toLISP p
+  toLISP (PRequest (a, ps) Nothing)  = "Request" -: [CONS (ATOM a) (toLISP ps)]
+  toLISP (PRequest (a, ps) (Just v)) = "Request" -: [CONS (ATOM a) (toLISP ps), ATOM v]
+  toLISP (PThunk v)                  = "Thunk" -: [ATOM v]
+  fromLISP t = PValue <$> fromLISP t <|> (spil t >>= \case
+    ("Request", [CONS (ATOM a) ps])         -> PRequest <$> ((a,) <$> fromLISP ps) <*> pure Nothing
+    ("Request", [CONS (ATOM a) ps, ATOM v]) -> PRequest <$> ((a,) <$> fromLISP ps) <*> pure (Just v)
+    ("Thunk", [ATOM v])                     -> pure (PThunk v)
+    _ -> Nothing)
+
+instance LISPY ScopedVariable where
+  toLISP (LocalVar :.: x) = ATOM x
+  fromLISP (ATOM x) = pure (LocalVar :.: x)
+  fromLISP _ = Nothing

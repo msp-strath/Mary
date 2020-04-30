@@ -1,7 +1,6 @@
-module Data.Lisp (LISP(..), lispText, lispMunch) where
+module Data.Lisp (LISP(..), LISPY(..), (-:), spil, lispText, lispMunch) where
 
 import qualified Data.Text as T
-import Control.Applicative
 import Data.Char
 import Data.Ratio
 
@@ -11,6 +10,65 @@ data LISP
   | NIL
   | RAT Rational
   | STR Text
+
+class LISPY t where
+  toLISP    :: t -> LISP
+  fromLISP  :: LISP -> Maybe t
+
+(-:) :: String -> [LISP] -> LISP
+c -: ts = CONS (ATOM c) (foldr CONS NIL ts)
+
+spil :: LISP -> Maybe (String, [LISP])
+spil (CONS (ATOM c) d) = (c,) <$> go d where
+  go NIL        = pure []
+  go (CONS a d) = (a :) <$> go d
+  go _          = Nothing
+spil _ = Nothing
+
+instance LISPY LISP where
+  toLISP   = id
+  fromLISP = Just
+
+instance LISPY Text where
+  toLISP = STR
+  fromLISP (STR t) = Just t
+  fromLISP _       = Nothing
+
+instance LISPY Rational where
+  toLISP = RAT
+  fromLISP (RAT r) = Just r
+  fromLISP _       = Nothing
+
+instance (LISPY s, LISPY t) => LISPY (Either s t) where
+  toLISP (Left s)  = "Left" -: [toLISP s]
+  toLISP (Right t) = "Right" -: [toLISP t]
+  fromLISP t = spil t >>= \case
+    ("Left",  [s]) -> Left <$> fromLISP s
+    ("Right", [t]) -> Right <$> fromLISP t
+    _ -> Nothing
+
+instance (LISPY s, LISPY t) => LISPY (s, t) where
+  toLISP (s, t) = CONS (toLISP s) (toLISP t)
+  fromLISP (CONS s t) = (,) <$> fromLISP s <*> fromLISP t
+  fromLISP _          = Nothing
+
+instance LISPY x => LISPY [x] where
+  toLISP = foldr (CONS . toLISP) NIL
+  fromLISP NIL         = pure []
+  fromLISP (CONS x xs) = (:) <$> fromLISP x <*> fromLISP xs
+  fromLISP _           = Nothing
+
+instance LISPY Bool where
+  toLISP = ATOM . show
+  fromLISP (ATOM "True")  = Just True
+  fromLISP (ATOM "False") = Just False
+  fromLISP _              = Nothing
+
+instance LISPY x => LISPY (Maybe x) where
+  toLISP = maybe NIL ((`CONS` NIL) . toLISP)
+  fromLISP NIL          = pure Nothing
+  fromLISP (CONS x NIL) = Just <$> fromLISP x
+  fromLISP _            = Nothing
 
 type Text = T.Text
 
