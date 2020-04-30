@@ -27,13 +27,16 @@ install-hasktags:
 	cabal update
 	cabal install hasktags
 
-.PHONY: test test-mary test-js test-shonkier
-test:
+.PHONY: test-all test test-mary test-js test-shonkier
+test-all:
 	cabal new-run mary-tests -- -i
+
+test:
+	cabal new-run mary-tests -- -i --regex-exclude "dot"
 #	runhaskell -itest test/Test/Main.hs -i
 
 test-mary:
-	cabal new-run mary-tests -- -i -p Mary
+	cabal new-run mary-tests -- -i -p Mary --regex-exclude "dot"
 
 test-shonkier:
 	cabal new-run mary-tests -- -i -p '$$2 == "Shonkier"'
