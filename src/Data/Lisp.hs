@@ -1,5 +1,6 @@
 module Data.Lisp (LISP(..), LISPY(..), (-:), spil, lispText, lispMunch) where
 
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char
 import Data.Ratio
@@ -52,6 +53,12 @@ instance (LISPY s, LISPY t) => LISPY (s, t) where
   fromLISP (CONS s t) = (,) <$> fromLISP s <*> fromLISP t
   fromLISP _          = Nothing
 
+instance (LISPY s, LISPY t, LISPY u) => LISPY (s, t, u) where
+  toLISP (s, t, u) = CONS (toLISP s) (CONS (toLISP t) (toLISP u))
+  fromLISP (CONS s (CONS t u)) = (,,) <$> fromLISP s <*> fromLISP t <*> fromLISP u
+  fromLISP _          = Nothing
+
+
 instance LISPY x => LISPY [x] where
   toLISP = foldr (CONS . toLISP) NIL
   fromLISP NIL         = pure []
@@ -69,8 +76,6 @@ instance LISPY x => LISPY (Maybe x) where
   fromLISP NIL          = pure Nothing
   fromLISP (CONS x NIL) = Just <$> fromLISP x
   fromLISP _            = Nothing
-
-type Text = T.Text
 
 num :: Integer -> Text
 num = T.pack . show

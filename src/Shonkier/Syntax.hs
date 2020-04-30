@@ -5,12 +5,10 @@ module Shonkier.Syntax where
 import Control.Monad.State
 import Control.Applicative
 
-import qualified Data.Text as T
+import Data.Text (Text)
 import Utils.List
 
 import Data.Lisp
-
-type Text = T.Text
 
 type Keyword   = String
 type Primitive = String
@@ -325,6 +323,18 @@ instance LISPY (PComputation' String) where
     _ -> Nothing)
 
 instance LISPY ScopedVariable where
-  toLISP (LocalVar :.: x) = ATOM x
-  fromLISP (ATOM x) = pure (LocalVar :.: x)
-  fromLISP _ = Nothing
+  toLISP (LocalVar :.: x)            = ATOM x
+  toLISP (GlobalVar b fp :.: x)      = toLISP (b, ATOM fp, ATOM x)
+  toLISP (AmbiguousVar fps :.: x)    = "AmbiguousVar" -: [toLISP (map ATOM fps), ATOM x]
+  toLISP (InvalidNamespace ns :.: x) = "InvalidNamespace" -: [ATOM ns, ATOM x]
+  toLISP (OutOfScope :.: x)          = "OutOfScope" -: [ATOM x]
+  fromLISP (ATOM x)                           = pure (LocalVar :.: x)
+  fromLISP (CONS s (CONS (ATOM fp) (ATOM x))) = do
+    b <- fromLISP s
+    pure (GlobalVar b fp :.: x)
+  fromLISP t = spil t >>= \case
+    ("AmbiguousVar", [fps, ATOM x])           ->
+        (:.: x) . AmbiguousVar <$> (fromLISP fps >>= traverse unatom)
+    ("InvalidNamespace", [ATOM ns, ATOM x])   -> pure (InvalidNamespace ns :.: x)
+    ("OutOfScope", [ATOM x])                  -> pure (OutOfScope :.: x)
+    _ -> Nothing
