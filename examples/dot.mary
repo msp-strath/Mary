@@ -37,3 +37,9 @@ we can generate a list:
 ```mary
 testList()
 ```
+
+and we can generate a tree:
+
+```mary
+testTree()
+```
