@@ -335,7 +335,6 @@ instance LISPY ScopedVariable where
   fromLISP (CONS (ATOM x) (CONS (STR n) b)) =
     (:.: x) <$> (GlobalVar <$> fromLISP b <*> pure (T.unpack n))
   fromLISP (CONS (ATOM x) t) = ((:.: x) <$>) $ spil t >>= \case
-    ("GlobalVar", [b, STR n])     -> GlobalVar <$> fromLISP b <*> pure (T.unpack n)
     ("AmbiguousVar", xs)          -> AmbiguousVar <$> traverse unstr xs
     ("InvalidNamespace", [STR n]) -> pure (InvalidNamespace (T.unpack n))
     ("OutOfScope", [])            -> pure OutOfScope
