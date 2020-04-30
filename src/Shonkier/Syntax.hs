@@ -326,5 +326,21 @@ instance LISPY (PComputation' String) where
 
 instance LISPY ScopedVariable where
   toLISP (LocalVar :.: x) = ATOM x
+  toLISP (s :.: x) = CONS (ATOM x) $ case s of
+    LocalVar -> error "doesn't happen"
+    GlobalVar b n      -> "GlobalVar" -: [toLISP b, STR (T.pack n)]
+    AmbiguousVar xs    -> "AmbiguousVar" -: map (STR . T.pack) xs
+    InvalidNamespace n -> "InvalidNamespace" -: [STR (T.pack n)]
+    OutOfScope         -> "OutOfScope" -: []
   fromLISP (ATOM x) = pure (LocalVar :.: x)
+  fromLISP (CONS (ATOM x) t) = ((:.: x) <$>) $ spil t >>= \case
+    ("GlobalVar", [b, STR n])     -> GlobalVar <$> fromLISP b <*> pure (T.unpack n)
+    ("AmbiguousVar", xs)          -> AmbiguousVar <$> traverse unstr xs
+    ("InvalidNamespace", [STR n]) -> pure (InvalidNamespace (T.unpack n))
+    ("OutOfScope", [])            -> pure OutOfScope
+    _ -> Nothing
+   where
+    unstr :: LISP -> Maybe Namespace
+    unstr (STR t) = Just (T.unpack t)
+    unstr _ = Nothing
   fromLISP _ = Nothing
