@@ -17,10 +17,12 @@ type Namespace = String
 type Operator  = String
 
 type Variable     = String
-type RawVariable  = (Maybe Namespace, Variable)
 
-data ScopedVariable = (:.:)
-  { scoping :: Scoping
+type RawVariable    = ScopingVariable (Maybe Namespace)
+type ScopedVariable = ScopingVariable Scoping
+
+data ScopingVariable s = (:.:)
+  { scoping :: s
   , nameOf  :: Variable
   } deriving Show
 
@@ -221,7 +223,7 @@ class Vary v where
 instance Vary Variable where
   varOf = id
 instance Vary RawVariable where
-  varOf = (Nothing,)
+  varOf = (Nothing :.:)
 instance Vary ScopedVariable where
   varOf = (LocalVar :.:)  -- you better know what you're doing
 
@@ -250,7 +252,7 @@ braceFun cs = cs' where
 instance LISPY v => LISPY (Term' String v) where
   toLISP (Atom a)        = ATOM a
   toLISP Nil             = NIL
-  toLISP (Lit l)         = "Lit" -: [toLISP l]
+  toLISP (Lit l)         = toLISP l
   toLISP (String k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
   toLISP (Var v)         = "Var" -: [toLISP v]
   toLISP Blank           = "Blank" -: []
@@ -263,8 +265,7 @@ instance LISPY v => LISPY (Term' String v) where
   toLISP (Mask a t)      = "Mask" -: [ATOM a, toLISP t]
   fromLISP (ATOM a) = Just (Atom a)
   fromLISP NIL      = Just Nil
-  fromLISP t = spil t >>= \case
-    ("Lit", [l])                -> Lit <$> fromLISP l
+  fromLISP t = Lit <$> fromLISP t <|> (spil t >>= \case
     ("String", [ATOM k, ps, t]) -> String k <$> fromLISP ps <*> fromLISP t
     ("Var", [v])                -> Var <$> fromLISP v
     ("Blank", [])               -> pure Blank
@@ -275,7 +276,7 @@ instance LISPY v => LISPY (Term' String v) where
     ("Fun", hss : cs)           -> Fun <$> lispHandles hss <*> traverse fromLISP cs
     ("Match", [p, t])           -> Match <$> fromLISP p <*> fromLISP t
     ("Mask", [ATOM a, t])       -> Mask a <$> fromLISP t
-    _ -> Nothing
+    _ -> Nothing)
 
 
 handlesLisp :: [[String]] -> LISP
@@ -295,7 +296,7 @@ instance LISPY Literal where
 instance LISPY (PValue' String) where
   toLISP (PAtom a)        = ATOM a
   toLISP PNil             = NIL
-  toLISP (PLit l)         = "Lit" -: [toLISP l]
+  toLISP (PLit l)         = toLISP l
   toLISP (PString k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
   toLISP (PBind v)        = "Bind" -: [ATOM v]
   toLISP PWild            = "Wild" -: []
@@ -351,3 +352,9 @@ instance LISPY ScopedVariable where
     unstr _ = Nothing
   fromLISP _ = Nothing
 
+instance LISPY RawVariable where
+  toLISP (Nothing :.: x) = ATOM x
+  toLISP (Just n  :.: x) = CONS (ATOM x) (STR (T.pack n))
+  fromLISP (ATOM x)                = pure (Nothing :.: x)
+  fromLISP (CONS (ATOM x) (STR n)) = pure (Just (T.unpack n) :.: x)
+  fromLISP _ = Nothing

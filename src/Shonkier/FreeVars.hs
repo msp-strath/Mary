@@ -20,7 +20,7 @@ instance FreeVars t => FreeVars (Maybe t)
 instance FreeVars t => FreeVars (Map k t)
 
 instance FreeVars RawVariable where
-  freeVars (mns, x) = maybe Set.empty Set.singleton (x <$ mns)
+  freeVars (mns :.: x) = maybe Set.empty Set.singleton (x <$ mns)
 
 instance FreeVars ScopedVariable where
   freeVars (scope :.: x) = case scope of

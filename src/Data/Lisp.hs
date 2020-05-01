@@ -13,6 +13,7 @@ data LISP
   | NIL
   | RAT Rational
   | STR Text
+  | BOO Bool
 
 class LISPY t where
   toLISP    :: t -> LISP
@@ -42,6 +43,11 @@ instance LISPY Rational where
   fromLISP (RAT r) = Just r
   fromLISP _       = Nothing
 
+instance LISPY Bool where
+  toLISP = BOO
+  fromLISP (BOO b) = Just b
+  fromLISP _       = Nothing
+
 instance (LISPY s, LISPY t) => LISPY (Either s t) where
   toLISP (Left s)  = "Left" -: [toLISP s]
   toLISP (Right t) = "Right" -: [toLISP t]
@@ -66,12 +72,6 @@ instance LISPY x => LISPY [x] where
   fromLISP NIL         = pure []
   fromLISP (CONS x xs) = (:) <$> fromLISP x <*> fromLISP xs
   fromLISP _           = Nothing
-
-instance LISPY Bool where
-  toLISP = ATOM . show
-  fromLISP (ATOM "True")  = Just True
-  fromLISP (ATOM "False") = Just False
-  fromLISP _              = Nothing
 
 instance LISPY x => LISPY (Maybe x) where
   toLISP = maybe NIL ((`CONS` NIL) . toLISP)
@@ -107,7 +107,9 @@ blat (STR s) = quo . (s :) . quo
   quo = ("'" :) . (foo :). ("'" :)
   foo = case [n | n <- T.splitOn "'" s, T.all isDigit n] of
     [] -> ""
-    ns -> num (maximum (negate 1 : map (read . ('0' :) . T.unpack) ns) + 1) 
+    ns -> num (maximum (negate 1 : map (read . ('0' :) . T.unpack) ns) + 1)
+blat (BOO False) = ("#0" :)
+blat (BOO True)  = ("#1" :)
 
 lispText :: LISP -> Text
 lispText x = T.concat (blat x [])
@@ -131,6 +133,10 @@ lispMunch t = case T.uncons t of
       | c == '-'  -> case lispMunch u of
         Right (RAT r, u)  -> Right (RAT (negate r), u)
         _                 -> Left t
+      | c == '#' -> case T.uncons u of
+        Just ('0', v) -> Right (BOO False, v)
+        Just ('1', v) -> Right (BOO True,  v)
+        _ -> Left t
       | c == '['  -> listMunch u
       | c == '\'' -> case T.span (/= '\'') u of
         (n, u) | T.all isDigit n -> case T.uncons u of

@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Mary.Pandoc where
 
-import Control.Arrow
 import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Control.Monad.Reader (MonadReader, runReader, runReaderT, asks)
@@ -174,7 +173,7 @@ evalMary e =
         Request r _ -> error (show r)
   where
     stripVarPrefix :: String -> RawVariable -> RawVariable
-    stripVarPrefix lcp = first (fmap $ stripPrefixButDot lcp)
+    stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
 
 evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
 evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =

@@ -181,7 +181,7 @@ moreTerm w t = choice
 prefixApp :: WhereAmI -> String -> Parser RawTerm
 prefixApp w p = case lookup p prefixOpFax of
   Nothing -> empty
-  Just x  -> App (Var (Nothing, "primPrefix" ++ spell x)) . (:[])
+  Just x  -> App (Var (Nothing :.: ("primPrefix" ++ spell x))) . (:[])
           <$ opok x w
           <* skipSpace
          <*> termBut (RightOf :^: x)
@@ -189,7 +189,7 @@ prefixApp w p = case lookup p prefixOpFax of
 infixApp :: WhereAmI -> RawTerm -> String -> Parser RawTerm
 infixApp w l i = case lookup i infixOpFax of
   Nothing -> empty
-  Just x  -> App (Var (Nothing, "primInfix" ++ spell x)) . (l :) . (:[])
+  Just x  -> App (Var (Nothing :.: ("primInfix" ++ spell x))) . (l :) . (:[])
           <$ opok x w
           <* skipSpace
          <*> termBut (RightOf :^: x)
@@ -294,8 +294,8 @@ variable = do
   next  <- choice [ Just <$ char '.' <*> identifier
                   , pure Nothing ]
   pure $ case next of
-    Nothing  -> (Nothing, start)
-    Just end -> (Just start, end)
+    Nothing  -> (Nothing :.: start)
+    Just end -> (Just start :.: end)
 
 spaceMaybeComma :: Parser ()
 spaceMaybeComma =

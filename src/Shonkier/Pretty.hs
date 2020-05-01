@@ -206,7 +206,7 @@ instance Pretty Literal where
       | otherwise -> annotate AnnBoolean "'0"
 
 instance Pretty RawVariable where
-  pretty (mns, v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
+  pretty (mns :.: v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
 
 instance Pretty ScopedVariable where
   -- deal with variables on rhs introduced by brace sections
@@ -368,7 +368,7 @@ instance InfixHuh ScopedVariable where
   prefixHuh (_ :.: x) = prefixHuh x        -- ORLY?
 
 instance InfixHuh RawVariable where
-  infixHuh (Nothing, x) = infixHuh x        -- ORLY?
+  infixHuh (Nothing :.: x) = infixHuh x        -- ORLY?
   infixHuh _ = Nothing
-  prefixHuh (Nothing, x) = prefixHuh x        -- ORLY?
+  prefixHuh (Nothing :.: x) = prefixHuh x        -- ORLY?
   prefixHuh _ = Nothing

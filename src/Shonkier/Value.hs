@@ -3,7 +3,6 @@ module Shonkier.Value where
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Applicative
-import Control.Arrow ((***))
 
 import Data.Map (Map, singleton, toAscList)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
@@ -370,6 +369,9 @@ lispValue :: LISP -> Value
 lispValue NIL        = VNil
 lispValue (ATOM a)   = VAtom a
 lispValue (CONS s t) = VCell (lispValue s) (lispValue t)
+lispValue (STR t)    = VString "" t
+lispValue (RAT r)    = VLit (Num r)
+lispValue (BOO b)    = VLit (Boolean b)
 
 
 ---------------------------------------------------------------------------
@@ -380,7 +382,7 @@ instance LISPY Value where
   toLISP (VAtom a)      = ATOM a
   toLISP (VString _ t)  = STR t
   toLISP VNil           = NIL
-  toLISP (VLit l)       = "Lit" -: [toLISP l]
+  toLISP (VLit l)       = toLISP l
   toLISP (VCell s t)    = "Cell" -: [toLISP s, toLISP t]
   toLISP (VPrim p hss)  = "Prim" -: [ATOM p, handlesLisp hss]
   toLISP (VFun k rho hss cs) = "Fun" -:
@@ -389,7 +391,7 @@ instance LISPY Value where
   fromLISP (ATOM a) = pure (VAtom a)
   fromLISP NIL      = pure VNil
   fromLISP (STR t)  = pure (VString "" t)
-  fromLISP t = spil t >>= \case
+  fromLISP t = VLit <$> fromLISP t <|> (spil t >>= \case
     ("Lit", [l])     -> VLit <$> fromLISP l
     ("Cell", [s, t]) -> VCell <$> fromLISP s <*> fromLISP t
     ("Prim", [ATOM p, hss]) -> VPrim p <$> lispHandles hss
@@ -399,7 +401,7 @@ instance LISPY Value where
       <*> lispHandles hss
       <*> fromLISP cs
     ("Thunk", [c]) -> VThunk <$> fromLISP c
-    _ -> Nothing
+    _ -> Nothing)
 
 instance LISPY LocalEnv where
   toLISP rho = toLISP (env2value rho)

@@ -73,7 +73,7 @@ instance ScopeCheck RawProgram Program where
       (nm, Right cl)  -> (nm,) . Right <$> scopeCheck local cl
 
 instance ScopeCheck RawVariable ScopedVariable where
-  scopeCheck local (mns, v) = case mns of
+  scopeCheck local (mns :.: v) = case mns of
     Nothing | Set.member v local -> pure $ LocalVar :.: v
     Just nm -> get >>= \ st -> case namespaces st Map.!? nm of
       Nothing  -> pure $ InvalidNamespace nm :.: v
