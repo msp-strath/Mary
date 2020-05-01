@@ -63,7 +63,7 @@ primInfixEquals [Value x, Value y] = case valueEqHuh x y of
 primInfixEquals _ = complain "Invalid_primInfixEquals_Arity" []
 
 primInfixUnequal [Value x, Value y] = case valueEqHuh x y of
-  Nothing -> complain "'higherOrderEqTest" []
+  Nothing -> complain "higherOrderEqTest" []
   Just b  -> use (VBoolean (not b))
 primInfixUnequal _ = complain "Invalid_primInfixUnequal_Arity" []
 
@@ -74,9 +74,10 @@ primNumBin :: String -> (Rational -> Rational -> Rational)
            -> PRIMITIVE
 primNumBin nm op = \case
   [CNum m, CNum n]   -> use (VNum (op m n))
-  [Value m, Value n] -> complain ("Invalid_" ++ nm ++ "_ArgType") [m, n]
-  [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
-  _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
+  [Value m, Value n] -> complaining "ArgType"    [m, n]
+  [_,_]              -> complaining "ArgRequest" []
+  _                  -> complaining "Arity"      []
+  where complaining str = complain (MkAtom $ "Invalid_" ++ nm ++ "_" ++ str)
 
 primInfixPlus, primInfixMinus, primInfixTimes :: PRIMITIVE
 primInfixPlus  = primNumBin "primInfixPlus"  (+)
@@ -90,17 +91,19 @@ primInfixOver as = primNumBin "primInfixOver" (/) as
 primNumToString :: PRIMITIVE
 primNumToString = \case
   [CNum m]  -> use (VString "" (ppRational Utopia m))
-  [Value m] -> complain "Invalid_primNumToString_ArgType" [m]
-  [_]       -> complain "Invalid_primNumToString_ArgRequest"[]
-  _         -> complain "Invalid_primNumToString_Arity" []
+  [Value m] -> complaining "ArgType"    [m]
+  [_]       -> complaining "ArgRequest" []
+  _         -> complaining "Arity"      []
+  where complaining = complain . MkAtom . ("Invalid_primNumToString_" ++)
 
 primNumBoo :: String -> (Rational -> Rational -> Bool)
            -> PRIMITIVE
 primNumBoo nm op = \case
   [CNum m, CNum n]   -> use (VBoolean (op m n))
-  [Value m, Value n] -> complain ("Invalid_" ++ nm ++ "_ArgType") [m, n]
-  [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
-  _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
+  [Value m, Value n] -> complaining "ArgType"    [m, n]
+  [_,_]              -> complaining "ArgRequest" []
+  _                  -> complaining "Arity"      []
+  where complaining str = complain (MkAtom $ "Invalid_" ++ nm ++ "_" ++ str)
 
 primInfixLessEq, primInfixGreaterEq, primInfixLess, primInfixGreater :: PRIMITIVE
 primInfixLessEq    = primNumBoo "primInfixLessEq"    (<=)
@@ -115,17 +118,19 @@ primInfixGreater   = primNumBoo "primInfixGreater"   (>)
 primPrefixNot :: PRIMITIVE
 primPrefixNot = \case
   [CBoolean b]   -> use (VBoolean (not b))
-  [Value n]      -> complain ("Invalid_primPrefixNot_ArgType") [n]
-  [_]            -> complain ("Invalid_primPrefixNot_ArgRequest") []
-  _              -> complain ("Invalid_primPrefixNot_Arity") []
+  [Value n]      -> complaining "ArgType"    [n]
+  [_]            -> complaining "ArgRequest" []
+  _              -> complaining "Arity"      []
+  where complaining = complain . MkAtom . ("Invalid_primPrefixNot_" ++)
 
 primBooBin :: String -> (Bool -> Bool -> Bool)
            -> PRIMITIVE
 primBooBin nm op = \case
   [CBoolean m, CBoolean n]   -> use (VBoolean (op m n))
-  [Value m, Value n] -> complain ("Invalid_" ++ nm ++ "_ArgType") [m, n]
-  [_,_]              -> complain ("Invalid_" ++ nm ++ "_ArgRequest") []
-  _                  -> complain ("Invalid_" ++ nm ++ "_Arity") []
+  [Value m, Value n] -> complaining "ArgType"    [m, n]
+  [_,_]              -> complaining "ArgRequest" []
+  _                  -> complaining "Arity"      []
+  where complaining str = complain (MkAtom $ "Invalid_" ++ nm ++ "_" ++ str)
 
 primInfixAnd, primInfixOr :: PRIMITIVE
 primInfixAnd = primBooBin "primInfixAnd" (&&)

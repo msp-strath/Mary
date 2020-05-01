@@ -18,6 +18,9 @@ class JSAtom a where
 instance JSAtom String where
   jsAtom a = T.concat ["\"",pack a,"\""]
 
+instance JSAtom Atom where
+  jsAtom = jsAtom . getAtom
+
 class JS t where
   js :: t -> [Text]
 
@@ -38,10 +41,10 @@ instance JS Scoping where
 instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
-instance (JS v, Vary v) => JS (Clause' String v) where
+instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Clause' a v) where
   js (qs, r) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term r) ++ [")"] where
 
-instance (JS v, Vary v) => JS (Term' String v) where
+instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Term' a v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]
   js (Lit l)         = ["Lit("] ++ js l ++ [")"]
   js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
@@ -59,25 +62,29 @@ instance (JS v, Vary v) => JS (Term' String v) where
   js (Mask a t)      = ["Mask(", jsAtom a, ","] ++ js t ++ [")"]
 
 instance JS Literal where
-  js (Num r) = ["LitNum(",pack (show (numerator r)),",",pack (show (denominator r)),")"]
+  js (Num r) = [ "LitNum(",pack (show (numerator r))
+               ,",", pack (show (denominator r)),")"
+               ]
   js (Boolean b) = js b
 
 instance JS Bool where
   js True  = ["true"]
   js False = ["false"]
 
-instance JS (PComputation' String) where
+instance JSAtom a => JS (PComputation' a) where
   js (PValue p) = ["Value("] ++ js p ++ [")"]
-  js (PRequest (a, ps) k) =
-    ["Request(", jsAtom a] ++ [","] ++ js ps ++ [",\"", maybe "_" pack k, "\")"]
+  js (PRequest (a, ps) k) = ["Request(", jsAtom a]
+                                ++ [","] ++ js ps
+                                ++ [","] ++ ["\"", maybe "_" pack k, "\")"]
   js (PThunk x) = ["\"",pack x,"\""]
 
-instance JS (PValue' String) where
+instance JSAtom a => JS (PValue' a) where
   js (PAtom a)        = ["Atom(", jsAtom a, ")"]
   js (PLit l)         = ["Lit("] ++ js l ++ [")"]
   js (PString _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
   js (PBind x)        = ["\"",pack x,"\""]
-  js (PAs x p)        = ["PAs("] ++ ["\"",pack x,"\""] ++ [","] ++ js p ++ [")"]
+  js (PAs x p)        = ["PAs("] ++ ["\"",pack x,"\""]
+                        ++ [","] ++ js p ++ [")"]
   js PNil             = ["Nil()"]
   js (PCell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js PWild            = ["PWild"]

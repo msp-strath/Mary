@@ -24,24 +24,24 @@ instance (ToRawTerm a, ToRawTerm b) => ToRawTerm (a, b) where
 instance (ToRawTerm a, ToRawTerm b, ToRawTerm c) => ToRawTerm (a, b, c) where
   toRawTerm (a, b, c) = Cell (toRawTerm a) (toRawTerm (b, c))
 
-toListy :: ToRawTerm a => String -> [a] -> RawTerm
+toListy :: ToRawTerm a => Atom -> [a] -> RawTerm
 toListy at = Cell (Atom at) . toRawTerm
 
-toTakes1 :: ToRawTerm a => String -> a -> RawTerm
+toTakes1 :: ToRawTerm a => Atom -> a -> RawTerm
 toTakes1 at = Cell (Atom at) . toRawTerm
 
-toTakes2 :: (ToRawTerm a, ToRawTerm b) => String -> a -> b -> RawTerm
+toTakes2 :: (ToRawTerm a, ToRawTerm b) => Atom -> a -> b -> RawTerm
 toTakes2 at a b = Cell (Atom at) (toRawTerm (a, b))
 
 toTakes3 :: (ToRawTerm a, ToRawTerm b, ToRawTerm c)
-         => String -> a -> b -> c -> RawTerm
+         => Atom -> a -> b -> c -> RawTerm
 toTakes3 at a b c = Cell (Atom at) (toRawTerm (a, b, c))
 
-toAfter1Listy :: (ToRawTerm a, ToRawTerm b) => String -> a -> [b] -> RawTerm
+toAfter1Listy :: (ToRawTerm a, ToRawTerm b) => Atom -> a -> [b] -> RawTerm
 toAfter1Listy at a b = Cell (Atom at) (Cell (toRawTerm a) (toRawTerm b))
 
 toAfter2Listy :: (ToRawTerm a, ToRawTerm b, ToRawTerm c)
-              => String -> a -> b -> [c] -> RawTerm
+              => Atom -> a -> b -> [c] -> RawTerm
 toAfter2Listy at a b c =
   Cell (Atom at) (Cell (toRawTerm a) (Cell (toRawTerm b) (toRawTerm c)))
 
@@ -56,10 +56,10 @@ instance ToRawTerm Format where
   toRawTerm (Format f) = toTakes1 "Format" f
 
 instance ToRawTerm ListNumberDelim where
-  toRawTerm = Atom . show
+  toRawTerm = Atom . MkAtom . show
 
 instance ToRawTerm ListNumberStyle where
-  toRawTerm = Atom . show
+  toRawTerm = Atom . MkAtom . show
 
 instance ToRawTerm Block where
   toRawTerm = \case

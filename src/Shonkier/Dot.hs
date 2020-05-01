@@ -3,6 +3,7 @@ module Shonkier.Dot where
 import qualified Data.Text as T
 import Dot.Types
 
+import Shonkier.Syntax
 import Shonkier.Value
 
 instance FromValue DotGraph where
@@ -39,7 +40,7 @@ instance FromValue NodeId where
     NodeId <$> fromValue a
            <*> fmap Just (Port <$> fromValue b
                                <*> fmap Just (fromValue c))
-  fromValue (VCell a (VCell b@(VAtom tag) VNil)) = do
+  fromValue (VCell a (VCell b@(VAtom (MkAtom tag)) VNil)) = do
     a <- fromValue a
     -- hack due to https://github.com/andrewthad/dot/issues/3
     b <- fromValue b :: Either Value CardinalDirection

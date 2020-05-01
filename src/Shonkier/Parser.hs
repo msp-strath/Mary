@@ -112,7 +112,7 @@ pattern EndNested a b = (a, b, [])
 someSp :: Parser a -> Parser [a]
 someSp p = (:) <$> p <*> many (id <$ skipSpace <*> p)
 
-decl :: Parser [[String]]
+decl :: Parser [[Atom]]
 decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
@@ -194,8 +194,8 @@ infixApp w l i = case lookup i infixOpFax of
           <* skipSpace
          <*> termBut (RightOf :^: x)
 
-atom :: Parser String
-atom = id <$ char '\'' <*> identifier
+atom :: Parser Atom
+atom = MkAtom <$ char '\'' <*> identifier
 
 identifier :: Parser String
 identifier = (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)

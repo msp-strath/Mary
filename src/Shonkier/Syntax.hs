@@ -5,6 +5,7 @@ module Shonkier.Syntax where
 import Control.Monad.State
 import Control.Applicative
 
+import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Utils.List
@@ -34,6 +35,9 @@ data Scoping
   | OutOfScope
   deriving (Show)
 
+newtype Atom = MkAtom { getAtom :: String }
+  deriving (Show, Eq, IsString)
+
 data Literal
   = Num Rational
   | Boolean Bool
@@ -55,27 +59,27 @@ data Term' a v
   | Mask a (Term' a v)
   deriving (Show, Functor)
 
-type RawTerm = Term' String RawVariable
-type Term    = Term' String ScopedVariable
+type RawTerm = Term' Atom RawVariable
+type Term    = Term' Atom ScopedVariable
 
 pattern TNum n        = Lit (Num n)
 
 type Import = (FilePath, Maybe Namespace)
-type Program' a v = [(String, Either [[String]] (Clause' a v))]
+type Program' a v = [(Variable, Either [[Atom]] (Clause' a v))]
 type Module'  a v = ([Import], Program' a v)
 
-type RawProgram = Program' String RawVariable
-type Program    = Program' String ScopedVariable
-type RawModule  = Module' String RawVariable
-type Module     = Module' String ScopedVariable
+type RawProgram = Program' Atom RawVariable
+type Program    = Program' Atom ScopedVariable
+type RawModule  = Module' Atom RawVariable
+type Module     = Module' Atom ScopedVariable
 
 type Clause' a v = ([PComputation' a], [Rhs' a v])
-type RawClause = Clause' String RawVariable
-type Clause    = Clause' String ScopedVariable
+type RawClause = Clause' Atom RawVariable
+type Clause    = Clause' Atom ScopedVariable
 data Rhs' a v = Maybe (Term' a v) :?> Term' a v
   deriving (Show, Functor)
-type Rhs = Rhs' String ScopedVariable
-type RawRhs = Rhs' String RawVariable
+type Rhs = Rhs' Atom ScopedVariable
+type RawRhs = Rhs' Atom RawVariable
 
 data PValue' a
   = PAtom a
@@ -87,7 +91,7 @@ data PValue' a
   | PNil
   | PCell (PValue' a) (PValue' a)
   deriving (Show)
-type PValue = PValue' String
+type PValue = PValue' Atom
 
 data PComputation' a
   = PValue (PValue' a)
@@ -97,19 +101,19 @@ data PComputation' a
     -- ^ grab any of the computations we are willing
     --   to handle (values are considered trivial comps).
   deriving (Show)
-type PComputation = PComputation' String
+type PComputation = PComputation' Atom
 
 ---------------------------------------------------------------------------
 -- INSTANCES
 ---------------------------------------------------------------------------
 
-instance HasListView (Term' String v) (Term' String v) where
+instance HasListView (Term' a v) (Term' a v) where
   coalgebra = \case
     Nil      -> ItsNil
     Cell a b -> ItsCons a b
     _        -> ItsNot
 
-instance HasListView PValue PValue where
+instance HasListView (PValue' a) (PValue' a) where
   coalgebra = \case
     PNil      -> ItsNil
     PCell a b -> ItsCons a b
@@ -139,7 +143,7 @@ data Tightness
   | Conj   -- a /\ ! b         ->    a /\ (! b)
   | Nega   -- ! x == y         ->    ! (x == y)
   | Comp   -- x == y + 1       ->    x == (y + 1)
-  
+
   -- arithmetic
   | Addy
   | Mult
@@ -214,7 +218,17 @@ prefixOpFax =
 
 
 ---------------------------------------------------------------------------
--- BRACE SECTIONS
+-- ATOMY
+---------------------------------------------------------------------------
+
+class Atomy a where
+  atomOf :: String -> a
+
+instance Atomy Atom where
+  atomOf = MkAtom
+
+---------------------------------------------------------------------------
+-- VARY
 ---------------------------------------------------------------------------
 
 class Vary v where
@@ -226,6 +240,10 @@ instance Vary RawVariable where
   varOf = (Nothing :.:)
 instance Vary ScopedVariable where
   varOf = (LocalVar :.:)  -- you better know what you're doing
+
+---------------------------------------------------------------------------
+-- BRACE SECTIONS
+---------------------------------------------------------------------------
 
 braceFun :: Vary v => [Clause' a v] -> [Clause' a v]
 braceFun cs = cs' where
@@ -249,8 +267,8 @@ braceFun cs = cs' where
 -- SERIALIZATION
 ---------------------------------------------------------------------------
 
-instance LISPY v => LISPY (Term' String v) where
-  toLISP (Atom a)        = ATOM a
+instance (LISPY a, LISPY v) => LISPY (Term' a v) where
+  toLISP (Atom a)        = toLISP a
   toLISP Nil             = NIL
   toLISP (Lit l)         = toLISP l
   toLISP (String k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
@@ -260,12 +278,13 @@ instance LISPY v => LISPY (Term' String v) where
   toLISP (App f as)      = "App" -: map toLISP (f : as)
   toLISP (Semi s t)      = "Semi" -: [toLISP s, toLISP t]
   toLISP (Prio s t)      = "Prio" -: [toLISP s, toLISP t]
-  toLISP (Fun hss cs)    = "Fun" -: (handlesLisp hss : map toLISP cs)
+  toLISP (Fun hss cs)    = "Fun" -: (toLISP hss : map toLISP cs)
   toLISP (Match p t)     = "Match" -: [toLISP p, toLISP t]
-  toLISP (Mask a t)      = "Mask" -: [ATOM a, toLISP t]
-  fromLISP (ATOM a) = Just (Atom a)
+  toLISP (Mask a t)      = "Mask" -: [toLISP a, toLISP t]
   fromLISP NIL      = Just Nil
-  fromLISP t = Lit <$> fromLISP t <|> (spil t >>= \case
+  fromLISP t = Atom <$> fromLISP t
+           <|> Lit <$> fromLISP t
+           <|> (spil t >>= \case
     ("String", [ATOM k, ps, t]) -> String k <$> fromLISP ps <*> fromLISP t
     ("Var", [v])                -> Var <$> fromLISP v
     ("Blank", [])               -> pure Blank
@@ -273,28 +292,18 @@ instance LISPY v => LISPY (Term' String v) where
     ("App", f : as)             -> App <$> fromLISP f <*> traverse fromLISP as
     ("Semi", [s, t])            -> Semi <$> fromLISP s <*> fromLISP t
     ("Prio", [s, t])            -> Prio <$> fromLISP s <*> fromLISP t
-    ("Fun", hss : cs)           -> Fun <$> lispHandles hss <*> traverse fromLISP cs
+    ("Fun", hss : cs)           -> Fun <$> fromLISP hss <*> traverse fromLISP cs
     ("Match", [p, t])           -> Match <$> fromLISP p <*> fromLISP t
-    ("Mask", [ATOM a, t])       -> Mask a <$> fromLISP t
+    ("Mask", [a, t])            -> Mask <$> fromLISP a <*> fromLISP t
     _ -> Nothing)
-
-
-handlesLisp :: [[String]] -> LISP
-handlesLisp = toLISP . map (map ATOM)
-lispHandles :: LISP -> Maybe [[String]]
-lispHandles = (>>= traverse (traverse unatom)) . fromLISP
-
-unatom :: LISP -> Maybe String
-unatom (ATOM a) = Just a
-unatom _        = Nothing
 
 instance LISPY Literal where
   toLISP (Num r)     = toLISP r
   toLISP (Boolean b) = toLISP b
   fromLISP t = Num <$> fromLISP t <|> Boolean <$> fromLISP t
 
-instance LISPY (PValue' String) where
-  toLISP (PAtom a)        = ATOM a
+instance LISPY a => LISPY (PValue' a) where
+  toLISP (PAtom a)        = toLISP a
   toLISP PNil             = NIL
   toLISP (PLit l)         = toLISP l
   toLISP (PString k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
@@ -302,31 +311,34 @@ instance LISPY (PValue' String) where
   toLISP PWild            = "Wild" -: []
   toLISP (PAs v p)        = "As" -: [ATOM v, toLISP p]
   toLISP (PCell s t)      = "Cell" -: [toLISP s, toLISP t]
-  fromLISP (ATOM a) = pure (PAtom a)
   fromLISP NIL      = pure PNil
-  fromLISP t = spil t >>= \case
+  fromLISP t = PAtom <$> fromLISP t <|> (spil t >>= \case
     ("Lit", [l])                -> PLit <$> fromLISP l
     ("String", [ATOM k, ps, t]) -> PString k <$> fromLISP ps <*> fromLISP t
     ("Bind", [ATOM v])          -> pure (PBind v)
     ("Wild", [])                -> pure PWild
     ("As", [ATOM v, p])         -> PAs v <$> fromLISP p
     ("Cell", [s, t])            -> PCell <$> fromLISP s <*> fromLISP t
-    _ -> Nothing
+    _ -> Nothing)
 
-instance LISPY v => LISPY (Rhs' String v) where
+instance (LISPY a, LISPY v) => LISPY (Rhs' a v) where
   toLISP (g :?> t) = toLISP (t, g)
   fromLISP x = do
     (t, g) <- fromLISP x
     return (g :?> t)
 
-instance LISPY (PComputation' String) where
+instance LISPY a => LISPY (PComputation' a) where
   toLISP (PValue p)                  = toLISP p
-  toLISP (PRequest (a, ps) Nothing)  = "Request" -: [CONS (ATOM a) (toLISP ps)]
-  toLISP (PRequest (a, ps) (Just v)) = "Request" -: [CONS (ATOM a) (toLISP ps), ATOM v]
+  toLISP (PRequest (a, ps) Nothing)  =
+    "Request" -: [CONS (toLISP a) (toLISP ps)]
+  toLISP (PRequest (a, ps) (Just v)) =
+    "Request" -: [CONS (toLISP a) (toLISP ps), ATOM v]
   toLISP (PThunk v)                  = "Thunk" -: [ATOM v]
   fromLISP t = PValue <$> fromLISP t <|> (spil t >>= \case
-    ("Request", [CONS (ATOM a) ps])         -> PRequest <$> ((a,) <$> fromLISP ps) <*> pure Nothing
-    ("Request", [CONS (ATOM a) ps, ATOM v]) -> PRequest <$> ((a,) <$> fromLISP ps) <*> pure (Just v)
+    ("Request", [CONS a ps])         ->
+      PRequest <$> ((,) <$> fromLISP a <*> fromLISP ps) <*> pure Nothing
+    ("Request", [CONS a ps, ATOM v]) ->
+      PRequest <$> ((,) <$> fromLISP a <*> fromLISP ps) <*> pure (Just v)
     ("Thunk", [ATOM v])                     -> pure (PThunk v)
     _ -> Nothing)
 
@@ -357,4 +369,9 @@ instance LISPY RawVariable where
   toLISP (Just n  :.: x) = CONS (ATOM x) (STR (T.pack n))
   fromLISP (ATOM x)                = pure (Nothing :.: x)
   fromLISP (CONS (ATOM x) (STR n)) = pure (Just (T.unpack n) :.: x)
+  fromLISP _ = Nothing
+
+instance LISPY Atom where
+  toLISP (MkAtom a) = ATOM a
+  fromLISP (ATOM a) = pure $ MkAtom a
   fromLISP _ = Nothing

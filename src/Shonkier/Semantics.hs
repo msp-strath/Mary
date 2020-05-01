@@ -18,8 +18,6 @@ import Shonkier.Value
 import Shonkier.Primitives (prim)
 import Utils.List
 
-
-
 ---------------------------------------------------------------------------
 -- EXCEPTIONS (ESPECIALLY ABORT)
 ---------------------------------------------------------------------------
@@ -29,13 +27,14 @@ import Utils.List
 abort :: Shonkier Computation
 abort = complain abortA []
 
-
 -- how to complain
 
-complain :: String -> [Value] -> Shonkier Computation
+complain :: Atom -> [Value] -> Shonkier Computation
 complain c vs = request c vs
 
--- environments
+---------------------------------------------------------------------------
+-- PATTERN MATCHING
+---------------------------------------------------------------------------
 
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch x y = guard (x == y)
@@ -115,8 +114,9 @@ matches :: (a -> b -> Maybe (LocalEnv' c d))
         -> [a] -> [b] -> Maybe (LocalEnv' c d)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
-
--- entry points
+---------------------------------------------------------------------------
+-- ENTRY POINTS
+---------------------------------------------------------------------------
 
 runShonkier :: Shonkier a -> Env -> Context -> (a, Context)
 runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
@@ -136,6 +136,10 @@ rawShonkier is fp env@(gl, ins) t =
       term  = checkRaw fp is scope t
   in shonkier env term
 
+---------------------------------------------------------------------------
+-- LOOKUP
+---------------------------------------------------------------------------
+
 globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
 globalLookup fp x = do
   (st, _) <- ask
@@ -153,6 +157,10 @@ dynVar (sco :.: x) = x <$ guard (dyn sco) where
   dyn (GlobalVar True _)    = False
   dyn (InvalidNamespace _)  = False
   dyn _                     = True
+
+---------------------------------------------------------------------------
+-- EVALUATION
+---------------------------------------------------------------------------
 
 eval :: (LocalEnv, Term) -> Shonkier Computation
 eval (rho, t) = case t of
@@ -260,7 +268,7 @@ use v = pop >>= \case
     Clauses{} -> use v
 
 app :: Funy
-    -> Bwd Computation -> LocalEnv -> [([String],Term)]
+    -> Bwd Computation -> LocalEnv -> [([Atom],Term)]
     -> Shonkier Computation
 app f cz rho = \case
   []             -> case f of
@@ -325,7 +333,7 @@ handle r@(a, _) k = go (Right k) 0 where
       _ -> go (Left hs) i
 
 -- used for atomic requests
-request :: String -> [Value] -> Shonkier Computation
+request :: Atom -> [Value] -> Shonkier Computation
 request a vs = handle (a, vs) CnNil
 
 call :: LocalEnv -> [Clause] -> [Computation]

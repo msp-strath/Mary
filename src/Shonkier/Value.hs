@@ -20,15 +20,15 @@ import Utils.List
 
 -- how to signal a failure
 
-abortA :: String
-abortA = "abort"
+abortA :: Atomy a => a
+abortA = atomOf "abort"
 
 
 ---------------------------------------------------------------------------
 -- RHS TRANSLATION
 ---------------------------------------------------------------------------
 
-rhs2Term :: [Rhs' String v] -> Term' String v
+rhs2Term :: Atomy a => [Rhs' a v] -> Term' a v
 rhs2Term [] = App (Atom abortA) []
 rhs2Term [Nothing :?> t] = t
 rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
@@ -44,15 +44,13 @@ rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
 type Env = (GlobalEnv, Map Text Text) -- map for form data
 
 type GlobalEnv' a v = Map Variable (Map FilePath (Value' a v))
-type GlobalEnv = GlobalEnv' String ScopedVariable
+type GlobalEnv = GlobalEnv' Atom ScopedVariable
 
 type LocalEnv' a v = Map Variable (Value' a v)
-type LocalEnv = LocalEnv' String ScopedVariable
+type LocalEnv = LocalEnv' Atom ScopedVariable
 
 merge :: LocalEnv' a v -> LocalEnv' a v -> LocalEnv' a v
 merge = flip (<>)
-
-
 
 ---------------------------------------------------------------------------
 -- VALUES
@@ -72,7 +70,7 @@ data Value' a v
   | VEnv (LocalEnv' a v)
   deriving (Show, Functor)
 
-type Value = Value' String ScopedVariable
+type Value = Value' Atom ScopedVariable
 
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
@@ -82,7 +80,6 @@ pattern CString k str = Value (VString k str)
 pattern CCell a b     = Value (VCell a b)
 pattern CAtom a       = Value (VAtom a)
 pattern CNil          = Value VNil
-
 
 ---------------------------------------------------------------------------
 -- FIRST-ORDER EQUALITY
@@ -106,7 +103,7 @@ valueEqHuh (VEnv rho)    (VEnv sig)
   = all id <$> mayZipWith help (toAscList rho) (toAscList sig)
   where
   help (j, u) (k, v) = guard (j == k) *> valueEqHuh u v
-  
+
 valueEqHuh x y | hoValue x || hoValue y = Nothing
 valueEqHuh _ _ = Just False
 
@@ -117,7 +114,7 @@ valueEqHuh _ _ = Just False
 
 value2env :: Value -> LocalEnv
 value2env (VEnv rho)          = rho
-value2env (VCell (VAtom x) v) = singleton x v
+value2env (VCell (VAtom x) v) = singleton (getAtom x) v
 value2env (VCell e1 e2)       = merge (value2env e2) (value2env e1)
 value2env _                   = mempty
 
@@ -127,7 +124,7 @@ value2env _                   = mempty
 ---------------------------------------------------------------------------
 
 type Request' a v = (a, [Value' a v])
-type Request = Request' String ScopedVariable
+type Request = Request' Atom ScopedVariable
 
 data Computation' a v
   = Value (Value' a v)
@@ -136,7 +133,7 @@ data Computation' a v
   -- frames present know how to interpret it
   deriving (Show, Functor)
 
-type Computation = Computation' String ScopedVariable
+type Computation = Computation' Atom ScopedVariable
 
 type HandList' a v =
   [ ( Frame' a v        -- handleFrame
@@ -144,7 +141,7 @@ type HandList' a v =
     )
   ]
 
-type HandList = HandList' String ScopedVariable
+type HandList = HandList' Atom ScopedVariable
 
 data Continuation' a v = Cn
   { aftard   :: Bwd (Frame' a v)   -- all (not . handleFrame)
@@ -152,7 +149,7 @@ data Continuation' a v = Cn
   }
   deriving (Show, Functor)
 
-type Continuation = Continuation' String ScopedVariable
+type Continuation = Continuation' Atom ScopedVariable
 
 pattern CnNil = Cn B0 []
 
@@ -169,7 +166,7 @@ data Funy' a v
   | FPrim Primitive
   | FFun {-(Continuation' a v)-} (LocalEnv' a v) [Clause' a v]
   deriving (Show, Functor)
-type Funy = Funy' String ScopedVariable
+type Funy = Funy' Atom ScopedVariable
 
 -- The argument of type (LocalEnv' a) indicates the
 -- cursor position
@@ -200,7 +197,7 @@ handleFrame (Masking a)           = True
 handleFrame (Clauses{})       = True
 handleFrame _ = False
 
-type Frame = Frame' String ScopedVariable
+type Frame = Frame' Atom ScopedVariable
 
 data Context' a v = Cx
   { handlerz :: Bwd ( Bwd (Frame' a v)  -- all (not . handleFrame)
@@ -208,7 +205,7 @@ data Context' a v = Cx
                     )
   , nandlerz :: Bwd (Frame' a v)        -- all (not . handleFrame)
   }
-type Context = Context' String ScopedVariable
+type Context = Context' Atom ScopedVariable
 
 pattern CxNil = Cx B0 B0
 
@@ -368,7 +365,7 @@ fromTakes3 f v = Left v
 
 lispValue :: LISP -> Value
 lispValue NIL        = VNil
-lispValue (ATOM a)   = VAtom a
+lispValue (ATOM a)   = VAtom (MkAtom a)
 lispValue (CONS s t) = VCell (lispValue s) (lispValue t)
 lispValue (STR t)    = VString "" t
 lispValue (RAT r)    = VLit (Num r)
@@ -379,72 +376,73 @@ lispValue (BOO b)    = VLit (Boolean b)
 -- SERIALIZATION
 ---------------------------------------------------------------------------
 
-instance LISPY Value where
-  toLISP (VAtom a)      = ATOM a
+instance LISPY v => LISPY (Value' Atom v) where
+  toLISP (VAtom a)      = toLISP a
   toLISP (VString _ t)  = STR t
   toLISP VNil           = NIL
   toLISP (VLit l)       = toLISP l
   toLISP (VCell s t)    = "Cell" -: [toLISP s, toLISP t]
-  toLISP (VPrim p hss)  = "Prim" -: [ATOM p, handlesLisp hss]
+  toLISP (VPrim p hss)  = "Prim" -: [ATOM p, toLISP hss]
   toLISP (VFun k rho hss cs) = "Fun" -:
-    [toLISP k, toLISP rho, handlesLisp hss, toLISP cs]
+    [toLISP k, toLISP rho, toLISP hss, toLISP cs]
   toLISP (VThunk c)     = "Thunk" -: [toLISP c]
   toLISP (VEnv rho)     = "Env" -: [toLISP rho]
-  fromLISP (ATOM a) = pure (VAtom a)
   fromLISP NIL      = pure VNil
   fromLISP (STR t)  = pure (VString "" t)
-  fromLISP t = VLit <$> fromLISP t <|> (spil t >>= \case
+  fromLISP t = VAtom <$> fromLISP t
+           <|> VLit <$> fromLISP t
+           <|> (spil t >>= \case
     ("Lit", [l])     -> VLit <$> fromLISP l
     ("Cell", [s, t]) -> VCell <$> fromLISP s <*> fromLISP t
-    ("Prim", [ATOM p, hss]) -> VPrim p <$> lispHandles hss
+    ("Prim", [ATOM p, hss]) -> VPrim p <$> fromLISP hss
     ("Fun", [k, rho, hss, cs]) -> VFun
       <$> fromLISP k
       <*> fromLISP rho
-      <*> lispHandles hss
+      <*> fromLISP hss
       <*> fromLISP cs
     ("Thunk", [c]) -> VThunk <$> fromLISP c
     ("Env", [rho]) -> VEnv <$> fromLISP rho
     _ -> Nothing)
 
-instance LISPY LocalEnv where
-  toLISP rho = toLISP (map (\ (k, v) -> CONS (ATOM k) (toLISP v)) (toAscList rho))
+instance LISPY v => LISPY (LocalEnv' Atom v) where
+  toLISP rho = toLISP $ map (\ (k, v) -> CONS (ATOM k) (toLISP v))
+                            (toAscList rho)
   fromLISP (CONS (ATOM x) v) = singleton x <$> fromLISP v
   fromLISP (CONS e1 e2)      = merge <$> fromLISP e2 <*> fromLISP e1
   fromLISP NIL               = pure mempty
   fromLISP _                 = Nothing
 
-instance LISPY Computation where
-  toLISP (Value v)     = toLISP v
+instance LISPY v => LISPY (Computation' Atom v) where
+  toLISP (Value v)           = toLISP v
   toLISP (Request (a, vs) k) =
-    "Request" -: [a -: map toLISP vs, toLISP k]
+    "Request" -: [CONS (toLISP a) (toLISP vs), toLISP k]
   fromLISP t = Value <$> fromLISP t <|> (spil t >>= \case
-    ("Request", [r, k]) -> do
-      (a, vs) <- spil r
-      Request <$> ((a,) <$> traverse fromLISP vs) <*> fromLISP k
+    ("Request", [(CONS a vs), k]) -> do
+      Request <$> ((,) <$> fromLISP a <*> fromLISP vs) <*> fromLISP k
     _ -> Nothing
     )
 
-instance LISPY Continuation where
+instance LISPY v => LISPY (Continuation' Atom v) where
   toLISP (Cn a h)     = CONS (toLISP a) (toLISP h)
   fromLISP (CONS a h) = Cn <$> fromLISP a <*> fromLISP h
   fromLISP _          = Nothing
 
-instance LISPY Frame where
+instance LISPY v => LISPY (Frame' Atom v) where
   toLISP (CellL rho t) = "CellL" -: [toLISP rho, toLISP t]
   toLISP (CellR v rho) = "CellR" -: [toLISP v, toLISP rho]
   toLISP (AppL rho ts) = "AppL" -: (toLISP rho : map toLISP ts)
   toLISP (AppR f vz hsrho hsts) = "AppR" -:
     [ toLISP f
     , toLISP vz
-    , hapLisp hsrho
-    , toLISP (map hapLisp hsts)
+    , toLISP hsrho
+    , toLISP hsts
     ]
   toLISP (SemiL rho t) = "SemiL" -: [toLISP rho, toLISP t]
   toLISP (PrioL rho t) = "PrioL" -: [toLISP rho, toLISP t]
   toLISP (StringLR v rho ts t) = "StringLR" -:
     [toLISP v, toLISP rho, toLISP ts, toLISP t]
   toLISP (MatchR p) = "MatchR" -: [toLISP p]
-  toLISP (Masking a) = "Masking" -: [ATOM a]
+  toLISP (Masking a) = "Masking" -: [toLISP a]
   toLISP (Clauses rho cs as) = "Clauses" -: [toLISP rho, toLISP cs, toLISP as]
   fromLISP t = spil t >>= \case
     ("CellL", [rho, t]) -> CellL <$> fromLISP rho <*> fromLISP t
@@ -453,8 +451,8 @@ instance LISPY Frame where
     ("AppR", [f, cz, hsrho, hsts]) -> AppR
       <$> fromLISP f
       <*> fromLISP cz
-      <*> lispHap hsrho
-      <*> (fromLISP hsts >>= traverse lispHap)
+      <*> fromLISP hsrho
+      <*> fromLISP hsts
     ("SemiL", [rho, t]) -> SemiL <$> fromLISP rho <*> fromLISP t
     ("PrioL", [rho, t]) -> PrioL <$> fromLISP rho <*> fromLISP t
     ("StringLR", [v, rho, ts, t]) -> StringLR
@@ -463,26 +461,18 @@ instance LISPY Frame where
       <*> fromLISP ts
       <*> fromLISP t
     ("MatchR", [p]) -> MatchR <$> fromLISP p
-    ("Masking", [ATOM a]) -> pure (Masking a)
+    ("Masking", [a]) -> Masking <$> fromLISP a
     ("Clauses", [rho, cs, as]) -> Clauses
       <$> fromLISP rho
       <*> fromLISP cs
       <*> fromLISP as
     _ -> Nothing
 
-hapLisp :: LISPY t => ([String], t) -> LISP
-hapLisp (hs, t) = toLISP (map ATOM hs, t)
-lispHap :: LISPY t => LISP -> Maybe ([String], t)
-lispHap t = do
-  (hs, t) <- fromLISP t
-  (, t) <$> traverse unatom hs
-
-instance LISPY Funy where
-  toLISP (FAtom a)     = ATOM a
+instance LISPY v => LISPY (Funy' Atom v) where
+  toLISP (FAtom a)     = toLISP a
   toLISP (FPrim p)     = "Prim" -: [ATOM p]
   toLISP (FFun rho cs) = "Fun" -: [toLISP rho, toLISP cs]
-  fromLISP (ATOM a) = pure (FAtom a)
-  fromLISP t = spil t >>= \case
+  fromLISP t = FAtom <$> fromLISP t <|> (spil t >>= \case
     ("Prim", [ATOM p]) -> pure (FPrim p)
     ("Fun", [rho, cs]) -> FFun <$> fromLISP rho <*> fromLISP cs
-    _ -> Nothing
+    _ -> Nothing)
