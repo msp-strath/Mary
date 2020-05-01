@@ -1,5 +1,7 @@
 module Shonkier where
 
+import System.FilePath
+import System.IO.Error
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -23,12 +25,24 @@ onShonkierModule action filename = do
     _ -> error "not exactly one simple main function"
 
 interpretShonkier :: FilePath -> IO ()
-interpretShonkier = onShonkierModule $ \ _ gl body ->
-  case shonkier gl body of
-    Value v -> putDoc $ pretty v <> line
-    r@Request{} -> do
+interpretShonkier = onShonkierModule $ \ _ gl body -> go gl (shonkier gl body) where
+  go _ (Value v) = putDoc $ pretty v <> line
+  go gamma (Request ("read", [v]) k) = case value2path v of
+    Nothing -> go gamma (resumeShonkier gamma k abort)
+    Just f -> do
+      tryIOError (TIO.readFile f) >>= \case
+        Right t  -> go gamma (resumeShonkier gamma k (use (VString "" t)))
+        Left _   -> go gamma (resumeShonkier gamma k abort)
+  go _ r@Request{} = do
       let r' = renderStrict $ layoutPretty defaultLayoutOptions $ pretty r
       error $ "unhandled request " ++ T.unpack r'
+
+value2path :: Value -> Maybe FilePath
+value2path v = makeValid <$> go v where
+  go (VString _ t) = pure (T.unpack t)
+  go VNil = pure ""
+  go (VCell s t) = (</>) <$> go s <*> go t
+  go _ = Nothing
 
 -- no support for imports here yet!
 compileShonkier :: FilePath -> FilePath -> IO Text

@@ -127,8 +127,11 @@ evalShonkier m gl s = fst $ runShonkier m gl s
 execShonkier :: Shonkier a -> Env -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
+resumeShonkier :: Env -> Continuation -> Shonkier a -> a
+resumeShonkier gamma k r = evalShonkier (cont k >> r) gamma CxNil
+
 shonkier :: Env -> Term -> Computation
-shonkier rho t = evalShonkier (eval (mempty, t)) rho CxNil
+shonkier gamma t = resumeShonkier gamma CnNil (eval (mempty, t))
 
 rawShonkier :: [Import] -> FilePath -> Env -> RawTerm -> Computation
 rawShonkier is fp env@(gl, ins) t =
