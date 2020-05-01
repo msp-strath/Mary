@@ -118,26 +118,26 @@ matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 -- ENTRY POINTS
 ---------------------------------------------------------------------------
 
-runShonkier :: Shonkier a -> Env -> Context -> (a, Context)
+runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
 runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
 
-evalShonkier :: Shonkier a -> Env -> Context -> a
+evalShonkier :: Shonkier a -> GlobalEnv -> Context -> a
 evalShonkier m gl s = fst $ runShonkier m gl s
 
-execShonkier :: Shonkier a -> Env -> Context -> Context
+execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
 execShonkier m gl s = snd $ runShonkier m gl s
 
-resumeShonkier :: Env -> Continuation -> Shonkier a -> a
+resumeShonkier :: GlobalEnv -> Continuation -> Shonkier a -> a
 resumeShonkier gamma k r = evalShonkier (cont k >> r) gamma CxNil
 
-shonkier :: Env -> Term -> Computation
+shonkier :: GlobalEnv -> Term -> Computation
 shonkier gamma t = resumeShonkier gamma CnNil (eval (mempty, t))
 
-rawShonkier :: [Import] -> FilePath -> Env -> RawTerm -> Computation
-rawShonkier is fp env@(gl, ins) t =
+rawShonkier :: [Import] -> FilePath -> GlobalEnv -> RawTerm -> Computation
+rawShonkier is fp gl t =
   let scope = fmap keysSet gl
       term  = checkRaw fp is scope t
-  in shonkier env term
+  in shonkier gl term
 
 ---------------------------------------------------------------------------
 -- LOOKUP
@@ -145,15 +145,10 @@ rawShonkier is fp env@(gl, ins) t =
 
 globalLookup :: FilePath -> Variable -> Shonkier (Maybe Value)
 globalLookup fp x = do
-  (st, _) <- ask
+  st <- ask
   pure $ do
     candidates <- st !? x
     candidates !? fp
-
-inputLookup :: Text -> Shonkier (Maybe Value)
-inputLookup f = do
-  (_, inp) <- ask
-  pure $ VString "" <$> inp !? f
 
 dynVar :: ScopedVariable -> Maybe Variable
 dynVar (sco :.: x) = x <$ guard (dyn sco) where
@@ -295,30 +290,13 @@ unsafeComToValue = \case
     , show r
     ]
 
-handleInput :: Request -> Continuation -> Shonkier Computation
-handleInput (a, vs) k = case vs of
-  [VString _ f] -> do
-    -- preprocess the array key depending on the effect
-    let f' = case a of
-          "POST" -> "POST_" <> f
-          "GET" -> "GET_"  <> f
-          _       -> f
-    inputLookup f' >>= \case
-      Just v -> do
-        cont k
-        use v
-      Nothing -> do cont k; complain "UnknownInput" vs
-  _             -> do cont k; complain "IncorrectInputRequest" vs
-
 handle :: Request
        -> Continuation
        -> Shonkier Computation
 handle r@(a, _) k = go (Right k) 0 where
   -- do we get away with not making the number part of the request?
   go x i = leap x >>= \case
-    Left k
-      | a `elem` ["POST", "GET", "meta"] && i == 0 -> handleInput r k
-      | otherwise -> return (Request r k)
+    Left k -> return (Request r k)
     Right (hs, (fr, k)) -> case fr of
       AppR f cz (es, rho) as | a `elem` es ->
         if i == 0
@@ -334,6 +312,17 @@ handle r@(a, _) k = go (Right k) 0 where
           else go (Left hs) (i - 1)
       Masking b | a == b -> go (Left hs) (i + 1)
       _ -> go (Left hs) i
+
+handleInputs :: (Computation -> b) -> Env -> Request -> Continuation -> b
+handleInputs action (gl, inp) (a, vs@[VString _ f]) k
+   | a `elem` ["POST", "GET", "meta"] =
+    -- preprocess the array key depending on the effect
+    let f' = case a of {"POST" -> "POST_"; "GET" -> "GET_"; _ -> ""} <> f in
+    case inp !? f' of
+      Just v  -> action (resumeShonkier gl k (use (VString "" v)))
+      Nothing -> action (resumeShonkier gl k (complain "UnknownInput" vs))
+handleInputs action (gl, _) (a, vs) k  =
+  action (resumeShonkier gl k (complain "IncorrectInputRequest" vs))
 
 -- used for atomic requests
 request :: Atom -> [Value] -> Shonkier Computation

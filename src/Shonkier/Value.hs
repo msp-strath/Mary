@@ -243,9 +243,9 @@ cxCn (Cx hz fz) (Cn gz hs) = foldl go (Cx hz (fz <> gz)) hs where
 ---------------------------------------------------------------------------
 
 newtype Shonkier a = Shonkier
-  { getShonkier :: StateT Context (Reader Env) a }
+  { getShonkier :: StateT Context (Reader GlobalEnv) a }
   deriving ( Functor, Applicative, Monad
-           , MonadState Context, MonadReader Env
+           , MonadState Context, MonadReader GlobalEnv
            )
 
 push :: Frame -> Shonkier ()

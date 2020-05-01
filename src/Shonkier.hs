@@ -25,20 +25,23 @@ onShonkierModule action filename = do
     _ -> error "not exactly one simple main function"
 
 interpretShonkier :: FilePath -> IO ()
-interpretShonkier = onShonkierModule $ \ _ gl body -> go gl (shonkier gl body) where
+interpretShonkier = onShonkierModule $ \ _ gamma@(gl,_) body -> go gamma (shonkier gl body) where
+  go :: Env -> Computation -> IO ()
   go _ (Value v) = putDoc $ pretty v <> line
-  go gamma (Request ("read", [f]) k) = case value2path f of
-    Nothing -> go gamma (resumeShonkier gamma k abort)
+  go gamma@(gl,inp) (Request ("read", [f]) k) = case value2path f of
+    Nothing -> go gamma (resumeShonkier gl k abort)
     Just f -> do
       tryIOError (TIO.readFile f) >>= \case
-        Right t  -> go gamma (resumeShonkier gamma k (use (VString "" t)))
-        Left _   -> go gamma (resumeShonkier gamma k abort)
-  go gamma (Request ("write", [f,VString _ t]) k) = case value2path f of
-    Nothing -> go gamma (resumeShonkier gamma k abort)
+        Right t  -> go gamma (resumeShonkier gl k (use (VString "" t)))
+        Left _   -> go gamma (resumeShonkier gl k abort)
+  go gamma@(gl,inp) (Request ("write", [f,VString _ t]) k) = case value2path f of
+    Nothing -> go gamma (resumeShonkier gl k abort)
     Just f -> do
       tryIOError (TIO.writeFile f t) >>= \case
-        Right _ -> go gamma (resumeShonkier gamma k (use VNil))
-        Left _  -> go gamma (resumeShonkier gamma k abort)
+        Right _ -> go gamma (resumeShonkier gl k (use VNil))
+        Left _  -> go gamma (resumeShonkier gl k abort)
+  go gamma@(gl,inp) (Request r@(a, vs) k) | a `elem` ["POST", "GET", "meta"] =
+      handleInputs (go gamma) gamma r k
   go _ r@Request{} = do
       let r' = renderStrict $ layoutPretty defaultLayoutOptions $ pretty r
       error $ "unhandled request " ++ T.unpack r'

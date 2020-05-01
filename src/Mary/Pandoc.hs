@@ -158,22 +158,26 @@ evalMary e =
     Right t -> do
       is <- readImports
       fp <- readFilename
-      env <- readEnv
+      env@(gl,_) <- readEnv
       -- we need to strip off the common var prefix from our term
       lcp <- readPrefixToStrip
       let t' = fmap (stripVarPrefix lcp) t
-      case rawShonkier is fp env t' of
-        Value v -> case fromValue v of
-          Right p  -> pure p
-          Left foc -> error $ L.unlines
-            [ "Invalid value: " ++ show foc
-            , "in result:"
-            , toString v
-            ]
-        Request r _ -> error (show r)
+      go env (rawShonkier is fp gl t')
   where
-    stripVarPrefix :: String -> RawVariable -> RawVariable
-    stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
+  go :: (Monad m, FromValue b) => Env -> Computation -> m b
+  go _ (Value v) = case fromValue v of
+                     Right p  -> pure p
+                     Left foc -> error $ L.unlines
+                       [ "Invalid value: " ++ show foc
+                       , "in result:"
+                       , toString v
+                       ]
+  go gamma (Request r@(a, vs) k) | a `elem` ["POST", "GET", "meta"] =
+     handleInputs (go gamma) gamma r k
+  go _ r@Request{} = error (show r)
+
+  stripVarPrefix :: String -> RawVariable -> RawVariable
+  stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
 
 evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
 evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
