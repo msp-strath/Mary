@@ -1,0 +1,10 @@
+readV(f) -> primUnpickle('read(f))
+
+writeV(f,v) -> 'write(f,primPickle(v))
+
+main() -> x := primPickle({2 + _});
+  [ x
+    primUnpickle(x)(2)
+    writeV(["examples" "pickle.marv"],[foo := {5 * _}, moo := 7])
+    readV(["examples" "pickle.marv"]); foo(moo)
+  ]

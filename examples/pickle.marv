@@ -1,0 +1,1 @@
+[Cell [Env [[foo Fun [[]] [[x|'1'[Fun [[]] [] [] [[[[Bind _0]] [[App [Var [primInfixPlus ''.''|#0]] 2 [Var _0]]]]]]'1']] [] [[[[Bind _0]] [[App [Var [primInfixTimes ''.''|#0]] 5 [Var _0]]]]]]]] [Cell [Env [[moo|7]]] []]]
