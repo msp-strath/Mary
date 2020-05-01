@@ -66,7 +66,7 @@ instance FreeVars (PComputation' a) where
     PThunk k            -> Set.singleton k
 
 instance FreeVars v => FreeVars (Clause' a v) where
-  freeVars (ps, t) = Set.difference (freeVars t) (freeVars ps)
+  freeVars (ps :-> t) = Set.difference (freeVars t) (freeVars ps)
 
 instance FreeVars v => FreeVars (Rhs' a v) where
   freeVars (gd :?> tm) = Set.union (freeVars gd) (freeVars tm)
