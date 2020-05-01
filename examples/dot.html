@@ -50,12 +50,16 @@
   globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
   globalEnv["primNumToString"] = {};
   globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primPickle"] = {};
+  globalEnv["primPickle"]["."] = VPrim("primPickle",[]);
   globalEnv["primPrefixNot"] = {};
   globalEnv["primPrefixNot"]["."] = VPrim("primPrefixNot",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  globalEnv["primUnpickle"] = {};
+  globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["renderList"] = {};
   globalEnv["renderList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("n"),Value(Cell("x","xs"))],Semi(Match("next",Stringy(Strunk("",Var(LocalVar(),"n"),"0"))),Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"x"),Nil())),Nil()))),Cell(Cell(Atom("edge"),Cell(Var(LocalVar(),"n"),Cell(Var(OutOfScope(),"next"),Nil()))),App(Var(GlobalVar(false,"dot.mary"),"renderList"),[Var(OutOfScope(),"next"),Var(LocalVar(),"xs")]))))),Clause([Value("n"),Value(Nil())],Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Stringy("[]"),Nil())),Nil()))),Nil()))]);
   globalEnv["renderTree"] = {};
