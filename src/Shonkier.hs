@@ -27,12 +27,18 @@ onShonkierModule action filename = do
 interpretShonkier :: FilePath -> IO ()
 interpretShonkier = onShonkierModule $ \ _ gl body -> go gl (shonkier gl body) where
   go _ (Value v) = putDoc $ pretty v <> line
-  go gamma (Request ("read", [v]) k) = case value2path v of
+  go gamma (Request ("read", [f]) k) = case value2path f of
     Nothing -> go gamma (resumeShonkier gamma k abort)
     Just f -> do
       tryIOError (TIO.readFile f) >>= \case
         Right t  -> go gamma (resumeShonkier gamma k (use (VString "" t)))
         Left _   -> go gamma (resumeShonkier gamma k abort)
+  go gamma (Request ("write", [f,VString _ t]) k) = case value2path f of
+    Nothing -> go gamma (resumeShonkier gamma k abort)
+    Just f -> do
+      tryIOError (TIO.writeFile f t) >>= \case
+        Right _ -> go gamma (resumeShonkier gamma k (use VNil))
+        Left _  -> go gamma (resumeShonkier gamma k abort)
   go _ r@Request{} = do
       let r' = renderStrict $ layoutPretty defaultLayoutOptions $ pretty r
       error $ "unhandled request " ++ T.unpack r'

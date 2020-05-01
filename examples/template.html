@@ -40,12 +40,16 @@
   globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
   globalEnv["primNumToString"] = {};
   globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primPickle"] = {};
+  globalEnv["primPickle"]["."] = VPrim("primPickle",[]);
   globalEnv["primPrefixNot"] = {};
   globalEnv["primPrefixNot"]["."] = VPrim("primPrefixNot",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  globalEnv["primUnpickle"] = {};
+  globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["printList"] = {};
   globalEnv["printList"]["."] = VFun(null,{},[],[Clause([Value(Cell("x","xs"))],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Nil(),Nil())),Cell(Cell(Atom("BulletList"),Cell(Cell(Cell(Atom("Plain"),Cell(Cell(Atom("Span"),Cell(Cell(Stringy(""),Cell(Nil(),Nil())),Cell(Var(LocalVar(),"x"),Nil()))),Nil())),Nil()),Nil())),Cell(Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Nil(),Nil())),Cell(App(Var(GlobalVar(false,"."),"printList"),[Var(LocalVar(),"xs")]),Nil()))),Nil()))))),Clause([Value(Nil())],Cell(Atom("Div"),Cell(Cell(Stringy(""),Cell(Nil(),Nil())),Nil())))]);
   </script>

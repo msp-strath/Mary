@@ -69,12 +69,16 @@
   globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
   globalEnv["primNumToString"] = {};
   globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primPickle"] = {};
+  globalEnv["primPickle"]["."] = VPrim("primPickle",[]);
   globalEnv["primPrefixNot"] = {};
   globalEnv["primPrefixNot"]["."] = VPrim("primPrefixNot",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
   globalEnv["primStringToNum"] = {};
   globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  globalEnv["primUnpickle"] = {};
+  globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["printTree"] = {};
   globalEnv["printTree"]["hutton.mary"] = VFun(null,{},[],[Clause([Value(Cell(Atom("Plus"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Plus ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value(Cell(Atom("Mult"),Cell("s",Cell("t",Nil()))))],Stringy(Strunk("['Mult ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"s")]),Strunk(" ",App(Var(GlobalVar(false,"hutton.mary"),"printTree"),[Var(LocalVar(),"t")]),"]")))),Clause([Value("n")],App(Var(GlobalVar(false,"."),"primNumToString"),[Var(LocalVar(),"n")]))]);
   globalEnv["reduce"] = {};

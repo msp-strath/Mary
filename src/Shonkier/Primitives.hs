@@ -11,6 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import Data.Lisp
 import Shonkier.Syntax
 import Shonkier.Value
 import {-# SOURCE #-} Shonkier.Semantics
@@ -50,6 +51,8 @@ primitives =
   , ("primInfixOver"      , primInfixOver)
   , ("primNumToString"    , primNumToString)
   , ("primStringToNum"    , primStringToNum)
+  , ("primPickle"         , primPickle)
+  , ("primUnpickle"       , primUnpickle)
   ]
 
 
@@ -163,3 +166,20 @@ primStringConcat cs = go cs Nothing [] where
     (CNil        : cs) -> go cs mk ts
     (Value v     : cs) -> complain "Invalid_StringConcat_ArgType" [v]
     _                  -> complain "Invalid_StringConcat_ArgRequest" []
+
+
+---------------------------------------------------------------------------
+-- PICKLING
+
+primPickle :: PRIMITIVE
+primPickle = \case
+  [Value v] -> use (VString "" (lispText (toLISP v)))
+  _ -> complain "PickleAValue" []
+
+primUnpickle :: PRIMITIVE
+primUnpickle = \case
+  [Value (VString _ t)] -> case textLisp t >>= fromLISP of
+    Just v -> use v
+    _ -> abort
+  _ -> complain "UnpickleAString" []
+  

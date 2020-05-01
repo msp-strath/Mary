@@ -6,3 +6,4 @@ import Shonkier.Value
 use :: Value -> Shonkier Computation
 handle :: Request -> Continuation -> Shonkier Computation
 complain :: Atom -> [Value] -> Shonkier Computation
+abort :: Shonkier Computation

@@ -1,4 +1,4 @@
-module Data.Lisp (LISP(..), LISPY(..), (-:), spil, lispText, lispMunch) where
+module Data.Lisp (LISP(..), LISPY(..), (-:), spil, lispText, textLisp) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -116,11 +116,16 @@ lispText x = T.concat (blat x [])
 
 instance Show LISP where show = T.unpack . lispText
 
+textLisp :: Text -> Maybe LISP
+textLisp t = case lispMunch t of
+  Right (v, r) | T.all isSpace r -> Just v
+  _ -> Nothing
+
 lispMunch :: Text -> Either Text (LISP, Text)
 lispMunch t = case T.uncons t of
     Just (c, u)
       | isSpace c -> lispMunch u
-      | isAlpha c -> let (x, v) = T.span isAlphaNum u in
+      | isAlpha c || c == '_' -> let (x, v) = T.span isAlphaNum u in
           Right (ATOM (c : T.unpack x), v)
       | isDigit c -> let (n, v) = numFrom c u in
           case T.uncons v of
