@@ -361,6 +361,18 @@ fromTakes3 f v = Left v
 
 
 ---------------------------------------------------------------------------
+-- THE BACK DOOR
+---------------------------------------------------------------------------
+
+-- This turns stuff quoted in LISP into actual values!
+
+lispValue :: LISP -> Value
+lispValue NIL        = VNil
+lispValue (ATOM a)   = VAtom a
+lispValue (CONS s t) = VCell (lispValue s) (lispValue t)
+
+
+---------------------------------------------------------------------------
 -- SERIALIZATION
 ---------------------------------------------------------------------------
 

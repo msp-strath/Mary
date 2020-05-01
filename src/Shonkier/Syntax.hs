@@ -350,3 +350,4 @@ instance LISPY ScopedVariable where
     unstr (STR t) = Just (T.unpack t)
     unstr _ = Nothing
   fromLISP _ = Nothing
+
