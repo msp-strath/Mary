@@ -2,12 +2,15 @@ module Shonkier.Value where
 
 import Control.Monad.State
 import Control.Monad.Reader
+import Control.Applicative
+import Control.Arrow ((***))
 
 import Data.Map (Map, singleton, toAscList)
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 
 import Data.Bwd
+import Data.Lisp
 import Shonkier.Syntax
 import Utils.List
 
@@ -107,10 +110,10 @@ valueEqHuh _ _ = Just False
 -- EXPLICIT ENVIRONMENTS
 ---------------------------------------------------------------------------
 
-value2Env :: Value -> LocalEnv
-value2Env (VCell (VAtom x) v) = singleton x v
-value2Env (VCell e1 e2)       = merge (value2Env e2) (value2Env e1)
-value2Env _                   = mempty
+value2env :: Value -> LocalEnv
+value2env (VCell (VAtom x) v) = singleton x v
+value2env (VCell e1 e2)       = merge (value2env e2) (value2env e1)
+value2env _                   = mempty
 
 env2value :: LocalEnv -> Value
 env2value = foldr (VCell . sing) VNil . toAscList where
@@ -172,7 +175,7 @@ type Funy = Funy' String ScopedVariable
 -- cursor position
 data Frame' a v
   = CellL (LocalEnv' a v) (Term' a v)
-  | CellR (Value' a v) (LocalEnv' a v)
+  | CellR (Value' a v) (LocalEnv' a v)  -- drop this env?
   | AppL (LocalEnv' a v) [Term' a v]
   | AppR (Funy' a v)
          (Bwd (Computation' a v))
@@ -355,3 +358,111 @@ fromTakes3 :: (FromValue a, FromValue b, FromValue c)
        => (a -> b -> c -> d) -> Value -> Either Value d
 fromTakes3 f (VCell a x) = fromValue a >>= \ va -> fromTakes2 (f va) x
 fromTakes3 f v = Left v
+
+
+---------------------------------------------------------------------------
+-- SERIALIZATION
+---------------------------------------------------------------------------
+
+instance LISPY Value where
+  toLISP (VAtom a)      = ATOM a
+  toLISP (VString _ t)  = STR t
+  toLISP VNil           = NIL
+  toLISP (VLit l)       = "Lit" -: [toLISP l]
+  toLISP (VCell s t)    = "Cell" -: [toLISP s, toLISP t]
+  toLISP (VPrim p hss)  = "Prim" -: [ATOM p, handlesLisp hss]
+  toLISP (VFun k rho hss cs) = "Fun" -:
+    [toLISP k, toLISP rho, handlesLisp hss, toLISP cs]
+  toLISP (VThunk c)     = "Thunk" -: [toLISP c]
+  fromLISP (ATOM a) = pure (VAtom a)
+  fromLISP NIL      = pure VNil
+  fromLISP (STR t)  = pure (VString "" t)
+  fromLISP t = spil t >>= \case
+    ("Lit", [l])     -> VLit <$> fromLISP l
+    ("Cell", [s, t]) -> VCell <$> fromLISP s <*> fromLISP t
+    ("Prim", [ATOM p, hss]) -> VPrim p <$> lispHandles hss
+    ("Fun", [k, rho, hss, cs]) -> VFun
+      <$> fromLISP k
+      <*> fromLISP rho
+      <*> lispHandles hss
+      <*> fromLISP cs
+    ("Thunk", [c]) -> VThunk <$> fromLISP c
+    _ -> Nothing
+
+instance LISPY LocalEnv where
+  toLISP rho = toLISP (env2value rho)
+  fromLISP rho = value2env <$> fromLISP rho
+
+instance LISPY Computation where
+  toLISP (Value v)     = toLISP v
+  toLISP (Request (a, vs) k) =
+    "Request" -: [a -: map toLISP vs, toLISP k]
+  fromLISP t = Value <$> fromLISP t <|> (spil t >>= \case
+    ("Request", [r, k]) -> do
+      (a, vs) <- spil r
+      Request <$> ((a,) <$> traverse fromLISP vs) <*> fromLISP k
+    _ -> Nothing
+    )
+
+instance LISPY Continuation where
+  toLISP (Cn a h)     = CONS (toLISP a) (toLISP h)
+  fromLISP (CONS a h) = Cn <$> fromLISP a <*> fromLISP h
+  fromLISP _          = Nothing
+
+instance LISPY Frame where
+  toLISP (CellL rho t) = "CellL" -: [toLISP rho, toLISP t]
+  toLISP (CellR v rho) = "CellR" -: [toLISP v, toLISP rho]
+  toLISP (AppL rho ts) = "AppL" -: (toLISP rho : map toLISP ts)
+  toLISP (AppR f vz hsrho hsts) = "AppR" -:
+    [ toLISP f
+    , toLISP vz
+    , hapLisp hsrho
+    , toLISP (map hapLisp hsts)
+    ]
+  toLISP (SemiL rho t) = "SemiL" -: [toLISP rho, toLISP t]
+  toLISP (PrioL rho t) = "PrioL" -: [toLISP rho, toLISP t]
+  toLISP (StringLR v rho ts t) = "StringLR" -:
+    [toLISP v, toLISP rho, toLISP ts, toLISP t]
+  toLISP (MatchR p) = "MatchR" -: [toLISP p]
+  toLISP (Masking a) = "Masking" -: [ATOM a]
+  toLISP (Clauses rho cs as) = "Clauses" -: [toLISP rho, toLISP cs, toLISP as]
+  fromLISP t = spil t >>= \case
+    ("CellL", [rho, t]) -> CellL <$> fromLISP rho <*> fromLISP t
+    ("CellR", [v, rho]) -> CellR <$> fromLISP v <*> fromLISP rho
+    ("AppL", rho : ts)  -> AppL <$> fromLISP rho <*> traverse fromLISP ts
+    ("AppR", [f, cz, hsrho, hsts]) -> AppR
+      <$> fromLISP f
+      <*> fromLISP cz
+      <*> lispHap hsrho
+      <*> (fromLISP hsts >>= traverse lispHap)
+    ("SemiL", [rho, t]) -> SemiL <$> fromLISP rho <*> fromLISP t
+    ("PrioL", [rho, t]) -> PrioL <$> fromLISP rho <*> fromLISP t
+    ("StringLR", [v, rho, ts, t]) -> StringLR
+      <$> fromLISP v
+      <*> fromLISP rho
+      <*> fromLISP ts
+      <*> fromLISP t
+    ("MatchR", [p]) -> MatchR <$> fromLISP p
+    ("Masking", [ATOM a]) -> pure (Masking a)
+    ("Clauses", [rho, cs, as]) -> Clauses
+      <$> fromLISP rho
+      <*> fromLISP cs
+      <*> fromLISP as
+    _ -> Nothing
+
+hapLisp :: LISPY t => ([String], t) -> LISP
+hapLisp (hs, t) = toLISP (map ATOM hs, t)
+lispHap :: LISPY t => LISP -> Maybe ([String], t)
+lispHap t = do
+  (hs, t) <- fromLISP t
+  (, t) <$> traverse unatom hs
+
+instance LISPY Funy where
+  toLISP (FAtom a)     = ATOM a
+  toLISP (FPrim p)     = "Prim" -: [ATOM p]
+  toLISP (FFun rho cs) = "Fun" -: [toLISP rho, toLISP cs]
+  fromLISP (ATOM a) = pure (FAtom a)
+  fromLISP t = spil t >>= \case
+    ("Prim", [ATOM p]) -> pure (FPrim p)
+    ("Fun", [rho, cs]) -> FFun <$> fromLISP rho <*> fromLISP cs
+    _ -> Nothing

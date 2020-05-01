@@ -258,7 +258,7 @@ instance LISPY v => LISPY (Term' String v) where
   toLISP (App f as)      = "App" -: map toLISP (f : as)
   toLISP (Semi s t)      = "Semi" -: [toLISP s, toLISP t]
   toLISP (Prio s t)      = "Prio" -: [toLISP s, toLISP t]
-  toLISP (Fun hss cs)    = "Fun" -: (toLISP (map (map ATOM) hss) : map toLISP cs)
+  toLISP (Fun hss cs)    = "Fun" -: (handlesLisp hss : map toLISP cs)
   toLISP (Match p t)     = "Match" -: [toLISP p, toLISP t]
   toLISP (Mask a t)      = "Mask" -: [ATOM a, toLISP t]
   fromLISP (ATOM a) = Just (Atom a)
@@ -272,10 +272,16 @@ instance LISPY v => LISPY (Term' String v) where
     ("App", f : as)             -> App <$> fromLISP f <*> traverse fromLISP as
     ("Semi", [s, t])            -> Semi <$> fromLISP s <*> fromLISP t
     ("Prio", [s, t])            -> Prio <$> fromLISP s <*> fromLISP t
-    ("Fun", hss : cs)           -> Fun <$> (fromLISP hss >>= traverse (traverse unatom)) <*> traverse fromLISP cs
+    ("Fun", hss : cs)           -> Fun <$> lispHandles hss <*> traverse fromLISP cs
     ("Match", [p, t])           -> Match <$> fromLISP p <*> fromLISP t
     ("Mask", [ATOM a, t])       -> Mask a <$> fromLISP t
     _ -> Nothing
+
+
+handlesLisp :: [[String]] -> LISP
+handlesLisp = toLISP . map (map ATOM)
+lispHandles :: LISP -> Maybe [[String]]
+lispHandles = (>>= traverse (traverse unatom)) . fromLISP
 
 unatom :: LISP -> Maybe String
 unatom (ATOM a) = Just a

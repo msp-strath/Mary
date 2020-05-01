@@ -243,7 +243,7 @@ use v = pop >>= \case
           Request r k  -> handle r k
         _  -> complain "ThunksAreNullary" [v]
       v -> case as of
-        [t] -> eval (merge rho (value2Env v), t)
+        [t] -> eval (merge rho (value2env v), t)
         _   -> complain "EnvironmentsAreUnary" []
     AppR f vz (_, rho) as -> app f (vz :< Value v) rho as
     SemiL rho r -> eval (rho, r)

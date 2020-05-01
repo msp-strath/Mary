@@ -5,6 +5,8 @@ import qualified Data.Text as T
 import Data.Char
 import Data.Ratio
 
+import Data.Bwd
+
 data LISP
   = ATOM String
   | CONS LISP LISP
@@ -76,6 +78,15 @@ instance LISPY x => LISPY (Maybe x) where
   fromLISP NIL          = pure Nothing
   fromLISP (CONS x NIL) = Just <$> fromLISP x
   fromLISP _            = Nothing
+
+instance LISPY x => LISPY (Bwd x) where
+  -- keeping the near end near means reversing or ugliness
+  -- choosing reversing for the now
+  toLISP B0        = NIL
+  toLISP (xz :< x) = CONS (toLISP x) (toLISP xz)
+  fromLISP NIL         = pure B0
+  fromLISP (CONS x xz) = (:<) <$> fromLISP xz <*> fromLISP x
+  fromLISP _           = Nothing
 
 num :: Integer -> Text
 num = T.pack . show
