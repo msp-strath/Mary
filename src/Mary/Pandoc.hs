@@ -109,7 +109,7 @@ maryDefinitionToModule = \case
   DivTemplate decl attr div ->
     let funDecl        = (,) <$> identifier <*> argTuple pcomputation
         Right (nm, ps) = parseOnly funDecl decl
-    in ([], [(nm, Right (ps, [Nothing :?> toRawTerm (Div attr div)]))])
+    in ([], [(nm, Right (ps :-> [Nothing :?> toRawTerm (Div attr div)]))])
 
 snarfMaryDef :: Block -> Writer [MaryDefinition] Block
 snarfMaryDef c@(CodeBlock (_, cs, _) p)

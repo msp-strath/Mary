@@ -116,7 +116,7 @@ decl :: Parser [[Atom]]
 decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> argTuple pcomputation <*> rhs
+defn = (:->) <$> argTuple pcomputation <*> rhs
 
 punc :: String -> Parser ()
 punc c = () <$ skipSpace <* traverse char c <* skipSpace
@@ -303,8 +303,8 @@ spaceMaybeComma =
 
 
 clause :: Parser RawClause
-clause = (,) <$> sep spaceMaybeComma pcomputation <*> rhs
-  <|> (,) [] <$> ((:[]) . (Nothing :?>) <$> term)
+clause = (:->) <$> sep spaceMaybeComma pcomputation <*> rhs
+  <|> ([] :->) <$> ((:[]) . (Nothing :?>) <$> term)
 
 rhs :: Parser [RawRhs]
 rhs = (:[]) . (Nothing :?>) <$ punc "->" <*> term

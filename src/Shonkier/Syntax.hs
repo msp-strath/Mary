@@ -73,7 +73,8 @@ type Program    = Program' Atom ScopedVariable
 type RawModule  = Module' Atom RawVariable
 type Module     = Module' Atom ScopedVariable
 
-type Clause' a v = ([PComputation' a], [Rhs' a v])
+data Clause' a v = [PComputation' a] :-> [Rhs' a v]
+  deriving (Show, Functor)
 type RawClause = Clause' Atom RawVariable
 type Clause    = Clause' Atom ScopedVariable
 data Rhs' a v = Maybe (Term' a v) :?> Term' a v
@@ -251,7 +252,7 @@ braceFun cs = cs' where
   uv i = varOf $ "_" ++ show i
   (cs', n) = runState (traverse mangle cs) 0
   ups = [PValue (PBind (uv i)) | i <- [0..(n - 1)]]
-  mangle (ps, rs) = (ups ++ ps,) <$> traverse wrangle rs
+  mangle (ps :-> rs) = ((ups ++ ps) :->) <$> traverse wrangle rs
   wrangle (g :?> t) = (:?>) <$> traverse tangle g <*> tangle t
   tangle Blank = get >>= \ i -> Var (uv i) <$ put (i + 1)
   tangle (String k ws z) = String k <$> traverse (traverse tangle) ws <*> pure z
@@ -320,6 +321,12 @@ instance LISPY a => LISPY (PValue' a) where
     ("As", [ATOM v, p])         -> PAs v <$> fromLISP p
     ("Cell", [s, t])            -> PCell <$> fromLISP s <*> fromLISP t
     _ -> Nothing)
+
+instance (LISPY a, LISPY v) => LISPY (Clause' a v) where
+  toLISP (ps :-> rs) = toLISP (ps, rs)
+  fromLISP x = do
+    (ps, rs) <- fromLISP x
+    pure (ps :-> rs)
 
 instance (LISPY a, LISPY v) => LISPY (Rhs' a v) where
   toLISP (g :?> t) = toLISP (t, g)

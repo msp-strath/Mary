@@ -60,8 +60,8 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
     Nothing -> mempty
     Just k  -> singleton k $
       VFun frs mempty []
-        [([PValue (PBind "_return")],
-          [Nothing :?> Var (LocalVar :.: "_return")])]
+        [([PValue (PBind "_return")] :->
+            [Nothing :?> Var (LocalVar :.: "_return")])]
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
@@ -338,8 +338,8 @@ request a vs = handle (a, vs) CnNil
 
 call :: LocalEnv -> [Clause] -> [Computation]
      -> Shonkier Computation
-call rho []                cs = abort
-call rho ((ps, rhs) : cls) cs = case matches cmatch ps cs of
+call rho []                   cs = abort
+call rho ((ps :-> rhs) : cls) cs = case matches cmatch ps cs of
   Nothing  -> call rho cls cs
   Just sig -> do
     push (Clauses rho cls cs)

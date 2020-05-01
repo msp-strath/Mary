@@ -42,7 +42,7 @@ instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
 instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Clause' a v) where
-  js (qs, r) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term r) ++ [")"] where
+  js (qs :-> rs) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term rs) ++ [")"] where
 
 instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Term' a v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]

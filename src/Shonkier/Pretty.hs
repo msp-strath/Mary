@@ -141,8 +141,8 @@ ppSemi w l r = parensIf semiFax w $
   prettyPrec (LeftOf :^: semiFax) l <> semi <+> prettyPrec (RightOf :^: semiFax) r
 
 ppClause :: (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Clause' a v -> Doc
-ppClause ([], [Nothing :?> t])  = pretty t
-ppClause (ps, rs) = hsep (pretty <$> ps) <+> ppRights rs
+ppClause ([] :-> [Nothing :?> t])  = pretty t
+ppClause (ps :-> rs) = hsep (pretty <$> ps) <+> ppRights rs
 
 ppRights :: (Pretty a, FreeVars v, Pretty v, InfixHuh v) => [Rhs' a v] -> Doc
 ppRights [Nothing :?> t] = hsep [arrow, pretty t]
@@ -255,7 +255,7 @@ instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' a v) wher
     squinch cls = case traverse pinch cls of
       Nothing  -> cls
       Just cls -> squinch cls
-    pinch (PValue (PBind ('_' : _)) : ps, rs) = Just (ps, rs)
+    pinch ((PValue (PBind ('_' : _)) : ps) :-> rs) = Just (ps :-> rs)
     pinch _ = Nothing
 
 instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Clause' a v) where
@@ -331,8 +331,8 @@ instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) =>
 
   pretty (fun, decl) =
     (annotate AnnFunction (pretty fun) <>) $ case decl of
-      Left hs        -> tupled $ map (hsep . map pretty) hs
-      Right (ps, rs) -> tupled (pretty <$> ps) <+> ppRights rs
+      Left hs           -> tupled $ map (hsep . map pretty) hs
+      Right (ps :-> rs) -> tupled (pretty <$> ps) <+> ppRights rs
 
 instance Pretty (FilePath, Maybe Namespace) where
   prettyList = vcat . map pretty

@@ -110,10 +110,10 @@ instance ScopeCheck RawTerm Term where
     Mask a t -> Mask a <$> scopeCheck local t
 
 instance ScopeCheck RawClause Clause where
-  scopeCheck local (ps, t) = do
+  scopeCheck local (ps :-> rs) = do
     locals <- mapM (scopeCheck local) ps
     let new = fold (local : locals)
-    (ps,) <$> traverse (scopeCheck new) t
+    (ps :->) <$> traverse (scopeCheck new) rs
 
 instance ScopeCheck RawRhs Rhs where
   scopeCheck local (mg :?> t) =
