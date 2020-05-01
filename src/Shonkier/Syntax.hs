@@ -65,7 +65,7 @@ type Term    = Term' Atom ScopedVariable
 pattern TNum n        = Lit (Num n)
 
 type Import = (FilePath, Maybe Namespace)
-type Program' a v = [(Variable, Either [[Atom]] (Clause' a v))]
+type Program' a v = [(Variable, Either [[a]] (Clause' a v))]
 type Module'  a v = ([Import], Program' a v)
 
 type RawProgram = Program' Atom RawVariable
