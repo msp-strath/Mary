@@ -81,6 +81,7 @@ instance FreeVars v => FreeVars (Value' a v) where
     VCell a b        -> freeVars [a, b]
     VFun _ rho _ cls -> Set.union (freeVars rho) (freeVars cls)
     VThunk c         -> freeVars c
+    VEnv rho         -> freeVars rho
 
 instance FreeVars v => FreeVars (Computation' a v) where
   freeVars = \case

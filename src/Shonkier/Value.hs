@@ -69,6 +69,7 @@ data Value' a v
   -- ^ Env is the one the function was created in
   --   Frames ??
   | VThunk (Computation' a v)
+  | VEnv (LocalEnv' a v)
   deriving (Show, Functor)
 
 type Value = Value' String ScopedVariable
@@ -101,6 +102,11 @@ valueEqHuh (VCell a b)   (VCell c d)   = (&&)
   <$> valueEqHuh a c
   <*> valueEqHuh b d
 valueEqHuh (VString _ a) (VString _ b) = Just (a == b)
+valueEqHuh (VEnv rho)    (VEnv sig)
+  = all id <$> mayZipWith help (toAscList rho) (toAscList sig)
+  where
+  help (j, u) (k, v) = guard (j == k) *> valueEqHuh u v
+  
 valueEqHuh x y | hoValue x || hoValue y = Nothing
 valueEqHuh _ _ = Just False
 
@@ -110,15 +116,10 @@ valueEqHuh _ _ = Just False
 ---------------------------------------------------------------------------
 
 value2env :: Value -> LocalEnv
+value2env (VEnv rho)          = rho
 value2env (VCell (VAtom x) v) = singleton x v
 value2env (VCell e1 e2)       = merge (value2env e2) (value2env e1)
 value2env _                   = mempty
-
-env2value :: LocalEnv -> Value
-env2value = foldr (VCell . sing) VNil . toAscList where
-  sing (k, v) = VCell (VAtom k) v
-
-
 
 
 ---------------------------------------------------------------------------
@@ -388,6 +389,7 @@ instance LISPY Value where
   toLISP (VFun k rho hss cs) = "Fun" -:
     [toLISP k, toLISP rho, handlesLisp hss, toLISP cs]
   toLISP (VThunk c)     = "Thunk" -: [toLISP c]
+  toLISP (VEnv rho)     = "Env" -: [toLISP rho]
   fromLISP (ATOM a) = pure (VAtom a)
   fromLISP NIL      = pure VNil
   fromLISP (STR t)  = pure (VString "" t)
@@ -401,11 +403,15 @@ instance LISPY Value where
       <*> lispHandles hss
       <*> fromLISP cs
     ("Thunk", [c]) -> VThunk <$> fromLISP c
+    ("Env", [rho]) -> VEnv <$> fromLISP rho
     _ -> Nothing)
 
 instance LISPY LocalEnv where
-  toLISP rho = toLISP (env2value rho)
-  fromLISP rho = value2env <$> fromLISP rho
+  toLISP rho = toLISP (map (\ (k, v) -> CONS (ATOM k) (toLISP v)) (toAscList rho))
+  fromLISP (CONS (ATOM x) v) = singleton x <$> fromLISP v
+  fromLISP (CONS e1 e2)      = merge <$> fromLISP e2 <*> fromLISP e1
+  fromLISP NIL               = pure mempty
+  fromLISP _                 = Nothing
 
 instance LISPY Computation where
   toLISP (Value v)     = toLISP v

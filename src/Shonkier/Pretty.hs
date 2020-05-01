@@ -312,6 +312,8 @@ instance (SelfListView (Value' String v), FreeVars v, Pretty v, InfixHuh v) =>
         let plocal = Map.toList $ Map.restrictKeys rho (freeVars cls)
         in prettyPrec w (uncurry VMatch <$> plocal, Fun hs cls)
       VThunk c          -> braces $ pretty c
+      VEnv rho          ->
+        prettyPrec w (uncurry VMatch <$> Map.toList rho)    
     it -> ppList it
 
 instance (SelfListView (Value' String v), FreeVars v, Pretty v, InfixHuh v) =>

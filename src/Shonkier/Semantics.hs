@@ -255,7 +255,7 @@ use v = pop >>= \case
         eval (rho, t)
     MatchR p -> case vmatch p v of
       Nothing  -> abort
-      Just sig -> use (env2value sig)
+      Just sig -> use (VEnv sig)
     Masking _ -> use v
     Clauses{} -> use v
 
