@@ -338,7 +338,7 @@ instance Pretty (FilePath, Maybe Namespace) where
 
   pretty (fp, mns) =
     annotate AnnKeyword "import" <+> pretty fp
-    <+> annotate AnnKeyword (pretty $ ("as" :: Atom) <$ mns) <+> pretty mns
+    <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
 instance (FreeVars v, Pretty v, InfixHuh v) => Pretty (Module' Atom v) where
   pretty ([], p) = pretty p

@@ -8,7 +8,7 @@ hello()
 arising from
 
 ``` { .mary-def .keep }
-import "subdir/import-down.shonkier"
+import "subdir/import-down.shonkier" as foo
 import "list.shonkier"
 
 cat([x y]) -> "`x` `y`"
