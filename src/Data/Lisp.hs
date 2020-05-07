@@ -1,4 +1,4 @@
-module Data.Lisp (LISP(..), LISPY(..), (-:), spil, lispText, textLisp) where
+module Data.Lisp (LISP(..), LISPY(..), (-:), spil, lispText, textLisp, lispJS) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -113,6 +113,21 @@ blat (BOO True)  = ("#1" :)
 
 lispText :: LISP -> Text
 lispText x = T.concat (blat x [])
+
+jsBlat :: LISP -> [Text] -> [Text]
+jsBlat NIL         = ("[]" :)
+jsBlat (CONS a d)  = ("[" :) . jsBlat a . ("," :) . jsBlat d . ("]" :)
+jsBlat (ATOM x)    = ("'" :) . (T.pack x :) . ("'" :)
+jsBlat (RAT r)     = ("{num:" :) . (T.pack (show (numerator r)) :)
+                   . (", den:" :) . (T.pack (show (denominator r)) :)
+                   . ("}" :)
+jsBlat (STR s)     = ("{str:" :) . (T.pack (show s) :)
+                   . ("}" :)
+jsBlat (BOO False) = ("false" :)
+jsBlat (BOO True)  = ("true" :)
+
+lispJS :: LISP -> Text
+lispJS x = T.concat (jsBlat x [])
 
 instance Show LISP where show = T.unpack . lispText
 
