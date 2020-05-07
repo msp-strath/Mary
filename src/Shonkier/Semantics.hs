@@ -176,7 +176,7 @@ eval (rho, t) = case t of
       AmbiguousVar _     -> complain "AmbiguousVar" [vVar x']
       InvalidNamespace _ -> complain "InvalidNamespace" [vVar x']
   Namespace nm -> namespace nm >>= \case
-    Nothing -> use (VEnv mempty)
+    Nothing -> abort
     Just lc -> use (VEnv lc)
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
