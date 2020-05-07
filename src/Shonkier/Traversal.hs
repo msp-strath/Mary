@@ -106,7 +106,7 @@ valueA' f g h = go where
     VFun k rho hs cs ->
       VFun <$> continuationA' f g h k
            <*> localEnvA' f g h rho
-           <*> traverse (traverse (g)) hs
+           <*> traverse (traverse g) hs
            <*> traverse (clauseA' f g h) cs
     VThunk k         -> VThunk <$> computationA' f g h k
     VEnv rho         -> VEnv <$> localEnvA' f g h rho
