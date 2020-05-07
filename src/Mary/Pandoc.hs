@@ -177,7 +177,8 @@ evalMary e =
   go _ r@Request{} = error (show r)
 
   stripVarPrefix :: String -> RawVariable -> RawVariable
-  stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
+  stripVarPrefix lcp (p :.: x) =
+    (over MkRawNamespace (stripPrefixButDot lcp) <$> p) :.: x
 
 evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
 evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =

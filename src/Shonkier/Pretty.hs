@@ -140,11 +140,13 @@ ppSemi :: (Pretty a, Pretty b) => WhereAmI -> a -> b -> Doc
 ppSemi w l r = parensIf semiFax w $
   prettyPrec (LeftOf :^: semiFax) l <> semi <+> prettyPrec (RightOf :^: semiFax) r
 
-ppClause :: (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Clause' a v -> Doc
+ppClause :: (Pretty ns, Pretty a, FreeVars v, Pretty v, InfixHuh v)
+         => Clause' ns a v -> Doc
 ppClause ([] :-> [Nothing :?> t])  = pretty t
 ppClause (ps :-> rs) = hsep (pretty <$> ps) <+> ppRights rs
 
-ppRights :: (Pretty a, FreeVars v, Pretty v, InfixHuh v) => [Rhs' a v] -> Doc
+ppRights :: (Pretty ns, Pretty a, FreeVars v, Pretty v, InfixHuh v)
+         => [Rhs' ns a v] -> Doc
 ppRights [Nothing :?> t] = hsep [arrow, pretty t]
 ppRights rs              = hsep (map pretty rs)
 
@@ -205,7 +207,7 @@ instance Pretty Literal where
       | otherwise -> annotate AnnBoolean "'0"
 
 instance Pretty RawVariable where
-  pretty (mns :.: v) = pretty (fmap (++ ".") mns) <> ppGlobalVar v
+  pretty (mns :.: v) = pretty mns <> "." <> ppGlobalVar v
 
 instance Pretty ScopedVariable where
   -- deal with variables on rhs introduced by brace sections
@@ -217,7 +219,9 @@ instance Pretty ScopedVariable where
     OutOfScope         -> annotate AnnError $ pretty x
     InvalidNamespace _ -> annotate AnnError $ pretty x
 
-instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' a v) where
+instance ( Pretty ns, Pretty a
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty (Term' ns a v) where
   pretty = prettyPrec Utopia
   prettyPrec w t = case listView t of
     ([], Just _) -> case t of
@@ -225,6 +229,7 @@ instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' a v) wher
       Lit l         -> prettyPrec w l
       String k ps t -> ppSplice k ps t
       Var v         -> pretty v
+      Namespace nm  -> pretty nm
       Blank         -> pretty ("_" :: Variable)
       Nil           -> error "The IMPOSSIBLE happened! listView refused to eat a nil."
       Cell a b      -> error "The IMPOSSIBLE happened! listView refused to eat a cell."
@@ -251,18 +256,22 @@ instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Term' a v) wher
     it -> ppList it
    where
     -- deal with variables on the lhs introduced by brace sections
-    squinch :: [Clause' a v] -> [Clause' a v]
+    squinch :: [Clause' ns a v] -> [Clause' ns a v]
     squinch cls = case traverse pinch cls of
       Nothing  -> cls
       Just cls -> squinch cls
     pinch ((PValue (PBind ('_' : _)) : ps) :-> rs) = Just (ps :-> rs)
     pinch _ = Nothing
 
-instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Clause' a v) where
+instance ( Pretty ns, Pretty a
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty (Clause' ns a v) where
   pretty = ppClause
   prettyList = vcat . map pretty
 
-instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Rhs' a v) where
+instance ( Pretty ns, Pretty a
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty (Rhs' ns a v) where
   pretty (mg :?> t) = hsep (pipe : foldMap (pure . pretty) mg ++ [arrow, pretty t])
 
 instance Pretty a => Pretty (PValue' a) where
@@ -284,21 +293,24 @@ instance Pretty a => Pretty (PComputation' a) where
     PRequest (a, vs) v -> braces $ hsep [ppApp (pretty a) vs, arrow, pretty v]
     PThunk v           -> braces $ pretty v
 
-data VMatch' a v = VMatch Variable (Value' a v)
+data VMatch' ns a v = VMatch Variable (Value' ns a v)
 
-instance (Pretty a, FreeVars v, SelfListView (Value' a v), Pretty v, InfixHuh v) =>
-         Pretty (VMatch' a v) where
+instance ( Pretty ns, Pretty a, SelfListView (Value' ns a v)
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty (VMatch' ns a v) where
   pretty = prettyPrec Utopia
   prettyPrec w (VMatch k v) = ppMatch w k v
 
-instance (Pretty a, FreeVars v, Pretty v, SelfListView (Value' a v), InfixHuh v) =>
-         Pretty ([VMatch' a v], Term' a v) where
+instance ( Pretty ns, Pretty a, SelfListView (Value' ns a v)
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty ([VMatch' ns a v], Term' ns a v) where
   pretty = prettyPrec Utopia
   prettyPrec w ([], t)    = prettyPrec w t
   prettyPrec w (kv:kvs,t) = ppSemi w kv (kvs, t)
 
-instance (Pretty a, SelfListView (Value' a v), FreeVars v, Pretty v, InfixHuh v) =>
-         Pretty (Value' a v) where
+instance ( Pretty ns, Pretty a, SelfListView (Value' ns a v)
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty (Value' ns a v) where
   pretty = prettyPrec Utopia
   prettyPrec w v = case listView v of
     ([], Just _) -> case v of
@@ -316,14 +328,15 @@ instance (Pretty a, SelfListView (Value' a v), FreeVars v, Pretty v, InfixHuh v)
         prettyPrec w (uncurry VMatch <$> Map.toList rho)
     it -> ppList it
 
-instance (Pretty a, SelfListView (Value' a v), FreeVars v, Pretty v, InfixHuh v) =>
-         Pretty (Computation' a v) where
+instance ( Pretty ns, Pretty a, SelfListView (Value' ns a v)
+         , FreeVars v, Pretty v, InfixHuh v
+         ) => Pretty (Computation' ns a v) where
   pretty = \case
     Value v             -> pretty v
     Request (a, vs) frs -> ppApp (pretty a) vs
 
-instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) =>
-         Pretty (Variable, Either [[a]] (Clause' a v)) where
+instance (Pretty ns, Pretty a, FreeVars v, Pretty v, InfixHuh v) =>
+         Pretty (Variable, Either [[a]] (Clause' ns a v)) where
   prettyList = vcat
              . intersperse ""
              . map (vcat . map pretty)
@@ -334,17 +347,23 @@ instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) =>
       Left hs           -> tupled $ map (hsep . map pretty) hs
       Right (ps :-> rs) -> tupled (pretty <$> ps) <+> ppRights rs
 
-instance Pretty (FilePath, Maybe Namespace) where
+instance Pretty (FilePath, Maybe RawNamespace) where
   prettyList = vcat . map pretty
 
   pretty (fp, mns) =
     annotate AnnKeyword "import" <+> pretty fp
     <+> annotate AnnKeyword (pretty $ ("as" :: String) <$ mns) <+> pretty mns
 
-instance (Pretty a, FreeVars v, Pretty v, InfixHuh v) => Pretty (Module' a v) where
+instance (Pretty ns, Pretty a, FreeVars v, Pretty v, InfixHuh v)
+  => Pretty (Module' ns a v) where
   pretty ([], p) = pretty p
   pretty (is, p) = vsep [pretty is, pretty p]
 
+instance Pretty RawNamespace where
+  pretty (MkRawNamespace str) = pretty str
+
+instance Pretty Namespace where
+  pretty (MkNamespace str _) = pretty str
 
 ------------------------------------------------------------------------------
 -- can tell if it's infix

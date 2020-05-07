@@ -102,6 +102,7 @@ library
                      , Shonkier.Semantics
                      , Shonkier.ShonkierJS
                      , Shonkier.Syntax
+                     , Shonkier.Traversal
                      , Shonkier.Value
                      , Utils.List
 

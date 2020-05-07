@@ -41,14 +41,15 @@ instance JS Scoping where
 instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
-instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Clause' a v) where
+instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Clause' ns a v) where
   js (qs :-> rs) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term rs) ++ [")"] where
 
-instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Term' a v) where
+instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Term' ns a v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]
   js (Lit l)         = ["Lit("] ++ js l ++ [")"]
   js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
   js (Var x)         = js x
+  js (Namespace nm)  = []
   js Nil             = ["Nil()"]
   js Blank           = ["undefined"]
   js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]

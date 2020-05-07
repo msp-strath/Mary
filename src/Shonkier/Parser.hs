@@ -30,9 +30,10 @@ import_ = do
   skipSpace
   ([], fp) <- spliceOf (const (,)) (choice [])
   skipSpace
-  alias <- choice [ Just <$ string "as" <* skipSpace <*> identifier
-                  , pure Nothing
-                  ]
+  alias <- choice
+    [ Just . MkRawNamespace <$ string "as" <* skipSpace <*> identifier
+    , pure Nothing
+    ]
   pure (T.unpack fp, alias)
 
 program :: Parser RawProgram
@@ -150,12 +151,12 @@ termBut w = weeTerm w >>= moreTerm w
 weeTerm :: WhereAmI -> Parser RawTerm
 weeTerm w = choice
   [ Match <$ opok pamaFax w
-    <*> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace
+    <*> pvalue <* skipSpace <* string ":=" <* skipSpace
     <*> termBut (RightOf :^: pamaFax)
   , Atom <$> atom
   , Lit <$> literal
   , spliceOf String spaceTerm
-  , Var <$> variable
+  , varOrNS
   , Blank <$ char '_'
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
   , Fun [] <$ char '{' <* skipSpace
@@ -290,14 +291,16 @@ argTuple p =                                                                --
 --                                                                          --
 ------------------------------------------------------------------------------
 
-variable :: Parser RawVariable
-variable = do
+varOrNS :: Parser RawTerm
+varOrNS = do
   start <- identifier
-  next  <- choice [ Just <$ char '.' <*> identifier
-                  , pure Nothing ]
+  next  <- choice
+    [ Just <$ char '.' <*> choice [ Just <$> identifier, pure Nothing ]
+    , pure Nothing ]
   pure $ case next of
-    Nothing  -> (Nothing :.: start)
-    Just end -> (Just start :.: end)
+    Nothing         -> Var (Nothing :.: start)
+    Just (Just end) -> Var (Just (MkRawNamespace start) :.: end)
+    Just Nothing    -> Namespace (MkRawNamespace start)
 
 spaceMaybeComma :: Parser ()
 spaceMaybeComma =
