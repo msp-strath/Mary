@@ -21,10 +21,11 @@ skipSpace :: Parser ()
 skipSpace = comments
 
 module_ :: Parser RawModule
-module_ = (,) <$> many (import_ <* skipSpace) <*> program
+module_ = (,) <$> many import_ <*> program
 
 import_ :: Parser Import
 import_ = do
+  skipSpace
   () <$ string "import"
   skipSpace
   ([], fp) <- spliceOf (const (,)) (choice [])
