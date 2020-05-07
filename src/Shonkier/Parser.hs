@@ -27,7 +27,7 @@ import_ :: Parser Import
 import_ = do
   () <$ string "import"
   skipSpace
-  (_, [], fp) <- spliceOf (choice [])
+  ([], fp) <- spliceOf (const (,)) (choice [])
   skipSpace
   alias <- choice [ Just <$ string "as" <* skipSpace <*> identifier
                   , pure Nothing
@@ -153,7 +153,7 @@ weeTerm w = choice
     <*> termBut (RightOf :^: pamaFax)
   , Atom <$> atom
   , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
+  , spliceOf String spaceTerm
   , Var <$> variable
   , Blank <$ char '_'
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
@@ -211,12 +211,13 @@ arrow = () <$ char '-' <* char '>'
 literal :: Parser Literal
 literal = boolit <|> numlit
 
-spliceOf :: Parser a -> Parser (Keyword, [(Text, a)], Text)
-spliceOf p = do
+spliceOf :: (Keyword -> [(Text, a)] -> Text -> b)
+         -> Parser a -> Parser b
+spliceOf c p = do
   fence <- option "" identifier <* char '"'
   (txt, atxts) <- munchSplice fence
   let (ps, end) = rotate txt atxts
-  pure (fence, ps, end)
+  pure $ c fence ps end
 
   where
   rotate txt []                 = ([], txt)
@@ -330,7 +331,7 @@ pvar = do
 pvalue :: Parser PValue
 pvalue = choice
   [ PLit <$> literal
-  , (\ (kw, ps, lit) -> PString kw ps lit) <$> spliceOf pvalue
+  , spliceOf PString pvalue
   , PAtom <$> atom
   , pvar
   , PWild <$ char '_'
