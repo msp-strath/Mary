@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import Data.List
 import Data.Ratio
 import Data.Map (Map, foldMapWithKey)
+import qualified Data.Set as Set
 
 import Shonkier.Syntax
 import Shonkier.Value
@@ -41,15 +42,15 @@ instance JS Scoping where
 instance JS ScopedVariable where
   js (sco :.: x) = ["Var("] ++ js sco ++ [",", jsAtom x, ")"]
 
-instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Clause' ns a v) where
+instance (JS ns, JSAtom a, JS v, Atomy a, Vary v) => JS (Clause' ns a v) where
   js (qs :-> rs) = ["Clause("] ++ js qs ++ [","] ++ js (rhs2Term rs) ++ [")"] where
 
-instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Term' ns a v) where
+instance (JS ns, JSAtom a, JS v, Atomy a, Vary v) => JS (Term' ns a v) where
   js (Atom a)        = ["Atom(", jsAtom a, ")"]
   js (Lit l)         = ["Lit("] ++ js l ++ [")"]
   js (String _ ts u) = ["Stringy("] ++ jsStringy ts u ++ [")"] where
   js (Var x)         = js x
-  js (Namespace nm)  = []
+  js (Namespace ns)  = ["Namespace("] ++ js ns ++ [")"]
   js Nil             = ["Nil()"]
   js Blank           = ["undefined"]
   js (Cell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
@@ -61,6 +62,9 @@ instance (JSAtom a, JS v, Atomy a, Vary v) => JS (Term' ns a v) where
                     ++ [")"]
   js (Match p t)     = ["Match("] ++ js p ++ [","] ++ js t ++ [")"]
   js (Mask a t)      = ["Mask(", jsAtom a, ","] ++ js t ++ [")"]
+
+instance JS Namespace where
+  js (MkNamespace ns fps) = [jsAtom ns, ","] ++ js (fmap jsAtom $ Set.toList fps)
 
 instance JS Literal where
   js (Num r) = [ "LitNum(",pack (show (numerator r))
