@@ -40,8 +40,9 @@ interpretShonkier = onShonkierModule $ \ _ gamma@(gl,_) body -> go gamma (shonki
       tryIOError (TIO.writeFile f t) >>= \case
         Right _ -> go gamma (resumeShonkier gl k (use VNil))
         Left _  -> go gamma (resumeShonkier gl k abort)
-  go gamma@(gl,inp) (Request r@(a, vs) k) | a `elem` ["POST", "GET", "meta"] =
-      handleInputs (go gamma) gamma r k
+  go gamma@(gl,inp) (Request r@(a, vs) k)
+    | a `elem` ["POST", "GET", "meta"] = handleInputs (go gamma) gamma r k
+    | a `elem` ["dot"]                 = handleDot (go gamma) gamma r k
   go _ r@Request{} = do
       let r' = renderStrict $ layoutPretty defaultLayoutOptions $ pretty r
       error $ "unhandled request " ++ T.unpack r'
