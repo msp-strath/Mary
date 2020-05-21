@@ -14,6 +14,10 @@
   var globalEnv = {};
   globalEnv["append"] = {};
   globalEnv["append"]["list.shonkier"] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
+  globalEnv["dotList"] = {};
+  globalEnv["dotList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("xs")],App(Var(GlobalVar(false,"dot.mary"),"toSVG"),[App(Var(GlobalVar(false,"dot.mary"),"prettyList"),[Var(LocalVar(),"xs")])]))]);
+  globalEnv["dotTree"] = {};
+  globalEnv["dotTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("t")],App(Var(GlobalVar(false,"dot.mary"),"toSVG"),[App(Var(GlobalVar(false,"dot.mary"),"prettyTree"),[Var(LocalVar(),"t")])]))]);
   globalEnv["fold"] = {};
   globalEnv["fold"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("c"),Value("n"),Value(Nil())],Var(LocalVar(),"n")),Clause([Value("c"),Value("n"),Value(Cell("x","xs"))],App(Var(LocalVar(),"c"),[Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Var(LocalVar(),"c"),Var(LocalVar(),"n"),Var(LocalVar(),"xs")])]))]);
   globalEnv["main"] = {};
@@ -21,9 +25,9 @@
   globalEnv["map"] = {};
   globalEnv["map"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"list.shonkier"),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
   globalEnv["prettyList"] = {};
-  globalEnv["prettyList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("xs")],Cell(Atom("DOT"),Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"renderList"),[Stringy("ND"),Var(LocalVar(),"xs")])))))]);
+  globalEnv["prettyList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("xs")],Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"renderList"),[Stringy("ND"),Var(LocalVar(),"xs")]))))]);
   globalEnv["prettyTree"] = {};
-  globalEnv["prettyTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("t")],Cell(Atom("DOT"),Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy("ND"),Var(LocalVar(),"t")])))))]);
+  globalEnv["prettyTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("t")],Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy("ND"),Var(LocalVar(),"t")]))))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -65,9 +69,11 @@
   globalEnv["renderTree"] = {};
   globalEnv["renderTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("n"),Value(Cell(Atom("Node"),Cell("nm",Cell("a",Cell("b",Nil())))))],App(Var(GlobalVar(false,"list.shonkier"),"append"),[Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Cell(Cell(Atom("edge"),Cell(Cell(Var(LocalVar(),"n"),Cell(Atom("sw"),Nil())),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Nil()))),Cell(Cell(Atom("edge"),Cell(Cell(Var(LocalVar(),"n"),Cell(Atom("se"),Nil())),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Nil()))),Nil()))),App(Var(GlobalVar(false,"list.shonkier"),"append"),[App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Var(LocalVar(),"a")]),App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Var(LocalVar(),"b")])])])),Clause([Value("n"),Value(Cell(Atom("Leaf"),Cell("nm",Nil())))],Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Nil()))]);
   globalEnv["testList"] = {};
-  globalEnv["testList"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"prettyList"),[Cell(Stringy("a"),Cell(Stringy("b"),Nil()))]))]);
+  globalEnv["testList"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"dotList"),[Cell(Stringy("a"),Cell(Stringy("b"),Nil()))]))]);
   globalEnv["testTree"] = {};
-  globalEnv["testTree"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"prettyTree"),[Cell(Atom("Node"),Cell(Stringy("+"),Cell(Cell(Atom("Node"),Cell(Stringy("*"),Cell(Cell(Atom("Leaf"),Cell(Stringy("17"),Nil())),Cell(Cell(Atom("Leaf"),Cell(Stringy("12"),Nil())),Nil())))),Cell(Cell(Atom("Leaf"),Cell(Stringy("3"),Nil())),Nil()))))]))]);
+  globalEnv["testTree"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"dotTree"),[Cell(Atom("Node"),Cell(Stringy("+"),Cell(Cell(Atom("Node"),Cell(Stringy("*"),Cell(Cell(Atom("Leaf"),Cell(Stringy("17"),Nil())),Cell(Cell(Atom("Leaf"),Cell(Stringy("12"),Nil())),Nil())))),Cell(Cell(Atom("Leaf"),Cell(Stringy("3"),Nil())),Nil()))))]))]);
+  globalEnv["toSVG"] = {};
+  globalEnv["toSVG"]["dot.mary"] = VFun(null,{},[],[Clause([Value("d")],Cell(Atom("Div"),Cell(Cell(Stringy("mary-svg"),Cell(Nil(),Nil())),Cell(Cell(Atom("RawBlock"),Cell(Stringy("html"),Cell(App(Atom("dot"),[Var(LocalVar(),"d")]),Nil()))),Nil()))))]);
   </script>
   <script>
   var inputs = {};
@@ -84,15 +90,19 @@
 <p>Using the following program:</p>
 <div class="shonkier-pretty">
 <span class="shonkier-keyword">import</span> list.shonkier <span class="shonkier-keyword"></span> <br />
+<span class="shonkier-function">toSVG</span>(d) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> [<span class="shonkier-string">"mary-svg"</span> []] [<span class="shonkier-atom">'RawBlock</span> <span class="shonkier-string">"html"</span> <span class="shonkier-atom">'dot</span>(d)]]<br />
+<br />
 <span class="shonkier-function">renderTree</span>(n, [<span class="shonkier-atom">'Node</span> nm a b]) <span class="shonkier-operator">-&gt;</span> append( [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> nm]]<br />
  [<span class="shonkier-atom">'edge</span> [n <span class="shonkier-atom">'sw</span>] <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span>]<br />
  [<span class="shonkier-atom">'edge</span> [n <span class="shonkier-atom">'se</span>] <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>1"</span>]]<br />
 , append(renderTree(<span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span>, a), renderTree(<span class="shonkier-string">"<span class="shonkier-splice">`n`</span>1"</span>, b)) )<br />
 <span class="shonkier-function">renderTree</span>(n, [<span class="shonkier-atom">'Leaf</span> nm]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> nm]]]<br />
 <br />
-<span class="shonkier-function">prettyTree</span>(t) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'DOT</span> <span class="shonkier-atom">'digraph</span> []|renderTree(<span class="shonkier-string">"ND"</span>, t)]<br />
+<span class="shonkier-function">prettyTree</span>(t) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'digraph</span> []|renderTree(<span class="shonkier-string">"ND"</span>, t)]<br />
 <br />
-<span class="shonkier-function">testTree</span>() <span class="shonkier-operator">-&gt;</span> prettyTree( [<span class="shonkier-atom">'Node</span><br />
+<span class="shonkier-function">dotTree</span>(t) <span class="shonkier-operator">-&gt;</span> toSVG(prettyTree(t))<br />
+<br />
+<span class="shonkier-function">testTree</span>() <span class="shonkier-operator">-&gt;</span> dotTree( [<span class="shonkier-atom">'Node</span><br />
  <span class="shonkier-string">"+"</span><br />
  [<span class="shonkier-atom">'Node</span> <span class="shonkier-string">"*"</span> [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"17"</span>] [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"12"</span>]]<br />
  [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"3"</span>]] )<br />
@@ -101,9 +111,11 @@
  [<span class="shonkier-atom">'edge</span> n next]|renderList(next, xs)]<br />
 <span class="shonkier-function">renderList</span>(n, []) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> <span class="shonkier-string">"[]"</span>]]]<br />
 <br />
-<span class="shonkier-function">prettyList</span>(xs) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'DOT</span> <span class="shonkier-atom">'digraph</span> []|renderList(<span class="shonkier-string">"ND"</span>, xs)]<br />
+<span class="shonkier-function">prettyList</span>(xs) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'digraph</span> []|renderList(<span class="shonkier-string">"ND"</span>, xs)]<br />
 <br />
-<span class="shonkier-function">testList</span>() <span class="shonkier-operator">-&gt;</span> prettyList([<span class="shonkier-string">"a"</span> <span class="shonkier-string">"b"</span>])
+<span class="shonkier-function">dotList</span>(xs) <span class="shonkier-operator">-&gt;</span> toSVG(prettyList(xs))<br />
+<br />
+<span class="shonkier-function">testList</span>() <span class="shonkier-operator">-&gt;</span> dotList([<span class="shonkier-string">"a"</span> <span class="shonkier-string">"b"</span>])
 </div>
 <p>we can generate a list:</p>
 <div id="mary-svg">

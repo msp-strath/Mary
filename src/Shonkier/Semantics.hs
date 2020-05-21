@@ -11,11 +11,15 @@ import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import qualified Dot.Text as Dot
+
 import Data.Bwd
 import Shonkier.Syntax
 import Shonkier.Scope
 import Shonkier.Value
+import Shonkier.Dot()
 import Shonkier.Primitives (prim)
+import System.Process
 import Utils.List
 
 ---------------------------------------------------------------------------
@@ -313,14 +317,24 @@ handle r@(a, _) k = go (Right k) 0 where
       Masking b | a == b -> go (Left hs) (i + 1)
       _ -> go (Left hs) i
 
+handleDot :: MonadIO m => (Computation -> m b) -> Env -> Request -> Continuation -> m b
+handleDot action (gl, inp) (a, [v]) k =
+  case fromValue v of
+    Left{} -> action (resumeShonkier gl k (complain "InvalidDotProgram" [v]))
+    Right dot -> do
+      let code = Dot.encode dot
+      svg <- liftIO $ readProcess "dot" ["-Tsvg"] (T.unpack code)
+      action $ resumeShonkier gl k $ use $ VString "" (T.pack svg)
+handleDot action (gl, inp) (a, vs) k =
+  action (resumeShonkier gl k (complain "IncorrectDotRequest" vs))
+
 handleInputs :: (Computation -> b) -> Env -> Request -> Continuation -> b
-handleInputs action (gl, inp) (a, vs@[VString _ f]) k
-   | a `elem` ["POST", "GET", "meta"] =
-    -- preprocess the array key depending on the effect
-    let f' = case a of {"POST" -> "POST_"; "GET" -> "GET_"; _ -> ""} <> f in
-    case inp !? f' of
-      Just v  -> action (resumeShonkier gl k (use (VString "" v)))
-      Nothing -> action (resumeShonkier gl k (complain "UnknownInput" vs))
+handleInputs action (gl, inp) (a, vs@[VString _ f]) k =
+  -- preprocess the array key depending on the effect
+  let f' = case a of {"POST" -> "POST_"; "GET" -> "GET_"; _ -> ""} <> f in
+  case inp !? f' of
+    Just v  -> action (resumeShonkier gl k (use (VString "" v)))
+    Nothing -> action (resumeShonkier gl k (complain "UnknownInput" vs))
 handleInputs action (gl, _) (a, vs) k  =
   action (resumeShonkier gl k (complain "IncorrectInputRequest" vs))
 

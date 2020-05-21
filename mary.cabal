@@ -97,7 +97,6 @@ library
                      , Shonkier.Pretty.Examples
                      , Shonkier.Pretty.Render.Pandoc
                      , Shonkier.Primitives
-                     , Shonkier.Result
                      , Shonkier.Scope
                      , Shonkier.Semantics
                      , Shonkier.ShonkierJS
