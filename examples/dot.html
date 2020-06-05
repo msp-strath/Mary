@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Inline SVG</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/shonkier.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+  <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
+  <script>
+  var globalEnv = {};
+  globalEnv["append"] = {};
+  globalEnv["append"]["list.shonkier"] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
+  globalEnv["dotList"] = {};
+  globalEnv["dotList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("xs")],App(Var(GlobalVar(false,"dot.mary"),"toSVG"),[App(Var(GlobalVar(false,"dot.mary"),"prettyList"),[Var(LocalVar(),"xs")])]))]);
+  globalEnv["dotTree"] = {};
+  globalEnv["dotTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("t")],App(Var(GlobalVar(false,"dot.mary"),"toSVG"),[App(Var(GlobalVar(false,"dot.mary"),"prettyTree"),[Var(LocalVar(),"t")])]))]);
+  globalEnv["fold"] = {};
+  globalEnv["fold"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("c"),Value("n"),Value(Nil())],Var(LocalVar(),"n")),Clause([Value("c"),Value("n"),Value(Cell("x","xs"))],App(Var(LocalVar(),"c"),[Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Var(LocalVar(),"c"),Var(LocalVar(),"n"),Var(LocalVar(),"xs")])]))]);
+  globalEnv["main"] = {};
+  globalEnv["main"]["list.shonkier"] = VFun(null,{},[],[Clause([],Nil())]);
+  globalEnv["map"] = {};
+  globalEnv["map"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"list.shonkier"),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
+  globalEnv["prettyList"] = {};
+  globalEnv["prettyList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("xs")],Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"renderList"),[Stringy("ND"),Var(LocalVar(),"xs")]))))]);
+  globalEnv["prettyTree"] = {};
+  globalEnv["prettyTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("t")],Cell(Atom("digraph"),Cell(Nil(),App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy("ND"),Var(LocalVar(),"t")]))))]);
+  globalEnv["primInfixAnd"] = {};
+  globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
+  globalEnv["primInfixEquals"] = {};
+  globalEnv["primInfixEquals"]["."] = VPrim("primInfixEquals",[]);
+  globalEnv["primInfixGreater"] = {};
+  globalEnv["primInfixGreater"]["."] = VPrim("primInfixGreater",[]);
+  globalEnv["primInfixGreaterEq"] = {};
+  globalEnv["primInfixGreaterEq"]["."] = VPrim("primInfixGreaterEq",[]);
+  globalEnv["primInfixLess"] = {};
+  globalEnv["primInfixLess"]["."] = VPrim("primInfixLess",[]);
+  globalEnv["primInfixLessEq"] = {};
+  globalEnv["primInfixLessEq"]["."] = VPrim("primInfixLessEq",[]);
+  globalEnv["primInfixMinus"] = {};
+  globalEnv["primInfixMinus"]["."] = VPrim("primInfixMinus",[]);
+  globalEnv["primInfixOr"] = {};
+  globalEnv["primInfixOr"]["."] = VPrim("primInfixOr",[]);
+  globalEnv["primInfixOver"] = {};
+  globalEnv["primInfixOver"]["."] = VPrim("primInfixOver",[]);
+  globalEnv["primInfixPlus"] = {};
+  globalEnv["primInfixPlus"]["."] = VPrim("primInfixPlus",[]);
+  globalEnv["primInfixTimes"] = {};
+  globalEnv["primInfixTimes"]["."] = VPrim("primInfixTimes",[]);
+  globalEnv["primInfixUnequal"] = {};
+  globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
+  globalEnv["primNumToString"] = {};
+  globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primPickle"] = {};
+  globalEnv["primPickle"]["."] = VPrim("primPickle",[]);
+  globalEnv["primPrefixNot"] = {};
+  globalEnv["primPrefixNot"]["."] = VPrim("primPrefixNot",[]);
+  globalEnv["primStringConcat"] = {};
+  globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["primStringToNum"] = {};
+  globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  globalEnv["primUnpickle"] = {};
+  globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
+  globalEnv["renderList"] = {};
+  globalEnv["renderList"]["dot.mary"] = VFun(null,{},[],[Clause([Value("n"),Value(Cell("x","xs"))],Semi(Match("next",Stringy(Strunk("",Var(LocalVar(),"n"),"0"))),Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"x"),Nil())),Nil()))),Cell(Cell(Atom("edge"),Cell(Var(LocalVar(),"n"),Cell(Var(OutOfScope(),"next"),Nil()))),App(Var(GlobalVar(false,"dot.mary"),"renderList"),[Var(OutOfScope(),"next"),Var(LocalVar(),"xs")]))))),Clause([Value("n"),Value(Nil())],Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Stringy("[]"),Nil())),Nil()))),Nil()))]);
+  globalEnv["renderTree"] = {};
+  globalEnv["renderTree"]["dot.mary"] = VFun(null,{},[],[Clause([Value("n"),Value(Cell(Atom("Node"),Cell("nm",Cell("a",Cell("b",Nil())))))],App(Var(GlobalVar(false,"list.shonkier"),"append"),[Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Cell(Cell(Atom("edge"),Cell(Cell(Var(LocalVar(),"n"),Cell(Atom("sw"),Nil())),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Nil()))),Cell(Cell(Atom("edge"),Cell(Cell(Var(LocalVar(),"n"),Cell(Atom("se"),Nil())),Cell(Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Nil()))),Nil()))),App(Var(GlobalVar(false,"list.shonkier"),"append"),[App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy(Strunk("",Var(LocalVar(),"n"),"0")),Var(LocalVar(),"a")]),App(Var(GlobalVar(false,"dot.mary"),"renderTree"),[Stringy(Strunk("",Var(LocalVar(),"n"),"1")),Var(LocalVar(),"b")])])])),Clause([Value("n"),Value(Cell(Atom("Leaf"),Cell("nm",Nil())))],Cell(Cell(Atom("node"),Cell(Var(LocalVar(),"n"),Cell(Cell(Stringy("label"),Cell(Var(LocalVar(),"nm"),Nil())),Nil()))),Nil()))]);
+  globalEnv["testList"] = {};
+  globalEnv["testList"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"dotList"),[Cell(Stringy("a"),Cell(Stringy("b"),Nil()))]))]);
+  globalEnv["testTree"] = {};
+  globalEnv["testTree"]["dot.mary"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"dot.mary"),"dotTree"),[Cell(Atom("Node"),Cell(Stringy("+"),Cell(Cell(Atom("Node"),Cell(Stringy("*"),Cell(Cell(Atom("Leaf"),Cell(Stringy("17"),Nil())),Cell(Cell(Atom("Leaf"),Cell(Stringy("12"),Nil())),Nil())))),Cell(Cell(Atom("Leaf"),Cell(Stringy("3"),Nil())),Nil()))))]))]);
+  globalEnv["toSVG"] = {};
+  globalEnv["toSVG"]["dot.mary"] = VFun(null,{},[],[Clause([Value("d")],Cell(Atom("Div"),Cell(Cell(Stringy("mary-svg"),Cell(Nil(),Nil())),Cell(Cell(Atom("RawBlock"),Cell(Stringy("html"),Cell(App(Atom("dot"),[Var(LocalVar(),"d")]),Nil()))),Nil()))))]);
+  </script>
+  <script>
+  var inputs = {};
+  inputs["GET_page"] = "examples/dot.mary";
+  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["sitesRoot"] = ".";
+  inputs["user"] = "testymctestyface";
+  </script>
+
+</head>
+<body>
+<form method="post">
+<h1 id="inline-svg">Inline SVG</h1>
+<p>Using the following program:</p>
+<div class="shonkier-pretty">
+<span class="shonkier-keyword">import</span> list.shonkier <span class="shonkier-keyword"></span> <br />
+<span class="shonkier-function">toSVG</span>(d) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> [<span class="shonkier-string">"mary-svg"</span> []] [<span class="shonkier-atom">'RawBlock</span> <span class="shonkier-string">"html"</span> <span class="shonkier-atom">'dot</span>(d)]]<br />
+<br />
+<span class="shonkier-function">renderTree</span>(n, [<span class="shonkier-atom">'Node</span> nm a b]) <span class="shonkier-operator">-&gt;</span> append( [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> nm]]<br />
+ [<span class="shonkier-atom">'edge</span> [n <span class="shonkier-atom">'sw</span>] <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span>]<br />
+ [<span class="shonkier-atom">'edge</span> [n <span class="shonkier-atom">'se</span>] <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>1"</span>]]<br />
+, append(renderTree(<span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span>, a), renderTree(<span class="shonkier-string">"<span class="shonkier-splice">`n`</span>1"</span>, b)) )<br />
+<span class="shonkier-function">renderTree</span>(n, [<span class="shonkier-atom">'Leaf</span> nm]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> nm]]]<br />
+<br />
+<span class="shonkier-function">prettyTree</span>(t) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'digraph</span> []|renderTree(<span class="shonkier-string">"ND"</span>, t)]<br />
+<br />
+<span class="shonkier-function">dotTree</span>(t) <span class="shonkier-operator">-&gt;</span> toSVG(prettyTree(t))<br />
+<br />
+<span class="shonkier-function">testTree</span>() <span class="shonkier-operator">-&gt;</span> dotTree( [<span class="shonkier-atom">'Node</span><br />
+ <span class="shonkier-string">"+"</span><br />
+ [<span class="shonkier-atom">'Node</span> <span class="shonkier-string">"*"</span> [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"17"</span>] [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"12"</span>]]<br />
+ [<span class="shonkier-atom">'Leaf</span> <span class="shonkier-string">"3"</span>]] )<br />
+<br />
+<span class="shonkier-function">renderList</span>(n, [x|xs]) <span class="shonkier-operator">-&gt;</span> next <span class="shonkier-operator">:=</span> <span class="shonkier-string">"<span class="shonkier-splice">`n`</span>0"</span><span class="shonkier-operator">;</span> [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> x]]<br />
+ [<span class="shonkier-atom">'edge</span> n next]|renderList(next, xs)]<br />
+<span class="shonkier-function">renderList</span>(n, []) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'node</span> n [<span class="shonkier-string">"label"</span> <span class="shonkier-string">"[]"</span>]]]<br />
+<br />
+<span class="shonkier-function">prettyList</span>(xs) <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'digraph</span> []|renderList(<span class="shonkier-string">"ND"</span>, xs)]<br />
+<br />
+<span class="shonkier-function">dotList</span>(xs) <span class="shonkier-operator">-&gt;</span> toSVG(prettyList(xs))<br />
+<br />
+<span class="shonkier-function">testList</span>() <span class="shonkier-operator">-&gt;</span> dotList([<span class="shonkier-string">"a"</span> <span class="shonkier-string">"b"</span>])
+</div>
+<p>we can generate a list:</p>
+<div id="mary-svg">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz
+ -->
+<!-- Title: %3 Pages: 1 -->
+<svg width="62pt" height="188pt"
+ viewBox="0.00 0.00 62.00 188.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 184)">
+<title>%3</title>
+<polygon fill="#ffffff" stroke="transparent" points="-4,4 -4,-184 58,-184 58,4 -4,4"/>
+<!-- ND -->
+<g id="node1" class="node">
+<title>ND</title>
+<ellipse fill="none" stroke="#000000" cx="27" cy="-162" rx="27" ry="18"/>
+<text text-anchor="middle" x="27" y="-158.3" font-family="Times,serif" font-size="14.00" fill="#000000">a</text>
+</g>
+<!-- ND0 -->
+<g id="node2" class="node">
+<title>ND0</title>
+<ellipse fill="none" stroke="#000000" cx="27" cy="-90" rx="27" ry="18"/>
+<text text-anchor="middle" x="27" y="-86.3" font-family="Times,serif" font-size="14.00" fill="#000000">b</text>
+</g>
+<!-- ND&#45;&gt;ND0 -->
+<g id="edge1" class="edge">
+<title>ND&#45;&gt;ND0</title>
+<path fill="none" stroke="#000000" d="M27,-143.8314C27,-136.131 27,-126.9743 27,-118.4166"/>
+<polygon fill="#000000" stroke="#000000" points="30.5001,-118.4132 27,-108.4133 23.5001,-118.4133 30.5001,-118.4132"/>
+</g>
+<!-- ND00 -->
+<g id="node3" class="node">
+<title>ND00</title>
+<ellipse fill="none" stroke="#000000" cx="27" cy="-18" rx="27" ry="18"/>
+<text text-anchor="middle" x="27" y="-14.3" font-family="Times,serif" font-size="14.00" fill="#000000">[]</text>
+</g>
+<!-- ND0&#45;&gt;ND00 -->
+<g id="edge2" class="edge">
+<title>ND0&#45;&gt;ND00</title>
+<path fill="none" stroke="#000000" d="M27,-71.8314C27,-64.131 27,-54.9743 27,-46.4166"/>
+<polygon fill="#000000" stroke="#000000" points="30.5001,-46.4132 27,-36.4133 23.5001,-46.4133 30.5001,-46.4132"/>
+</g>
+</g>
+</svg>
+
+</div>
+<p>and we can generate a tree:</p>
+<div id="mary-svg">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz
+ -->
+<!-- Title: %3 Pages: 1 -->
+<svg width="170pt" height="188pt"
+ viewBox="0.00 0.00 170.00 188.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 184)">
+<title>%3</title>
+<polygon fill="#ffffff" stroke="transparent" points="-4,4 -4,-184 166,-184 166,4 -4,4"/>
+<!-- ND -->
+<g id="node1" class="node">
+<title>ND</title>
+<ellipse fill="none" stroke="#000000" cx="99" cy="-162" rx="27" ry="18"/>
+<text text-anchor="middle" x="99" y="-158.3" font-family="Times,serif" font-size="14.00" fill="#000000">+</text>
+</g>
+<!-- ND0 -->
+<g id="node2" class="node">
+<title>ND0</title>
+<ellipse fill="none" stroke="#000000" cx="63" cy="-90" rx="27" ry="18"/>
+<text text-anchor="middle" x="63" y="-86.3" font-family="Times,serif" font-size="14.00" fill="#000000">*</text>
+</g>
+<!-- ND&#45;&gt;ND0 -->
+<g id="edge1" class="edge">
+<title>ND:sw&#45;&gt;ND0</title>
+<path fill="none" stroke="#000000" d="M84,-147C76.1699,-139.1699 71.2302,-128.174 68.127,-117.9264"/>
+<polygon fill="#000000" stroke="#000000" points="71.4741,-116.8885 65.597,-108.0732 64.6941,-118.6295 71.4741,-116.8885"/>
+</g>
+<!-- ND1 -->
+<g id="node3" class="node">
+<title>ND1</title>
+<ellipse fill="none" stroke="#000000" cx="135" cy="-90" rx="27" ry="18"/>
+<text text-anchor="middle" x="135" y="-86.3" font-family="Times,serif" font-size="14.00" fill="#000000">3</text>
+</g>
+<!-- ND&#45;&gt;ND1 -->
+<g id="edge2" class="edge">
+<title>ND:se&#45;&gt;ND1</title>
+<path fill="none" stroke="#000000" d="M114,-147C121.8301,-139.1699 126.7698,-128.174 129.873,-117.9264"/>
+<polygon fill="#000000" stroke="#000000" points="133.3059,-118.6295 132.403,-108.0732 126.5259,-116.8885 133.3059,-118.6295"/>
+</g>
+<!-- ND00 -->
+<g id="node4" class="node">
+<title>ND00</title>
+<ellipse fill="none" stroke="#000000" cx="27" cy="-18" rx="27" ry="18"/>
+<text text-anchor="middle" x="27" y="-14.3" font-family="Times,serif" font-size="14.00" fill="#000000">17</text>
+</g>
+<!-- ND0&#45;&gt;ND00 -->
+<g id="edge3" class="edge">
+<title>ND0:sw&#45;&gt;ND00</title>
+<path fill="none" stroke="#000000" d="M48,-75C40.1699,-67.1699 35.2302,-56.174 32.127,-45.9264"/>
+<polygon fill="#000000" stroke="#000000" points="35.4741,-44.8885 29.597,-36.0732 28.6941,-46.6295 35.4741,-44.8885"/>
+</g>
+<!-- ND01 -->
+<g id="node5" class="node">
+<title>ND01</title>
+<ellipse fill="none" stroke="#000000" cx="99" cy="-18" rx="27" ry="18"/>
+<text text-anchor="middle" x="99" y="-14.3" font-family="Times,serif" font-size="14.00" fill="#000000">12</text>
+</g>
+<!-- ND0&#45;&gt;ND01 -->
+<g id="edge4" class="edge">
+<title>ND0:se&#45;&gt;ND01</title>
+<path fill="none" stroke="#000000" d="M78,-75C85.8301,-67.1699 90.7698,-56.174 93.873,-45.9264"/>
+<polygon fill="#000000" stroke="#000000" points="97.3059,-46.6295 96.403,-36.0732 90.5259,-44.8885 97.3059,-46.6295"/>
+</g>
+</g>
+</svg>
+
+</div>
+</form>
+</body>
+</html>

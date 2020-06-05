@@ -1,0 +1,17 @@
+# Importing Shonkier files
+
+Let's run some code:
+
+```mary
+hello()
+```
+arising from
+
+``` { .mary-def .keep }
+import "subdir/import-down.shonkier" as foo
+import "list.shonkier"
+
+cat([x y]) -> "`x` `y`"
+
+hello() -> ['Para cat(map({x -> "`greeting()` `x`"},["there" "World"])) ]
+```

@@ -9,75 +9,21 @@ main()
 is obtained by running the following program
 
 ```{ .mary-def .keep }
-main() -> ['Plain primStringConcat(printTree(runParser("31*13+24*42", hutton())))]
+main() -> ['Plain printTree(parse("31*(13+7*2)+24*42", hutton))]
 ```
 
 using the following auxiliary definitions.
 
 ``` { .mary-def .keep }
-runFail('fail,):
-runFail({'fail() -> _}, k) -> k()
-runFail(v, _) -> v
+import "examples/parser.shonkier"
 
-runParser(,'getChar 'choice):
-runParser("`[c|cs]`", {'getChar()   -> k}) -> runParser(cs,k({c}))
-runParser(""        , {'getChar()   -> k}) -> k('fail)
-runParser(cs        , {'choice(a,b) -> k}) -> runFail(runParser(cs,k(a())),{runParser(cs,k(b()))})
-runParser(""        , v)                   -> v
-runParser(cs        , v)                   -> [v cs]
-
-anyChar() -> 'getChar()()
-
-// Conditional parse of a character
-fromJust([n]) -> n
-fromJust([])  -> 'fail()
-
-satisfy(p) -> fromJust(p(anyChar()))
-
-// Lists of parsed values
-some(p) -> [p()|many(p)]
-many(p) -> 'choice({some(p)},{[]})
-
-// Digits
-isDigit("0") -> [0]
-isDigit("1") -> [1]
-isDigit("2") -> [2]
-isDigit("3") -> [3]
-isDigit("4") -> [4]
-isDigit("5") -> [5]
-isDigit("6") -> [6]
-isDigit("7") -> [7]
-isDigit("8") -> [8]
-isDigit("9") -> [9]
-isDigit(_)   -> []
-
-digit()  -> satisfy(isDigit)
-number() -> convert(reverse(some(digit)))
-
-reverse(xs) -> reverseAcc([],xs)
-reverseAcc(acc,[])     -> acc
-reverseAcc(acc,[x|xs]) -> reverseAcc([x|acc],xs)
-
-convert([])     -> 0
-convert([d|ds]) -> primNumAdd(d, primNumMult(10,convert(ds)))
-
-isOperator(0,"*") -> ['Mult]
-isOperator(1,"+") -> ['Plus]
-isOperator(_,_)   -> []
-
-operator(k) -> satisfy({c -> isOperator(k,c)})
-
-chain(i,c,a) -> reduce(i(),many({[c() a()]}))
-
-reduce(v,[])         -> v
-reduce(v,[[c a]|xs]) -> [c v reduce(a,xs)]
-
-mult() -> chain(number,{operator(0)},number)
-plus() -> chain(mult,{operator(1)},mult)
+atom() -> 'choice(number,{parens(plus)})
+mult() -> chain(atom,{is("*"); 'Mult},atom)
+plus() -> chain(mult,{is("+"); 'Plus},mult)
 
 hutton() -> plus()
 
-printTree(['Plus s t]) -> ["['Plus " printTree(s) " " printTree(t) "]"]
-printTree(['Mult s t]) -> ["['Mult " printTree(s) " " printTree(t) "]"]
+printTree(['Plus s t]) -> "['Plus `printTree(s)` `printTree(t)`]"
+printTree(['Mult s t]) -> "['Mult `printTree(s)` `printTree(t)`]"
 printTree(n)           -> primNumToString(n)
 ```

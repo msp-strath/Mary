@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Importing Shonkier files</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/shonkier.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+  <script src="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/Shonkier.js"></script>
+  <script>
+  var globalEnv = {};
+  globalEnv["append"] = {};
+  globalEnv["append"]["list.shonkier"] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
+  globalEnv["cat"] = {};
+  globalEnv["cat"]["imports.mary"] = VFun(null,{},[],[Clause([Value(Cell("x",Cell("y",Nil())))],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk(" ",Var(LocalVar(),"y"),""))))]);
+  globalEnv["fold"] = {};
+  globalEnv["fold"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("c"),Value("n"),Value(Nil())],Var(LocalVar(),"n")),Clause([Value("c"),Value("n"),Value(Cell("x","xs"))],App(Var(LocalVar(),"c"),[Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Var(LocalVar(),"c"),Var(LocalVar(),"n"),Var(LocalVar(),"xs")])]))]);
+  globalEnv["greeting"] = {};
+  globalEnv["greeting"]["subdir/import-down.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Fun([],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]),Stringy(""),Cell(Stringy("H"),Cell(Stringy("e"),Cell(Stringy("l"),Cell(Stringy("l"),Cell(Stringy("o"),Nil())))))]))]);
+  globalEnv["hello"] = {};
+  globalEnv["hello"]["imports.mary"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(App(Var(GlobalVar(false,"imports.mary"),"cat"),[App(Var(GlobalVar(false,"list.shonkier"),"map"),[Fun([],[Clause([Value("x")],Stringy(Strunk("",App(Var(GlobalVar(false,"subdir/import-down.shonkier"),"greeting"),[]),Strunk(" ",Var(LocalVar(),"x"),""))))]),Cell(Stringy("there"),Cell(Stringy("World"),Nil()))])]),Nil())))]);
+  globalEnv["main"] = {};
+  globalEnv["main"]["list.shonkier"] = VFun(null,{},[],[Clause([],Nil())]);
+  globalEnv["main"]["subdir/import-down.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"list.shonkier"),"map"),[Fun([],[Clause([Value("x")],App(Var(GlobalVar(false,"."),"primInfixPlus"),[Var(LocalVar(),"x"),Lit(LitNum(1,1))]))]),Cell(Lit(LitNum(1,1)),Cell(Lit(LitNum(2,1)),Cell(Lit(LitNum(3,1)),Nil())))]))]);
+  globalEnv["map"] = {};
+  globalEnv["map"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"list.shonkier"),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
+  globalEnv["primInfixAnd"] = {};
+  globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
+  globalEnv["primInfixEquals"] = {};
+  globalEnv["primInfixEquals"]["."] = VPrim("primInfixEquals",[]);
+  globalEnv["primInfixGreater"] = {};
+  globalEnv["primInfixGreater"]["."] = VPrim("primInfixGreater",[]);
+  globalEnv["primInfixGreaterEq"] = {};
+  globalEnv["primInfixGreaterEq"]["."] = VPrim("primInfixGreaterEq",[]);
+  globalEnv["primInfixLess"] = {};
+  globalEnv["primInfixLess"]["."] = VPrim("primInfixLess",[]);
+  globalEnv["primInfixLessEq"] = {};
+  globalEnv["primInfixLessEq"]["."] = VPrim("primInfixLessEq",[]);
+  globalEnv["primInfixMinus"] = {};
+  globalEnv["primInfixMinus"]["."] = VPrim("primInfixMinus",[]);
+  globalEnv["primInfixOr"] = {};
+  globalEnv["primInfixOr"]["."] = VPrim("primInfixOr",[]);
+  globalEnv["primInfixOver"] = {};
+  globalEnv["primInfixOver"]["."] = VPrim("primInfixOver",[]);
+  globalEnv["primInfixPlus"] = {};
+  globalEnv["primInfixPlus"]["."] = VPrim("primInfixPlus",[]);
+  globalEnv["primInfixTimes"] = {};
+  globalEnv["primInfixTimes"]["."] = VPrim("primInfixTimes",[]);
+  globalEnv["primInfixUnequal"] = {};
+  globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
+  globalEnv["primNumToString"] = {};
+  globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primPickle"] = {};
+  globalEnv["primPickle"]["."] = VPrim("primPickle",[]);
+  globalEnv["primPrefixNot"] = {};
+  globalEnv["primPrefixNot"]["."] = VPrim("primPrefixNot",[]);
+  globalEnv["primStringConcat"] = {};
+  globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["primStringToNum"] = {};
+  globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  globalEnv["primUnpickle"] = {};
+  globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
+  </script>
+  <script>
+  var inputs = {};
+  inputs["GET_page"] = "examples/imports.mary";
+  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["sitesRoot"] = ".";
+  inputs["user"] = "testymctestyface";
+  </script>
+
+</head>
+<body>
+<form method="post">
+<h1 id="importing-shonkier-files">Importing Shonkier files</h1>
+<p>Let’s run some code:</p>
+<p>Hello there Hello World</p>
+<p>arising from</p>
+<div class="shonkier-pretty">
+<span class="shonkier-keyword">import</span> subdir/import-down.shonkier <span class="shonkier-keyword">as</span> foo<br />
+<span class="shonkier-keyword">import</span> list.shonkier <span class="shonkier-keyword"></span> <br />
+<span class="shonkier-function">cat</span>([x y]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-string">"<span class="shonkier-splice">`x`</span> <span class="shonkier-splice">`y`</span>"</span><br />
+<br />
+<span class="shonkier-function">hello</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Para</span> cat(map({x <span class="shonkier-operator">-&gt;</span> <span class="shonkier-string">"<span class="shonkier-splice">`greeting()`</span> <span class="shonkier-splice">`x`</span>"</span>}, [<span class="shonkier-string">"there"</span> <span class="shonkier-string">"World"</span>]))]
+</div>
+</form>
+</body>
+</html>

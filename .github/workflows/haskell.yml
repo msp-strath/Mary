@@ -19,9 +19,9 @@ jobs:
           - ghc: '8.4.4'
             cabal: '2.2'
           - ghc: '8.2.2'
-            cabal: '2.0'
+            cabal: '2.2'
           - ghc: '8.0.2'
-            cabal: '2.0'
+            cabal: '2.2'
 
     steps:
     - uses: actions/checkout@v2
@@ -48,6 +48,9 @@ jobs:
       with:
         pandoc-version: '2.9'
 
+    - name: Install graphviz
+      run: sudo apt-get install graphviz
+
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
@@ -70,11 +73,13 @@ jobs:
       run: |
         cabal install
         cabal build --enable-tests
+        cp ~/.cabal/bin/mary .
 
     - name: Legacy build mary
       if: matrix.cabal < '3.0'
       run: |
         cabal install --enable-tests
+        cp ~/.cabal/bin/mary .
 
     - name: Run tests
       run: |

@@ -4,6 +4,7 @@ module Shonkier.Parser where
 
 import Control.Applicative
 import Control.Arrow (first)
+import Control.Monad
 
 import Data.Attoparsec.Text hiding (skipSpace)
 import qualified Data.Attoparsec.Text as Atto
@@ -35,7 +36,7 @@ import_ = do
 
 program :: Parser RawProgram
 program = id <$ skipSpace
-            <*> many ((,) <$> identifier <*> (Left <$> decl <|> Right <$>defn) <* skipSpace)
+            <*> many ((,) <$> identifier <*> (Left <$> decl <|> Right <$> defn) <* skipSpace)
              <* endOfInput
 
 data Comment = Line | Nested deriving (Eq, Show)
@@ -108,33 +109,107 @@ pattern NewNested a c = (a, [], c)
 pattern EndNested a b = (a, b, [])
 
 
-decl :: Parser [[String]]
-decl = tupleOf (sep skipSpace atom) <* char ':'
+someSp :: Parser a -> Parser [a]
+someSp p = (:) <$> p <*> many (id <$ skipSpace <*> p)
+
+decl :: Parser [[Atom]]
+decl = argTuple (sep skipSpace atom) <* skipSpace <* char ':'
 
 defn :: Parser RawClause
-defn = (,) <$> tupleOf pcomputation
-           <* arrow <* skipSpace <*> term
+defn = (:->) <$> argTuple pcomputation <*> rhs
 
-punc :: Char -> Parser ()
-punc c = () <$ skipSpace <* char c <* skipSpace
+punc :: String -> Parser ()
+punc c = () <$ skipSpace <* traverse char c <* skipSpace
 
 sep :: Parser () -> Parser x -> Parser [x]
 sep s p = (:) <$> p <*> many (id <$ s <*> p) <|> pure []
 
-term :: Parser RawTerm
-term = weeTerm >>= moreTerm
+topTerm :: Parser RawTerm
+topTerm = spaceTerm
 
-atom :: Parser String
-atom = id <$ char '\'' <*> some (satisfy isAlphaNum)
+spaceTerm :: Parser RawTerm
+spaceTerm = id <$ skipSpace <*> term <* skipSpace
+
+------------------------------------------------------------------------------
+-- NOTA BENE                                                                --
+--                                                                          --
+-- parsers for terms/patterns must forbid leading/trailing space            --
+--                                                                          --
+------------------------------------------------------------------------------
+
+opok :: OpFax -> WhereAmI -> Parser ()
+opok o w = () <$ guard (not (needParens o w))
+
+term :: Parser RawTerm
+term = termBut Utopia
+
+termBut :: WhereAmI -> Parser RawTerm
+termBut w = weeTerm w >>= moreTerm w
+
+weeTerm :: WhereAmI -> Parser RawTerm
+weeTerm w = choice
+  [ Match <$ opok pamaFax w
+    <*> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace
+    <*> termBut (RightOf :^: pamaFax)
+  , Atom <$> atom
+  , Lit <$> literal
+  , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
+  , Var <$> variable
+  , Blank <$ char '_'
+  , uncurry (flip $ foldr Cell) <$> listOf term Nil
+  , Fun [] <$ char '{' <* skipSpace
+    <*> sep skipSpace clause <* skipSpace <* char '}'
+  , id <$ char '(' <*> spaceTerm <* char ')'
+  , opCand >>= prefixApp w
+  ]
+
+moreTerm :: WhereAmI -> RawTerm -> Parser RawTerm
+moreTerm w t = choice
+  [ App t <$ opok applFax w <*> argTuple term >>= moreTerm w
+  , Mask <$> tmAtom t <* opok maskFax w <* punc "^"
+    <*> termBut (RightOf :^: maskFax) >>= moreTerm w
+  , Semi t <$ opok semiFax w <* punc ";"
+    <*> termBut (RightOf :^: semiFax) >>= moreTerm w
+  , Prio t <$ opok prioFax w <* punc "?>"
+    <*> termBut (RightOf :^: prioFax) >>= moreTerm w
+  , (skipSpace *> opCand) >>= infixApp w t >>= moreTerm w
+  , pure t
+  ] where
+  tmAtom (Atom a) = pure a
+  tmAtom _ = empty
+
+prefixApp :: WhereAmI -> String -> Parser RawTerm
+prefixApp w p = case lookup p prefixOpFax of
+  Nothing -> empty
+  Just x  -> App (Var (Nothing :.: ("primPrefix" ++ spell x))) . (:[])
+          <$ opok x w
+          <* skipSpace
+         <*> termBut (RightOf :^: x)
+
+infixApp :: WhereAmI -> RawTerm -> String -> Parser RawTerm
+infixApp w l i = case lookup i infixOpFax of
+  Nothing -> empty
+  Just x  -> App (Var (Nothing :.: ("primInfix" ++ spell x))) . (l :) . (:[])
+          <$ opok x w
+          <* skipSpace
+         <*> termBut (RightOf :^: x)
+
+atom :: Parser Atom
+atom = MkAtom <$ char '\'' <*> identifier
 
 identifier :: Parser String
 identifier = (:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)
+
+opCand :: Parser String
+opCand = (:) <$> satisfy oppy
+             <*> (T.unpack <$> Atto.takeWhile oppy)
+  where oppy = inClass opChars
 
 arrow :: Parser ()
 arrow = () <$ char '-' <* char '>'
 
 literal :: Parser Literal
-literal = numlit
+literal = boolit <|> numlit
 
 spliceOf :: Parser a -> Parser (Keyword, [(Text, a)], Text)
 spliceOf p = do
@@ -173,6 +248,9 @@ spliceOf p = do
          pure (txt', [])
        | otherwise -> choice []
 
+boolit :: Parser Literal
+boolit = Boolean <$ char '\'' <*> (False <$ char '0' <|> True <$ char '1')
+
 data NumExtension
   = Dot   String
   | Slash String
@@ -192,12 +270,23 @@ numlit = do
 
 listOf :: Parser a -> a -> Parser ([a], a)
 listOf p nil = (,) <$ char '['
-      <*> many (skipSpace *> p) <* skipSpace
+      <*> many (spaceMaybeComma *> p) <* spaceMaybeComma
       <*> (id <$ char '|' <* skipSpace <*> p <|> pure nil)
       <* skipSpace <* char ']'
 
-tupleOf :: Parser a -> Parser [a]
-tupleOf p = id <$ punc '(' <*> sep (punc ',') p <* punc ')'
+------------------------------------------------------------------------------
+-- NOTA BENE                                                                --
+--                                                                          --
+-- no whitespace before or after an argtuple!                               --
+                                                                            --
+argTuple :: Parser a -> Parser [a]                                          --
+argTuple p =                                                                --
+  id <$ char '(' <* skipSpace                                               --
+  <*> sep (punc ",") p                                                      --
+  <* skipSpace <* char ')'                                                  --
+                                                                            --
+--                                                                          --
+------------------------------------------------------------------------------
 
 variable :: Parser RawVariable
 variable = do
@@ -205,37 +294,29 @@ variable = do
   next  <- choice [ Just <$ char '.' <*> identifier
                   , pure Nothing ]
   pure $ case next of
-    Nothing  -> (Nothing, start)
-    Just end -> (Just start, end)
+    Nothing  -> (Nothing :.: start)
+    Just end -> (Just start :.: end)
 
-weeTerm :: Parser RawTerm
-weeTerm = choice
-  [ Atom <$> atom
-  , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf term
-  , Var <$> variable
-  , uncurry (flip $ foldr Cell) <$> listOf term (Atom "")
-  , Fun [] <$ char '{' <* skipSpace <*> sep skipSpace clause <* skipSpace <* char '}'
-  ]
+spaceMaybeComma :: Parser ()
+spaceMaybeComma =
+  () <$ skipSpace <* (() <$ char ',' <* skipSpace <|> pure ())
 
-moreTerm :: RawTerm -> Parser RawTerm
-moreTerm t = choice
-  [ App t <$> tupleOf term >>= moreTerm
-  , Semi t <$ punc ';' <*> term
-  , pure t
-  ]
 
 clause :: Parser RawClause
-clause = (,) <$> sep skipSpace pcomputation <* skipSpace <* arrow <* skipSpace
-             <*> term
-  <|> (,) [] <$> term
+clause = (:->) <$> sep spaceMaybeComma pcomputation <*> rhs
+  <|> ([] :->) <$> ((:[]) . (Nothing :?>) <$> term)
+
+rhs :: Parser [RawRhs]
+rhs = (:[]) . (Nothing :?>) <$ punc "->" <*> term
+  <|> someSp ((:?>) <$ punc "|" <*> (Just <$> term <|> pure Nothing)
+                    <* punc "->" <*> term)
 
 pcomputation :: Parser PComputation
 pcomputation
   =   PValue <$> pvalue
   <|> id <$ char '{' <* skipSpace <*>
       (    PThunk <$> identifier
-       <|> PRequest <$> ((,) <$> atom <*> tupleOf pvalue)
+       <|> PRequest <$> ((,) <$> atom <*> argTuple pvalue) <* skipSpace
            <* arrow <* skipSpace <*> (Just <$> identifier <|> Nothing <$ char '_')
       ) <* skipSpace <* char '}'
 
@@ -253,7 +334,7 @@ pvalue = choice
   , PAtom <$> atom
   , pvar
   , PWild <$ char '_'
-  , uncurry (flip $ foldr PCell) <$> listOf pvalue (PAtom "")
+  , uncurry (flip $ foldr PCell) <$> listOf pvalue PNil
   ]
 
 getMeA :: Parser a -> Text -> a
@@ -268,4 +349,4 @@ getMeAProgram :: Text -> RawProgram
 getMeAProgram = getMeA program
 
 getMeATerm :: Text -> RawTerm
-getMeATerm = getMeA (term <* endOfInput)
+getMeATerm = getMeA (spaceTerm <* endOfInput)

@@ -1,1 +1,2 @@
+#! /bin/sh
 ./mary pandoc

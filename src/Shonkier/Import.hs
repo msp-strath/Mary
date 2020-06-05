@@ -8,7 +8,6 @@ import Data.Foldable (fold)
 import Data.Function (on)
 import Data.List (nub, groupBy, sortBy, stripPrefix)
 import qualified Data.Map as Map
-import Data.Maybe
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -109,23 +108,25 @@ loadModule base fp (is, ls) = do
 -- prefix from all paths therein. Hence if all imported files are in
 -- the directory /home/biffo/shonkier-projects/, this prefix will be
 -- stripped out in the interest of read- and port-ability.
-loadToplevelModule :: FilePath -> RawModule -> IO (Module, GlobalEnv)
+loadToplevelModule :: FilePath -> RawModule -> IO (Module, GlobalEnv, String)
 loadToplevelModule fp rm = do
   base <- takeDirectory <$> makeAbsolute fp
   (m, st) <- runImportT (loadModule (splitPath base) (takeFileName fp) rm) emptyImportState
   -- strip common prefix from global env
   let (lcp, gl) = simplifyGlobalEnv $ globals st
   -- strip common prefix from all programs
-  let m' = (second (fmap (fmap (fmap (fmap $ simplifyTerm lcp))))) m
-  pure (m', gl)
+  let m' = second (fmap (fmap (fmap (simplifyTerm lcp)))) m
+  pure (m', gl, lcp)
 
 importToplevelModule :: FilePath -> IO (Module, GlobalEnv)
-importToplevelModule fp = forceReadModule fp >>= loadToplevelModule fp
+importToplevelModule fp = do
+  (m, e, lcp) <- forceReadModule fp >>= loadToplevelModule fp
+  pure (m, e)
 
 mkGlobalEnv :: FilePath -> Program -> GlobalEnv
 mkGlobalEnv fp ls = fold
   [ Map.singleton f $ Map.singleton fp
-    $ VFun [] mempty
+    $ VFun CnNil mempty
       (map nub (foldr padCat [] [hs | (_, Left hs) <- grp]))
       [cl | (_, Right cl) <- grp]
   | grp@((f, _) : _) <- groupBy ((==) `on` fst) $
@@ -148,11 +149,12 @@ simplifyTerm :: Functor f => String -> f ScopedVariable -> f ScopedVariable
 simplifyTerm lcp = fmap simp
   where
     simp :: ScopedVariable -> ScopedVariable
-    simp (GlobalVar fp x) = GlobalVar (stripPrefixButDot lcp fp) x
-    simp y                = y
+    simp (GlobalVar b fp :.: x) = GlobalVar b (stripPrefixButDot lcp fp) :.: x
+    simp y                      = y
 
 stripPrefixButDot :: String -> String -> String
 stripPrefixButDot prf "." = "."
-stripPrefixButDot prf x   =
-  let stripped = fromJust $ stripPrefix prf x in
-  if null stripped then "." else stripped
+stripPrefixButDot prf x   = case stripPrefix prf x of
+  Just "" -> "."
+  Just x -> x
+  Nothing -> error $ "IMPOSSIBLE claimed common prefix actually not a prefix. Prefix: " ++ show prf ++ " x: " ++ show x

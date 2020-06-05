@@ -5,7 +5,7 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Recursively building content</title>
-  <link rel="stylesheet" href="https://raw.githubusercontent.com/msp-strath/Mary/master/src/data-dir/shonkier.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/msp-strath/Mary@latest/src/data-dir/shonkier.css" />
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
@@ -13,28 +13,62 @@
   <script>
   var globalEnv = {};
   globalEnv["enum"] = {};
-  globalEnv["enum"]["."] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App(GVar(".","primStringConcat"),["xs"]),Atom(""))),Cell(Cell(Atom("BulletList"),App(GVar(".","map"),[GVar(".","enum"),"xs"])),Atom("")))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell("xs",Atom(""))),Atom("")))]);
+  globalEnv["enum"]["."] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"."),"primStringConcat"),[Var(LocalVar(),"xs")]),Nil())),Cell(Cell(Atom("BulletList"),App(Var(GlobalVar(false,"."),"map"),[Var(GlobalVar(false,"."),"enum"),Var(LocalVar(),"xs")])),Nil()))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell(Var(LocalVar(),"xs"),Nil())),Nil()))]);
   globalEnv["map"] = {};
-  globalEnv["map"]["."] = VFun(null,{},[],[Clause([Value("f"),Value(Atom(""))],Atom("")),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App("f",["x"]),App(GVar(".","map"),["f","xs"])))]);
-  globalEnv["primNumAdd"] = {};
-  globalEnv["primNumAdd"]["."] = VPrim("primNumAdd",[]);
-  globalEnv["primNumMinus"] = {};
-  globalEnv["primNumMinus"]["."] = VPrim("primNumMinus",[]);
-  globalEnv["primNumMult"] = {};
-  globalEnv["primNumMult"]["."] = VPrim("primNumMult",[]);
+  globalEnv["map"]["."] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"."),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
+  globalEnv["primInfixAnd"] = {};
+  globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
+  globalEnv["primInfixEquals"] = {};
+  globalEnv["primInfixEquals"]["."] = VPrim("primInfixEquals",[]);
+  globalEnv["primInfixGreater"] = {};
+  globalEnv["primInfixGreater"]["."] = VPrim("primInfixGreater",[]);
+  globalEnv["primInfixGreaterEq"] = {};
+  globalEnv["primInfixGreaterEq"]["."] = VPrim("primInfixGreaterEq",[]);
+  globalEnv["primInfixLess"] = {};
+  globalEnv["primInfixLess"]["."] = VPrim("primInfixLess",[]);
+  globalEnv["primInfixLessEq"] = {};
+  globalEnv["primInfixLessEq"]["."] = VPrim("primInfixLessEq",[]);
+  globalEnv["primInfixMinus"] = {};
+  globalEnv["primInfixMinus"]["."] = VPrim("primInfixMinus",[]);
+  globalEnv["primInfixOr"] = {};
+  globalEnv["primInfixOr"]["."] = VPrim("primInfixOr",[]);
+  globalEnv["primInfixOver"] = {};
+  globalEnv["primInfixOver"]["."] = VPrim("primInfixOver",[]);
+  globalEnv["primInfixPlus"] = {};
+  globalEnv["primInfixPlus"]["."] = VPrim("primInfixPlus",[]);
+  globalEnv["primInfixTimes"] = {};
+  globalEnv["primInfixTimes"]["."] = VPrim("primInfixTimes",[]);
+  globalEnv["primInfixUnequal"] = {};
+  globalEnv["primInfixUnequal"]["."] = VPrim("primInfixUnequal",[]);
   globalEnv["primNumToString"] = {};
   globalEnv["primNumToString"]["."] = VPrim("primNumToString",[]);
+  globalEnv["primPickle"] = {};
+  globalEnv["primPickle"]["."] = VPrim("primPickle",[]);
+  globalEnv["primPrefixNot"] = {};
+  globalEnv["primPrefixNot"]["."] = VPrim("primPrefixNot",[]);
   globalEnv["primStringConcat"] = {};
   globalEnv["primStringConcat"]["."] = VPrim("primStringConcat",[]);
+  globalEnv["primStringToNum"] = {};
+  globalEnv["primStringToNum"]["."] = VPrim("primStringToNum",[]);
+  globalEnv["primUnpickle"] = {};
+  globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Stringy("Enums"),Cell(Atom(""),Cell(Atom(""),App(GVar(".","enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Atom(""))),Cell(Stringy("d"),Atom(""))),Atom("")))]))))))]);
+  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Cell(Stringy("Enums"),Cell(Nil(),Nil())),App(Var(GlobalVar(false,"."),"enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Nil())),Cell(Stringy("d"),Nil())),Nil()))]))))]);
   </script>
+  <script>
+  var inputs = {};
+  inputs["GET_page"] = "examples/enum.mary";
+  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["sitesRoot"] = ".";
+  inputs["user"] = "testymctestyface";
+  </script>
+
 </head>
 <body>
 <form method="post">
 <h1 id="recursively-building-content">Recursively building content</h1>
 <p>This is a nested enumeration with concatenated sublists as intermediate items.</p>
-<div>
+<div id="Enums">
 Abcd
 <ul>
 <li>A</li>
@@ -57,7 +91,7 @@ Abcd
 <span class="shonkier-function">enum</span>(xs<span class="shonkier-operator">@</span>[_|_]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
 <span class="shonkier-function">enum</span>(xs) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> xs]]<br />
 <br />
-<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> <span class="shonkier-string">"Enums"</span> [] []|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
+<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> [<span class="shonkier-string">"Enums"</span> []]|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
 </div>
 </form>
 </body>

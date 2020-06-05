@@ -3,10 +3,10 @@ runExit({'exit() -> _}) -> 0
 runExit(v) -> v
 
 product([0|ns]) -> 'exit()
-product([n|ns]) -> primNumMult(n,product(ns))
+product([n|ns]) -> primInfixTimes(n,product(ns))
 product([])     -> 1
 
 longlist(0) -> []
-longlist(n) -> [n|longlist(primNumMinus(n,1))]
+longlist(n) -> [n|longlist(primInfixMinus(n,1))]
 
 main() -> runExit(product([0|longlist(100000)]))

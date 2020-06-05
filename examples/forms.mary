@@ -1,0 +1,35 @@
+# Displaying Forms
+
+
+Name: `name`{.input type=text size=12}
+
+What number am I thinking of? `number`{.input}
+
+This is what I did during my summer holiday:
+```{.input}
+essay
+```
+
+`Submit answers and essay`{.input type=submit}
+
+Here is a form which is being submitted empty: `empty`{.input type=text size=1}
+
+## Using the inputs
+
+```mary
+greet()
+```
+
+```mary
+numberGame('POST(concat("num","ber")))
+```
+
+```mary-def
+concat(x, y) -> "`x``y`"
+
+greet() -> ['Para "Hello " 'POST("name") "! You are on page " 'GET("page")]
+numberGame(guess) ->
+  ['Para "Wrong, the right number was "
+         primNumToString(primStringToNum(guess) + 1)
+         ". Better luck next time!"]
+```

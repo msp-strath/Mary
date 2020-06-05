@@ -1,0 +1,13 @@
+// we can handle effects before they get to the world
+catchPOST('POST):
+catchPOST({'POST(f) -> k}) -> catchPOST(k("Moon"))
+catchPOST(x) -> x
+
+// recovering from unknown inputs
+failGracefully('UnknownInput):
+failGracefully({'UnknownInput(n) -> _}) -> ""
+failGracefully(v) -> v
+
+main() -> [ catchPOST(["Hello" 'POST("World")])
+            failGracefully('GET("fieldDoesNotExist"))
+          ]

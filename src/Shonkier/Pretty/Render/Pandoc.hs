@@ -25,6 +25,7 @@ renderTree = \case
 renderAnn :: Annotation -> Text
 renderAnn ann = "shonkier-" <> case ann of
   AnnAtom      -> "atom"
+  AnnBoolean   -> "boolean"
   AnnError     -> "error"
   AnnFunction  -> "function"
   AnnKeyword   -> "keyword"

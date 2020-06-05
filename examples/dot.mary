@@ -1,0 +1,51 @@
+# Inline SVG
+
+Using the following program:
+
+```{ .mary-def .keep }
+import "list.shonkier"
+
+toSVG(d) -> ['Div ["mary-svg" []|[]] ['RawBlock "html" 'dot(d) ]]
+
+renderTree(n,['Node nm a b]) ->
+  append([ ['node n ["label" nm]]
+           ['edge [n 'sw] "`n`0"]
+           ['edge [n 'se] "`n`1"]
+         ]
+         ,append(renderTree("`n`0",a), renderTree("`n`1",b))
+         )
+renderTree(n,['Leaf nm]) -> [['node n ["label" nm]]]
+
+prettyTree(t) -> ['digraph []|renderTree("ND",t)]
+
+dotTree(t) -> toSVG(prettyTree(t))
+
+testTree() -> dotTree(['Node "+" ['Node "*" ['Leaf "17"]
+                                            ['Leaf "12"]]
+                                 ['Leaf "3"]])
+
+renderList(n,[x|xs]) -> next := "`n`0";
+                        [['node n ["label" x]]
+                         ['edge n next]
+                         |renderList(next,xs)
+                        ]
+renderList(n,[]) -> [['node n ["label" "[]"]]]
+
+prettyList(xs) -> ['digraph []|renderList("ND",xs)]
+
+dotList(xs) -> toSVG(prettyList(xs))
+
+testList() -> dotList(["a" "b"])
+```
+
+we can generate a list:
+
+```mary
+testList()
+```
+
+and we can generate a tree:
+
+```mary
+testTree()
+```

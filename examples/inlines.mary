@@ -1,7 +1,7 @@
 # Embedding Programs as Fenced Code Blocks
 
 ```mary-def
-testBlock() -> ['Para "Hello" [] ['Strong "World"]]
+testBlock() -> ['Para "Hello" 'Space ['Strong "World"]]
 testInline() -> ['Emph "blether"]
 ```
 
