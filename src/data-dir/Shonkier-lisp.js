@@ -2,17 +2,23 @@
 /** machine                                                                **/
 /****************************************************************************/
 
-function shonkier(glob, state) {
+function shonkier(glob, inputs, state) {
+    // inputs currently ignored; shouldn't be here anyway
 
     var x; // dogsbody
     var y; // dogsbody
     
     // setting up the machine stack
     
-    var lox = [];  // list of local nonhandlers
-    var hox = [];  // list of handlers with their local nonhandlers
+    var lox = Nil;  // list of local nonhandlers
+    var hox = Nil;  // list of handlers with their local nonhandlers
 
-    var fr = []; // frame just popped
+    /*
+    lox looks like Nil or [frame, lox]
+    hox looks like Nil or [[handlerframe, lox], hox]
+    */
+
+    var fr; // frame just popped
 
     function done() {
         return (nilly(lox) && nilly(hox))
@@ -20,7 +26,7 @@ function shonkier(glob, state) {
     
     function push(f) {
         if (isHandler(f)) {
-            hox = [[f, lox] ,hox];
+            hox = [[f, lox], hox];
             lox = [];
         } else {
             lox = [f,lox];
@@ -39,11 +45,17 @@ function shonkier(glob, state) {
         
     };
 
+    /*
+    a continuation, k looks like
+    [lox, k'] where
+    k' is either Nil or [[handlerframe, lox], k']
+    */
+    
     function cont(k) {
         lox = cat(k[0], lox);
-        k = k[1];
+        k = k[1];   // k is now a k'
         while (k.length > 1) {
-            hox = [[k[0], lox], hox];
+            hox = [[k[0][0], lox], hox];
             lox = k[0][1];
             k = k[1];
         };
@@ -65,7 +77,7 @@ function shonkier(glob, state) {
                 state = use(Cell(x.u, state.val));
                 continue;
             case "AppL": x = grab(fr[1], ["rho", "as"]);
-                if (state.val === false) { state = abort; continue; };
+                if (state.val === false) { state = abort(); continue; };
                 if (state.val === true || nilly(state.val)) {
                     if (celly(x.as)) {
                         state = eval(x.rho, x.as[0]);
@@ -114,6 +126,8 @@ function shonkier(glob, state) {
                 state = app(x.f, [state.val, x.cz], x.hsrho[1], x.has);
                 continue;
             // "Clauses" dismounts when we use a value
+            // "PrioL" dismounts when we use a value
+            // "Masking" dismounts when we use a value    
             };
             continue;
         case "eval":
@@ -151,12 +165,20 @@ function shonkier(glob, state) {
                 push(AppL(state.env, x.as));
                 state = eval(state.env, x.f);
                 continue;
-            case "Semi": x = grab(t[1], ["l","r"]);
+            case "Semi": x = grab(t[1], ["l", "r"]);
                 push(AppL(state.env, [x.r, Nil]));
                 state = eval(state.env, x.l);
                 continue;
+            case "Prio": x = grab(t[1], ["l", "r"]);
+                push(PrioL(state.env, x.r));
+                state = eval(state.env, x.l);
+                continue;
+            case "Mask": x = grab(t[1], ["a", "t"]);
+                push(Masking(x.a));
+                state = eval(state.env, x.t);
+                continue;
             case "Fun":
-                state = use(["Fun", [idCont, [state.env, [t[1][0], [t[1][1], []]]]]]);
+                state = use(["Fun", [anIdCont, [state.env, [t[1][0], [t[1][1], []]]]]]);
                 continue;
             };
             continue;
@@ -173,7 +195,7 @@ function shonkier(glob, state) {
             };
             switch (state.funy[0]) {
             case "Prim": x = grab(state.funy[1], ["p"]);
-                state = prim[x.p](y);
+                state = shonkierPrimitive[x.p](y);
                 continue;
             case "Fun": x = grab(state.funy[1], ["sig", "cs"]);
                 state = call(x.sig, x.cs, y);
@@ -190,26 +212,33 @@ function shonkier(glob, state) {
                 state = eval([sig, state.env], rhs2Term(y[1]));
                 continue machine;
             };
-            state = abort;
+            state = abort();
             continue;
         case "handle":
-            state.kont[0] = cat(state.kont,lox); lox = Nil;
+            state.kont[0] = cat(state.kont[0],lox); lox = Nil;
             if (nilly(hox)) { break machine; }
             fr = hox[0][0]; lox = hox[0][1]; hox = hox[1];
             switch (fr[0]) {
             case "AppR": x = grab(fr[1],["f","cz","hsrho","has"]);
                 if (atomIn(state.cmd,x.hsrho[0])) {
                     if (state.inx == 0) {
-                        state = app(x.f,[["Request",[[state.cmd,state.args],[state.kont,Nil]]],x.cz],x.has);
+                        state = app(x.f,[["Request",[[state.cmd,state.args],[state.kont,Nil]]],x.cz],x.hsrho[1],x.has);
                         continue;
                     };
                     state.inx--;
                 };
                 break;
             case "Clauses": if (state.cmd != "abort") { break; };
-                x = grab(fr[1],["rho","cs","as"]);
+                x = grab(fr[1],["rho", "cs", "as"]);
                 state = call(x.rho,x.cs,x.as);
                 continue;
+            case "PrioL": if (state.cmd != "abort") { break; };
+                x = grab(fr[1],["rho", "r"]);
+                state = eval(x.rho, x.r);
+                continue;
+            case "Masking":
+                if (state.cmd == fr[1][0]) { state.inx++; };
+                break;
             };
             state.kont[1] = [[fr,state.kont[0]],state.kont[1]];
             state.kont[0] = Nil;
@@ -270,8 +299,8 @@ function call(rho, cs, as) {
 
 // derived states
 
-function request(a, vs) { return handle(a, 0, vs, idCont); };
-var abort = request("abort", Nil);
+function request(a, vs) { return handle(a, 0, vs, idCont()); };
+function abort() { request("abort", Nil); };
 var complain = request;
 
 
@@ -279,23 +308,35 @@ var complain = request;
 /** context frames                                                         **/
 /****************************************************************************/
 
-function CellL(rho, t) { return ["CellL",[rho,[t,Nil]]]; };
+function CellL(rho, t) { return ["CellL", [rho, [t, Nil]]]; };
 
-function CellR(v, rho) { return ["CellR",[v,[rho,Nil]]]; };
+function CellR(v, rho) { return ["CellR", [v, [rho, Nil]]]; };
 
-function AppL(rho, as) { return ["AppL",[rho,[as,Nil]]]; };
+function AppL(rho, as) { return ["AppL", [rho, [as, Nil]]]; };
 
-function AppR(f, cz, hsrho, has) { return ["AppR",[f,[cz,[hsrho,[has,Nil]]]]]; };
+function AppR(f, cz, hsrho, has) { return ["AppR", [f, [cz, [hsrho, [has, Nil]]]]]; };
 
-function Clauses(rho, cs, as) { return ["Clauses",[rho,[cs,[as,Nil]]]]; };
+function Clauses(rho, cs, as) { return ["Clauses", [rho, [cs, [as, Nil]]]]; };
+
+function PrioL(rho, r) { return ["PrioL", [rho, [r, Nil]]]; };
 
 function isHandler(fr) {
     var x;
     switch (fr[0]) {
     case "AppR":
-        x = grab(fr[1],["f","cz","hsrho","hsts"]);
+        x = grab(fr[1], ["f", "cz", "hsrho", "hsts"]);
         return celly(x.hsrho[0]);
     case "Clauses":
+    case "PrioL":
+        return true;
+    };
+    return false;
+};
+
+function maskAbortDrop(fr) {
+    switch (fr[0]) {
+    case "Clauses":
+    case "PrioL":
         return true;
     };
     return false;
@@ -317,7 +358,8 @@ function Cell(a, d) {
 /** continuations                                                          **/
 /****************************************************************************/
 
-var idCont = [Nil, Nil];
+function idCont() { return [Nil, Nil] };
+var anIdCont = idCont();
     
 
 /****************************************************************************/
@@ -404,6 +446,9 @@ function match(p, c) {
         case "Bind":
             if (compIsVal(c)) { rho = [[p[1][0], c], rho]; continue; };
             return null;
+        case "Wild":
+            if (compIsVal(c)) { continue; };
+            return null;
         case "Cell":
             p = grab(p[1], ["a","d"]);
             if (celly(c) && c[0]==="Cell") {
@@ -413,6 +458,31 @@ function match(p, c) {
             };
             ps[i] = p.d; cs[i] = c.d; i++;
             ps[i] = p.a; cs[i] = c.a; i++;
+            continue;
+        case "Thunk":
+            rho = [[p[1][0], ["Thunk", [c, Nil]]],rho];
+            continue;
+        case "Request": // ["Request", [[cmd,args], [kont, Nil]]]
+            if (   !celly(c)
+                   || c[0]!=="Request"
+                   || !celly(c[1]) || !celly(c[1][0]) || !celly(c[1][1])
+                   || p[1][0][0] !== c[1][0][0] // check cmds
+               ) {
+                return null;
+            };                   
+            // pattern need not bind the kont; if it does, let's have it
+            if (celly(p[1][1])) {
+                rho = [[p[1][1][0], ["Fun", [c[1][1][0], idClause]]]
+                       , rho];
+            };
+            // not strictly left-to-right: problem?
+            // now set up the args
+            p = p[1][0][1]; c = c[1][0][1];
+            while (celly(p)) { // similarly, should I try harder to push them backwards?
+                if (!celly(c)) { return null; };
+                ps[i] = p[0]; cs[i] = c[0]; i++;
+                p = p[1]; c = c[1];
+            };
             continue;
         };
         return null;
@@ -545,6 +615,47 @@ function dynVar(v) {
     return !(celly(v) && celly(v[1]) && boolean(v[1][1]) && v[1][1]);
 };
 
+// the following is used to turn a continuation into a function
+var idClause = [Nil,[Nil,[[[[['Bind',['_return',Nil]],Nil],[[['Var',['_return',Nil]],Nil],Nil]],Nil],Nil]]];
+
+
+/****************************************************************************/
+/** shonkier primitives                                                    **/
+/****************************************************************************/
+
+var shonkierPrimitive =
+    { primStringConcat: function (v) {
+        var acc = "";
+        var stk = [v];
+        var i = 1;
+        while (i-- > 0) {
+            v = stk[i];
+            if (celly(v)) {
+                if (!atomic(v[0])) {
+                    stk[i++] = v[1];
+                    stk[i++] = v[0];
+                    continue;
+                };
+                if (v[0]==="Cell") {
+                    stk[i++] = v[1];
+                    continue;
+                };
+                return complain("Invalid_StringConcat_ArgType", Nil);
+            };
+            if (nilly(v) || atomic(v)) { continue; };
+            if (v.str !== undefined) {
+                acc = acc.concat(v.str); // do some work!
+                continue;
+            };
+            return complain("Invalid_StringConcat_ArgType", Nil);
+        };
+        return use({str: acc});
+    }
+    };
+
+
+
+
 /****************************************************************************/
 /** recursive partial uglyprinters, for diagnostic purposes                **/
 /****************************************************************************/
@@ -572,9 +683,20 @@ function crapprint(v) {
     if (v.den !== undefined) {
         var x = v.num.toString();
         if (v.den == 1) { return x; };
-        x = x.concat("/");
-        x = x.concat(v.den.toString());
+        x = x.concat("/").concat(v.den.toString());
+        return x;
+    };
+    if (v.str !== undefined) {
+        var x = '"'; // no attempt to escape things
+        x = x.concat(v.str).concat('"');
         return x;
     };
     return "";
+};
+
+function render(state) {
+    switch (state.tag) {
+    case "use": return crapprint(state.val);
+    case "handle": return state.cmd.concat(" unhandled! ")/*.concat(crapprint(state.kont))*/;
+    };
 };
