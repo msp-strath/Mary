@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Mary.Pandoc where
 
-import Control.Monad.Trans (MonadIO, liftIO)
+import Control.Monad.Trans (MonadIO)
 import Control.Monad.Writer (Writer, runWriter, tell)
-import Control.Monad.Reader (MonadReader, runReader, runReaderT, asks)
+import Control.Monad.Reader (MonadReader, runReaderT, asks)
 import Control.Newtype
 
 import Data.Attoparsec.Text
@@ -16,8 +16,6 @@ import Data.Monoid (First(..))
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 
-import qualified Dot.Text as Dot
-
 import Network.URI.Encode as URI
 
 import Text.Pandoc.Builder
@@ -25,7 +23,6 @@ import Text.Pandoc.Walk
 
 import System.Directory
 import System.FilePath
-import System.Process
 
 import Shonkier.Import
 import Shonkier.Parser as SP
@@ -35,7 +32,7 @@ import Shonkier.Semantics
 import Shonkier.ShonkierJS
 import Shonkier.Syntax
 import Shonkier.Value
-import Shonkier.Result
+import Shonkier.Pandoc()
 
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
@@ -56,7 +53,7 @@ process doc0@(Pandoc meta docs) = do
   (_, env, lcp) <- loadToplevelModule fp rm
   let envdata = EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
   doc2 <- runReaderT (walkM evalMaryBlock  doc1) envdata
-  let doc3 = runReader (walkM evalMaryInline doc2) envdata
+  doc3 <- runReaderT (walkM evalMaryInline doc2) envdata
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
        . setMeta "jsInputs" (fromList $ Str <$> jsInputs inputs)
@@ -151,7 +148,7 @@ readPrefixToStrip :: MonadReader EnvData m => m FilePath
 readPrefixToStrip = asks prefix
 
 
-evalMary :: (MonadReader EnvData m, FromValue b) => Text -> m b
+evalMary :: (MonadReader EnvData m, MonadIO m, FromValue b) => Text -> m b
 evalMary e =
   case parseOnly (topTerm <* endOfInput) e of
     Left err -> error err
@@ -164,7 +161,7 @@ evalMary e =
       let t' = fmap (stripVarPrefix lcp) t
       go env (rawShonkier is fp gl t')
   where
-  go :: (Monad m, FromValue b) => Env -> Computation -> m b
+  go :: (Monad m, MonadIO m, FromValue b) => Env -> Computation -> m b
   go _ (Value v) = case fromValue v of
                      Right p  -> pure p
                      Left foc -> error $ L.unlines
@@ -172,8 +169,9 @@ evalMary e =
                        , "in result:"
                        , toString v
                        ]
-  go gamma (Request r@(a, vs) k) | a `elem` ["POST", "GET", "meta"] =
-     handleInputs (go gamma) gamma r k
+  go gamma (Request r@(a, vs) k)
+    | a `elem` ["POST", "GET", "meta"] = handleInputs (go gamma) gamma r k
+    | a `elem` ["dot"]                 = handleDot (go gamma) gamma r k
   go _ r@Request{} = error (show r)
 
   stripVarPrefix :: String -> RawVariable -> RawVariable
@@ -181,13 +179,7 @@ evalMary e =
     (over MkRawNamespace (stripPrefixButDot lcp) <$> p) :.: x
 
 evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
-evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs =
-  evalMary e >>= \case
-    ResultPandoc p -> pure p
-    ResultDot dot -> do
-      let code = Dot.encode dot
-      svg <- liftIO $ readProcess "dot" ["-Tsvg"] (T.unpack code)
-      pure $ Div ("mary-svg", [], []) [RawBlock "html" (T.pack svg)]
+evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs = evalMary e
 evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set
@@ -195,7 +187,7 @@ evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
     RawBlock (Format "html") <$> makeInputForm textarea a t
 evalMaryBlock b = pure b
 
-evalMaryInline :: MonadReader EnvData m => Inline -> m Inline
+evalMaryInline :: (MonadIO m, MonadReader EnvData m) => Inline -> m Inline
 evalMaryInline (Code (_, cs, _) e) | "mary" `elem` cs = evalMary e
 evalMaryInline (Code a@(_, cs, _) t) | "input" `elem` cs =
   RawInline (Format "html") <$> makeInputForm False a t

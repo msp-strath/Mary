@@ -5,6 +5,8 @@ Using the following program:
 ```{ .mary-def .keep }
 import "list.shonkier"
 
+toSVG(d) -> ['Div ["mary-svg" []|[]] ['RawBlock "html" 'dot(d) ]]
+
 renderTree(n,['Node nm a b]) ->
   append([ ['node n ["label" nm]]
            ['edge [n 'sw] "`n`0"]
@@ -14,11 +16,13 @@ renderTree(n,['Node nm a b]) ->
          )
 renderTree(n,['Leaf nm]) -> [['node n ["label" nm]]]
 
-prettyTree(t) -> ['DOT 'digraph []|renderTree("ND",t)]
+prettyTree(t) -> ['digraph []|renderTree("ND",t)]
 
-testTree() -> prettyTree(['Node "+" ['Node "*" ['Leaf "17"]
-                                               ['Leaf "12"]]
-                                    ['Leaf "3"]])
+dotTree(t) -> toSVG(prettyTree(t))
+
+testTree() -> dotTree(['Node "+" ['Node "*" ['Leaf "17"]
+                                            ['Leaf "12"]]
+                                 ['Leaf "3"]])
 
 renderList(n,[x|xs]) -> next := "`n`0";
                         [['node n ["label" x]]
@@ -27,9 +31,11 @@ renderList(n,[x|xs]) -> next := "`n`0";
                         ]
 renderList(n,[]) -> [['node n ["label" "[]"]]]
 
-prettyList(xs) -> ['DOT 'digraph []|renderList("ND",xs)]
+prettyList(xs) -> ['digraph []|renderList("ND",xs)]
 
-testList() -> prettyList(["a" "b"])
+dotList(xs) -> toSVG(prettyList(xs))
+
+testList() -> dotList(["a" "b"])
 ```
 
 we can generate a list:

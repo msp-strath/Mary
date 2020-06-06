@@ -53,7 +53,7 @@ instance ToRawTerm Text where
   toRawTerm = String "" []
 
 instance ToRawTerm Format where
-  toRawTerm (Format f) = toTakes1 "Format" f
+  toRawTerm (Format f) = toRawTerm f
 
 instance ToRawTerm ListNumberDelim where
   toRawTerm = Atom . MkAtom . show
