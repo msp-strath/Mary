@@ -21,17 +21,19 @@ skipSpace :: Parser ()
 skipSpace = comments
 
 module_ :: Parser RawModule
-module_ = (,) <$> many (import_ <* skipSpace) <*> program
+module_ = (,) <$> many import_ <*> program
 
 import_ :: Parser Import
 import_ = do
+  skipSpace
   () <$ string "import"
   skipSpace
-  (_, [], fp) <- spliceOf (choice [])
+  ([], fp) <- spliceOf (const (,)) (choice [])
   skipSpace
-  alias <- choice [ Just <$ string "as" <* skipSpace <*> identifier
-                  , pure Nothing
-                  ]
+  alias <- choice
+    [ Just . MkRawNamespace <$ string "as" <* skipSpace <*> identifier
+    , pure Nothing
+    ]
   pure (T.unpack fp, alias)
 
 program :: Parser RawProgram
@@ -149,12 +151,12 @@ termBut w = weeTerm w >>= moreTerm w
 weeTerm :: WhereAmI -> Parser RawTerm
 weeTerm w = choice
   [ Match <$ opok pamaFax w
-    <*> pvalue <* skipSpace <* char ':' <* char '=' <* skipSpace
+    <*> pvalue <* skipSpace <* string ":=" <* skipSpace
     <*> termBut (RightOf :^: pamaFax)
   , Atom <$> atom
   , Lit <$> literal
-  , (\ (k, t, es) -> String k t es) <$> spliceOf spaceTerm
-  , Var <$> variable
+  , spliceOf String spaceTerm
+  , varOrNS
   , Blank <$ char '_'
   , uncurry (flip $ foldr Cell) <$> listOf term Nil
   , Fun [] <$ char '{' <* skipSpace
@@ -211,12 +213,13 @@ arrow = () <$ char '-' <* char '>'
 literal :: Parser Literal
 literal = boolit <|> numlit
 
-spliceOf :: Parser a -> Parser (Keyword, [(Text, a)], Text)
-spliceOf p = do
+spliceOf :: (Keyword -> [(Text, a)] -> Text -> b)
+         -> Parser a -> Parser b
+spliceOf c p = do
   fence <- option "" identifier <* char '"'
   (txt, atxts) <- munchSplice fence
   let (ps, end) = rotate txt atxts
-  pure (fence, ps, end)
+  pure $ c fence ps end
 
   where
   rotate txt []                 = ([], txt)
@@ -288,14 +291,16 @@ argTuple p =                                                                --
 --                                                                          --
 ------------------------------------------------------------------------------
 
-variable :: Parser RawVariable
-variable = do
+varOrNS :: Parser RawTerm
+varOrNS = do
   start <- identifier
-  next  <- choice [ Just <$ char '.' <*> identifier
-                  , pure Nothing ]
+  next  <- choice
+    [ Just <$ char '.' <*> choice [ Just <$> identifier, pure Nothing ]
+    , pure Nothing ]
   pure $ case next of
-    Nothing  -> (Nothing :.: start)
-    Just end -> (Just start :.: end)
+    Nothing         -> Var (Nothing :.: start)
+    Just (Just end) -> Var (Just (MkRawNamespace start) :.: end)
+    Just Nothing    -> Namespace (MkRawNamespace start)
 
 spaceMaybeComma :: Parser ()
 spaceMaybeComma =
@@ -330,7 +335,7 @@ pvar = do
 pvalue :: Parser PValue
 pvalue = choice
   [ PLit <$> literal
-  , (\ (kw, ps, lit) -> PString kw ps lit) <$> spliceOf pvalue
+  , spliceOf PString pvalue
   , PAtom <$> atom
   , pvar
   , PWild <$ char '_'

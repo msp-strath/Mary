@@ -2,9 +2,12 @@
 
 module Shonkier.Syntax where
 
-import Control.Monad.State
 import Control.Applicative
+import Control.Monad.State
+import Control.Newtype
 
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -14,26 +17,43 @@ import Data.Lisp
 
 type Keyword   = String
 type Primitive = String
-type Namespace = String
 type Operator  = String
+
+---------------------------------------------------------------------------
+-- VARIABLES
+---------------------------------------------------------------------------
+
+newtype RawNamespace = MkRawNamespace String
+  deriving (Show, Eq, Ord)
+
+instance Newtype RawNamespace String where
+  pack = MkRawNamespace
+  unpack (MkRawNamespace str) = str
+
+data Namespace = MkNamespace String (Set FilePath)
+  deriving (Show)
 
 type Variable     = String
 
-type RawVariable    = ScopingVariable (Maybe Namespace)
+type RawVariable    = ScopingVariable (Maybe RawNamespace)
 type ScopedVariable = ScopingVariable Scoping
 
 data ScopingVariable s = (:.:)
   { scoping :: s
   , nameOf  :: Variable
-  } deriving Show
+  } deriving (Show)
 
 data Scoping
   = LocalVar
   | GlobalVar Bool{-from longname?-} FilePath
   | AmbiguousVar [FilePath]
-  | InvalidNamespace Namespace
+  | InvalidNamespace RawNamespace
   | OutOfScope
   deriving (Show)
+
+---------------------------------------------------------------------------
+-- ATOMS, LITERALS and NAMESPACES
+---------------------------------------------------------------------------
 
 newtype Atom = MkAtom { getAtom :: String }
   deriving (Show, Eq, IsString)
@@ -43,44 +63,50 @@ data Literal
   | Boolean Bool
   deriving (Show, Eq)
 
-data Term' a v
+---------------------------------------------------------------------------
+-- TERMS
+---------------------------------------------------------------------------
+
+data Term' ns a v
   = Atom a
   | Nil
   | Lit Literal
-  | String Keyword [(Text, Term' a v)] Text
+  | String Keyword [(Text, Term' ns a v)] Text
   | Var v
+  | Namespace ns
   | Blank  -- for brace sections
-  | Cell (Term' a v) (Term' a v)
-  | App (Term' a v) [Term' a v]
-  | Semi (Term' a v) (Term' a v)
-  | Prio (Term' a v) (Term' a v)
-  | Fun [[a]] [Clause' a v]
-  | Match (PValue' a) (Term' a v)
-  | Mask a (Term' a v)
+  | Cell (Term' ns a v) (Term' ns a v)
+  | App (Term' ns a v) [Term' ns a v]
+  | Semi (Term' ns a v) (Term' ns a v)
+  | Prio (Term' ns a v) (Term' ns a v)
+  | Fun [[a]] [Clause' ns a v]
+  | Match (PValue' a) (Term' ns a v)
+  | Mask a (Term' ns a v)
   deriving (Show, Functor)
 
-type RawTerm = Term' Atom RawVariable
-type Term    = Term' Atom ScopedVariable
+type RawTerm = Term' RawNamespace Atom RawVariable
+type Term    = Term' Namespace Atom ScopedVariable
 
 pattern TNum n        = Lit (Num n)
 
-type Import = (FilePath, Maybe Namespace)
-type Program' a v = [(Variable, Either [[a]] (Clause' a v))]
-type Module'  a v = ([Import], Program' a v)
+type Import = (FilePath, Maybe RawNamespace)
+type Program' ns a v = [(Variable, Either [[a]] (Clause' ns a v))]
+type Module'  ns a v = ([Import], Program' ns a v)
 
-type RawProgram = Program' Atom RawVariable
-type Program    = Program' Atom ScopedVariable
-type RawModule  = Module' Atom RawVariable
-type Module     = Module' Atom ScopedVariable
+type RawProgram = Program' RawNamespace Atom RawVariable
+type Program    = Program' Namespace Atom ScopedVariable
+type RawModule  = Module' RawNamespace Atom RawVariable
+type Module     = Module' Namespace Atom ScopedVariable
 
-data Clause' a v = [PComputation' a] :-> [Rhs' a v]
+data Clause' ns a v = [PComputation' a] :-> [Rhs' ns a v]
   deriving (Show, Functor)
-type RawClause = Clause' Atom RawVariable
-type Clause    = Clause' Atom ScopedVariable
-data Rhs' a v = Maybe (Term' a v) :?> Term' a v
+type RawClause = Clause' RawNamespace Atom RawVariable
+type Clause    = Clause' Namespace Atom ScopedVariable
+data Rhs' ns a v = Maybe (Term' ns a v) :?> Term' ns a v
   deriving (Show, Functor)
-type Rhs = Rhs' Atom ScopedVariable
-type RawRhs = Rhs' Atom RawVariable
+type RawRhs = Rhs' RawNamespace Atom RawVariable
+type Rhs = Rhs' Namespace Atom ScopedVariable
+
 
 data PValue' a
   = PAtom a
@@ -108,7 +134,7 @@ type PComputation = PComputation' Atom
 -- INSTANCES
 ---------------------------------------------------------------------------
 
-instance HasListView (Term' a v) (Term' a v) where
+instance HasListView (Term' ns a v) (Term' ns a v) where
   coalgebra = \case
     Nil      -> ItsNil
     Cell a b -> ItsCons a b
@@ -246,7 +272,7 @@ instance Vary ScopedVariable where
 -- BRACE SECTIONS
 ---------------------------------------------------------------------------
 
-braceFun :: Vary v => [Clause' a v] -> [Clause' a v]
+braceFun :: Vary v => [Clause' ns a v] -> [Clause' ns a v]
 braceFun cs = cs' where
   uv :: forall w. Vary w => Int -> w
   uv i = varOf $ "_" ++ show i
@@ -268,12 +294,13 @@ braceFun cs = cs' where
 -- SERIALIZATION
 ---------------------------------------------------------------------------
 
-instance (LISPY a, LISPY v) => LISPY (Term' a v) where
+instance (LISPY ns, LISPY a, LISPY v) => LISPY (Term' ns a v) where
   toLISP (Atom a)        = toLISP a
   toLISP Nil             = NIL
   toLISP (Lit l)         = toLISP l
   toLISP (String k ps t) = "String" -: [ATOM k, toLISP ps, toLISP t]
   toLISP (Var v)         = "Var" -: [toLISP v]
+  toLISP (Namespace nm)  = "Namespace" -: [toLISP nm]
   toLISP Blank           = "Blank" -: []
   toLISP (Cell s t)      = "Cell" -: [toLISP s, toLISP t]
   toLISP (App f as)      = "App" -: map toLISP (f : as)
@@ -288,6 +315,7 @@ instance (LISPY a, LISPY v) => LISPY (Term' a v) where
            <|> (spil t >>= \case
     ("String", [ATOM k, ps, t]) -> String k <$> fromLISP ps <*> fromLISP t
     ("Var", [v])                -> Var <$> fromLISP v
+    ("Namespace", [v])          -> Namespace <$> fromLISP v
     ("Blank", [])               -> pure Blank
     ("Cell", [s, t])            -> Cell <$> fromLISP s <*> fromLISP t
     ("App", f : as)             -> App <$> fromLISP f <*> traverse fromLISP as
@@ -322,13 +350,13 @@ instance LISPY a => LISPY (PValue' a) where
     ("Cell", [s, t])            -> PCell <$> fromLISP s <*> fromLISP t
     _ -> Nothing)
 
-instance (LISPY a, LISPY v) => LISPY (Clause' a v) where
+instance (LISPY ns, LISPY a, LISPY v) => LISPY (Clause' ns a v) where
   toLISP (ps :-> rs) = toLISP (ps, rs)
   fromLISP x = do
     (ps, rs) <- fromLISP x
     pure (ps :-> rs)
 
-instance (LISPY a, LISPY v) => LISPY (Rhs' a v) where
+instance (LISPY ns, LISPY a, LISPY v) => LISPY (Rhs' ns a v) where
   toLISP (g :?> t) = toLISP (t, g)
   fromLISP x = do
     (t, g) <- fromLISP x
@@ -355,30 +383,50 @@ instance LISPY ScopedVariable where
     LocalVar -> error "doesn't happen"
     GlobalVar b n      -> CONS (STR (T.pack n)) (toLISP b)
     AmbiguousVar xs    -> "AmbiguousVar" -: map (STR . T.pack) xs
-    InvalidNamespace n -> "InvalidNamespace" -: [STR (T.pack n)]
+    InvalidNamespace n -> "InvalidNamespace" -: [toLISP n]
     OutOfScope         -> "OutOfScope" -: []
   fromLISP (ATOM x) = pure (LocalVar :.: x)
   fromLISP (CONS (ATOM x) (CONS (STR n) b)) =
     (:.: x) <$> (GlobalVar <$> fromLISP b <*> pure (T.unpack n))
   fromLISP (CONS (ATOM x) t) = ((:.: x) <$>) $ spil t >>= \case
-    ("AmbiguousVar", xs)          -> AmbiguousVar <$> traverse unstr xs
-    ("InvalidNamespace", [STR n]) -> pure (InvalidNamespace (T.unpack n))
-    ("OutOfScope", [])            -> pure OutOfScope
+    ("AmbiguousVar", xs)      -> AmbiguousVar <$> traverse unstr xs
+    ("InvalidNamespace", [n]) -> InvalidNamespace <$> fromLISP n
+    ("OutOfScope", [])        -> pure OutOfScope
     _ -> Nothing
    where
-    unstr :: LISP -> Maybe Namespace
+    unstr :: LISP -> Maybe FilePath
     unstr (STR t) = Just (T.unpack t)
     unstr _ = Nothing
   fromLISP _ = Nothing
 
 instance LISPY RawVariable where
   toLISP (Nothing :.: x) = ATOM x
-  toLISP (Just n  :.: x) = CONS (ATOM x) (STR (T.pack n))
-  fromLISP (ATOM x)                = pure (Nothing :.: x)
-  fromLISP (CONS (ATOM x) (STR n)) = pure (Just (T.unpack n) :.: x)
+  toLISP (Just n  :.: x) = CONS (ATOM x) (toLISP n)
+  fromLISP (ATOM x)           = pure (Nothing :.: x)
+  fromLISP (CONS (ATOM x) ns) = (:.: x) . Just <$> fromLISP ns
   fromLISP _ = Nothing
 
 instance LISPY Atom where
   toLISP (MkAtom a) = ATOM a
   fromLISP (ATOM a) = pure $ MkAtom a
+  fromLISP _ = Nothing
+
+instance LISPY RawNamespace where
+  toLISP (MkRawNamespace ns) = STR (T.pack ns)
+  fromLISP (STR str) = pure $ MkRawNamespace (T.unpack str)
+  fromLISP _ = Nothing
+
+instance LISPY Namespace where
+  toLISP (MkNamespace n ns) =
+    CONS (ATOM n) $ toLISP $ map (STR . T.pack) $ Set.toList ns
+  fromLISP (CONS (ATOM n) t) = do
+    ls  <- fromLISP t
+    fps <- traverse unSTR ls
+    pure $ MkNamespace n (Set.fromList fps)
+
+    where
+
+    unSTR :: LISP -> Maybe FilePath
+    unSTR (STR str) = pure (T.unpack str)
+    unSTR _ = Nothing
   fromLISP _ = Nothing

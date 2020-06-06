@@ -7,6 +7,7 @@ import Control.Applicative
 
 import Data.Maybe (fromMaybe)
 import Data.Map (singleton, (!?), keysSet)
+import qualified Data.Map as Map
 import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -43,7 +44,7 @@ complain c vs = request c vs
 lmatch :: Literal -> Literal -> Maybe ()
 lmatch x y = guard (x == y)
 
-vmatch :: Eq a => PValue' a -> Value' a v -> Maybe (LocalEnv' a v)
+vmatch :: Eq a => PValue' a -> Value' ns a v -> Maybe (LocalEnv' ns a v)
 vmatch (PAtom a)   (VAtom b)   = mempty <$ guard (a == b)
 vmatch (PLit l)    (VLit l')   = mempty <$ lmatch l l'
 vmatch (PBind x)   v           = pure (singleton x v)
@@ -69,7 +70,7 @@ cmatch (PRequest (a, ps) k) (Request (b, vs) frs) = do
 cmatch (PThunk k) c = pure $ singleton k $ VThunk c
 cmatch _ _ = Nothing
 
-smatch :: Eq a => [(Text, PValue' a)] -> Text -> Maybe (LocalEnv' a v)
+smatch :: Eq a => [(Text, PValue' a)] -> Text -> Maybe (LocalEnv' ns a v)
 smatch [] t = mempty <$ guard (T.null t)
 smatch ((d, p) : dps) t = do
   t <- T.stripPrefix d t
@@ -87,7 +88,7 @@ tmatch :: Eq a
        -> MaPo        -- match position
        -> Text        -- text
        -> Maybe ( Bwd Text       -- segments consumed, in case of as-pattern
-                , LocalEnv' a v  -- matching environment
+                , LocalEnv' ns a v  -- matching environment
                 , Text           -- rest of text
                 )
 tmatch p d t0 = case p of
@@ -114,25 +115,13 @@ tmatch p d t0 = case p of
     rho <- vmatch p (VString "" l)
     return (B0 :< l, rho, r)
 
-matches :: (a -> b -> Maybe (LocalEnv' c d))
-        -> [a] -> [b] -> Maybe (LocalEnv' c d)
+matches :: (a -> b -> Maybe (LocalEnv' ns c d))
+        -> [a] -> [b] -> Maybe (LocalEnv' ns c d)
 matches match as bs = foldl merge mempty <$> mayZipWith match as bs
 
 ---------------------------------------------------------------------------
 -- ENTRY POINTS
 ---------------------------------------------------------------------------
-
-runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
-runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
-
-evalShonkier :: Shonkier a -> GlobalEnv -> Context -> a
-evalShonkier m gl s = fst $ runShonkier m gl s
-
-execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
-execShonkier m gl s = snd $ runShonkier m gl s
-
-resumeShonkier :: GlobalEnv -> Continuation -> Shonkier a -> a
-resumeShonkier gamma k r = evalShonkier (cont k >> r) gamma CxNil
 
 shonkier :: GlobalEnv -> Term -> Computation
 shonkier gamma t = resumeShonkier gamma CnNil (eval (mempty, t))
@@ -160,6 +149,17 @@ dynVar (sco :.: x) = x <$ guard (dyn sco) where
   dyn (InvalidNamespace _)  = False
   dyn _                     = True
 
+namespace :: Namespace -> Shonkier (Maybe LocalEnv)
+namespace (MkNamespace n fps) = do
+  st <- ask
+  let env = flip Map.mapMaybe st $ \ scp -> do
+              let candidates  = Map.restrictKeys scp fps
+              guard (Map.size candidates == 1)
+              pure $ head (Map.elems candidates)
+  pure $ do
+    guard (not $ Map.null env)
+    pure env
+
 ---------------------------------------------------------------------------
 -- EVALUATION
 ---------------------------------------------------------------------------
@@ -179,6 +179,9 @@ eval (rho, t) = case t of
       OutOfScope         -> complain "OutOfScope" [vVar x']
       AmbiguousVar _     -> complain "AmbiguousVar" [vVar x']
       InvalidNamespace _ -> complain "InvalidNamespace" [vVar x']
+  Namespace nm -> namespace nm >>= \case
+    Nothing -> abort
+    Just lc -> use (VEnv lc)
   -- move left; start evaluating left to right
   Atom a    -> use (VAtom a)
   Lit l     -> use (VLit l)

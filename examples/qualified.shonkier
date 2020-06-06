@@ -1,0 +1,9 @@
+// Both of these define map
+import "examples/list.shonkier" as List
+import "examples/list2.shonkier"
+
+// However this should be unambiguous
+main() -> [ List.(map({_+1},[0 1]))
+            (List. ; map({_+1},[0 1]))
+            List.
+          ]

@@ -28,7 +28,7 @@ abortA = atomOf "abort"
 -- RHS TRANSLATION
 ---------------------------------------------------------------------------
 
-rhs2Term :: Atomy a => [Rhs' a v] -> Term' a v
+rhs2Term :: Atomy a => [Rhs' ns a v] -> Term' ns a v
 rhs2Term [] = App (Atom abortA) []
 rhs2Term [Nothing :?> t] = t
 rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
@@ -43,34 +43,34 @@ rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
 
 type Env = (GlobalEnv, Map Text Text) -- map for form data
 
-type GlobalEnv' a v = Map Variable (Map FilePath (Value' a v))
-type GlobalEnv = GlobalEnv' Atom ScopedVariable
+type GlobalEnv' ns a v = Map Variable (Map FilePath (Value' ns a v))
+type GlobalEnv = GlobalEnv' Namespace Atom ScopedVariable
 
-type LocalEnv' a v = Map Variable (Value' a v)
-type LocalEnv = LocalEnv' Atom ScopedVariable
+type LocalEnv' ns a v = Map Variable (Value' ns a v)
+type LocalEnv = LocalEnv' Namespace Atom ScopedVariable
 
-merge :: LocalEnv' a v -> LocalEnv' a v -> LocalEnv' a v
+merge :: LocalEnv' ns a v -> LocalEnv' ns a v -> LocalEnv' ns a v
 merge = flip (<>)
 
 ---------------------------------------------------------------------------
 -- VALUES
 ---------------------------------------------------------------------------
 
-data Value' a v
+data Value' ns a v
   = VAtom a
   | VLit Literal
   | VNil
-  | VCell (Value' a v) (Value' a v)
+  | VCell (Value' ns a v) (Value' ns a v)
   | VString Keyword Text
   | VPrim Primitive [[a]]
-  | VFun (Continuation' a v) (LocalEnv' a v) [[a]] [Clause' a v]
+  | VFun (Continuation' ns a v) (LocalEnv' ns a v) [[a]] [Clause' ns a v]
   -- ^ Env is the one the function was created in
   --   Frames ??
-  | VThunk (Computation' a v)
-  | VEnv (LocalEnv' a v)
+  | VThunk (Computation' ns a v)
+  | VEnv (LocalEnv' ns a v)
   deriving (Show, Functor)
 
-type Value = Value' Atom ScopedVariable
+type Value = Value' Namespace Atom ScopedVariable
 
 pattern VNum n        = VLit (Num n)
 pattern CNum n        = Value (VNum n)
@@ -123,37 +123,37 @@ value2env _                   = mempty
 -- COMPUTATIONS
 ---------------------------------------------------------------------------
 
-type Request' a v = (a, [Value' a v])
-type Request = Request' Atom ScopedVariable
+type Request' ns a v = (a, [Value' ns a v])
+type Request = Request' Namespace Atom ScopedVariable
 
-data Computation' a v
-  = Value (Value' a v)
-  | Request (Request' a v) (Continuation' a v) -- [Frame' a v]
+data Computation' ns a v
+  = Value (Value' ns a v)
+  | Request (Request' ns a v) (Continuation' ns a v) -- [Frame' ns a v]
   -- ^ Invoking an effect & none of the
   -- frames present know how to interpret it
   deriving (Show, Functor)
 
-type Computation = Computation' Atom ScopedVariable
+type Computation = Computation' Namespace Atom ScopedVariable
 
-type HandList' a v =
-  [ ( Frame' a v        -- handleFrame
-    , Bwd (Frame' a v)  -- all (not . handleFrame)
+type HandList' ns a v =
+  [ ( Frame' ns a v        -- handleFrame
+    , Bwd (Frame' ns a v)  -- all (not . handleFrame)
     )
   ]
 
-type HandList = HandList' Atom ScopedVariable
+type HandList = HandList' Namespace Atom ScopedVariable
 
-data Continuation' a v = Cn
-  { aftard   :: Bwd (Frame' a v)   -- all (not . handleFrame)
-  , handlers :: HandList' a v
+data Continuation' ns a v = Cn
+  { aftard   :: Bwd (Frame' ns a v)   -- all (not . handleFrame)
+  , handlers :: HandList' ns a v
   }
   deriving (Show, Functor)
 
-type Continuation = Continuation' Atom ScopedVariable
+type Continuation = Continuation' Namespace Atom ScopedVariable
 
 pattern CnNil = Cn B0 []
 
-cnFlat :: Continuation' a v -> [Frame' a v]
+cnFlat :: Continuation' ns a v -> [Frame' ns a v]
 cnFlat (Cn fz hs) = fz <>> foldr (\ (f, fz) fs -> f : fz <>> fs) [] hs
 
 
@@ -161,79 +161,79 @@ cnFlat (Cn fz hs) = fz <>> foldr (\ (f, fz) fs -> f : fz <>> fs) [] hs
 -- EVALUATION CONTEXTS
 ---------------------------------------------------------------------------
 
-data Funy' a v
+data Funy' ns a v
   = FAtom a
   | FPrim Primitive
-  | FFun {-(Continuation' a v)-} (LocalEnv' a v) [Clause' a v]
+  | FFun {-(Continuation' ns a v)-} (LocalEnv' ns a v) [Clause' ns a v]
   deriving (Show, Functor)
-type Funy = Funy' Atom ScopedVariable
+type Funy = Funy' Namespace Atom ScopedVariable
 
 -- The argument of type (LocalEnv' a) indicates the
 -- cursor position
-data Frame' a v
-  = CellL (LocalEnv' a v) (Term' a v)
-  | CellR (Value' a v) (LocalEnv' a v)  -- drop this env?
-  | AppL (LocalEnv' a v) [Term' a v]
-  | AppR (Funy' a v)
-         (Bwd (Computation' a v))
+data Frame' ns a v
+  = CellL (LocalEnv' ns a v) (Term' ns a v)
+  | CellR (Value' ns a v) (LocalEnv' ns a v)  -- drop this env?
+  | AppL (LocalEnv' ns a v) [Term' ns a v]
+  | AppR (Funy' ns a v)
+         (Bwd (Computation' ns a v))
          -- ^ already evaluated arguments (some requests we are
          --   willing to handle may still need to be dealt with)
-         ([a], LocalEnv' a v)
+         ([a], LocalEnv' ns a v)
          -- ^ focus: [a] = requests we are willing to handle
-         [([a], Term' a v)]
+         [([a], Term' ns a v)]
          -- ^ each arg comes with requests we are willing to handle
-  | SemiL (LocalEnv' a v) (Term' a v)
-  | PrioL (LocalEnv' a v) (Term' a v)
-  | StringLR (Value' a v) (LocalEnv' a v) [(Text, Term' a v)] Text
+  | SemiL (LocalEnv' ns a v) (Term' ns a v)
+  | PrioL (LocalEnv' ns a v) (Term' ns a v)
+  | StringLR (Value' ns a v) (LocalEnv' ns a v) [(Text, Term' ns a v)] Text
   | MatchR (PValue' a)
   | Masking a
-  | Clauses (LocalEnv' a v) [Clause' a v] [Computation' a v]
+  | Clauses (LocalEnv' ns a v) [Clause' ns a v] [Computation' ns a v]
   deriving (Show, Functor)
 
-handleFrame :: Frame' a v -> Bool
+handleFrame :: Frame' ns a v -> Bool
 handleFrame (PrioL _ _)           = True
 handleFrame (AppR _ _ (_:_, _) _) = True
 handleFrame (Masking a)           = True
 handleFrame (Clauses{})       = True
 handleFrame _ = False
 
-type Frame = Frame' Atom ScopedVariable
+type Frame = Frame' Namespace Atom ScopedVariable
 
-data Context' a v = Cx
-  { handlerz :: Bwd ( Bwd (Frame' a v)  -- all (not . handleFrame)
-                    , Frame' a v        -- handleFrame
+data Context' ns a v = Cx
+  { handlerz :: Bwd ( Bwd (Frame' ns a v)  -- all (not . handleFrame)
+                    , Frame' ns a v        -- handleFrame
                     )
-  , nandlerz :: Bwd (Frame' a v)        -- all (not . handleFrame)
+  , nandlerz :: Bwd (Frame' ns a v)        -- all (not . handleFrame)
   }
-type Context = Context' Atom ScopedVariable
+type Context = Context' Namespace Atom ScopedVariable
 
 pattern CxNil = Cx B0 B0
 
-cxNull :: Context' a v -> Bool
+cxNull :: Context' ns a v -> Bool
 cxNull CxNil = True
 cxNull _     = False
 
-cxPush :: Context' a v -> Frame' a v -> Context' a v
+cxPush :: Context' ns a v -> Frame' ns a v -> Context' ns a v
 cxPush (Cx hz fz) f
   | handleFrame f = Cx (hz :< (fz, f)) B0
   | otherwise     = Cx hz (fz :< f)
 
-cxPop :: Context' a v -> Maybe (Context' a v, Frame' a v)
+cxPop :: Context' ns a v -> Maybe (Context' ns a v, Frame' ns a v)
 cxPop (Cx hz (fz :< f))        = Just (Cx hz fz, f)
 cxPop (Cx (hz :< (fz, f)) B0)  = Just (Cx hz fz, f)
 cxPop (Cx B0 B0) = Nothing
 
-cxHand :: Context' a v -> Either
-  ( Bwd (Frame' a v)   -- all (not . handleFrame)
+cxHand :: Context' ns a v -> Either
+  ( Bwd (Frame' ns a v)   -- all (not . handleFrame)
   )
-  ( Context' a v       -- whatever
-  , Frame' a v         -- handleFrame
-  , Bwd (Frame' a v)   -- all (not . handleFrame)
+  ( Context' ns a v       -- whatever
+  , Frame' ns a v         -- handleFrame
+  , Bwd (Frame' ns a v)   -- all (not . handleFrame)
   )
 cxHand (Cx (hz :< (fz, f)) gz) = Right (Cx hz fz, f, gz)
 cxHand (Cx B0 gz)              = Left  gz
 
-cxCn :: Context' a v -> Continuation' a v -> Context' a v
+cxCn :: Context' ns a v -> Continuation' ns a v -> Context' ns a v
 cxCn (Cx hz fz) (Cn gz hs) = foldl go (Cx hz (fz <> gz)) hs where
   go (Cx hz fz) (g , gz) = Cx (hz :< (fz, g)) gz
 
@@ -280,6 +280,18 @@ leap x = gets cxHand >>= \case
 
 cont :: Continuation -> Shonkier ()
 cont k = modify (`cxCn` k)
+
+runShonkier :: Shonkier a -> GlobalEnv -> Context -> (a, Context)
+runShonkier m gl s = (`runReader` gl) . (`runStateT` s) $ getShonkier m
+
+evalShonkier :: Shonkier a -> GlobalEnv -> Context -> a
+evalShonkier m gl s = fst $ runShonkier m gl s
+
+execShonkier :: Shonkier a -> GlobalEnv -> Context -> Context
+execShonkier m gl s = snd $ runShonkier m gl s
+
+resumeShonkier :: GlobalEnv -> Continuation -> Shonkier a -> a
+resumeShonkier gamma k r = evalShonkier (cont k >> r) gamma CxNil
 
 ---------------------------------------------------------------------------
 -- INSTANCES
@@ -376,7 +388,7 @@ lispValue (BOO b)    = VLit (Boolean b)
 -- SERIALIZATION
 ---------------------------------------------------------------------------
 
-instance LISPY v => LISPY (Value' Atom v) where
+instance LISPY v => LISPY (Value' Namespace Atom v) where
   toLISP (VAtom a)      = toLISP a
   toLISP (VString _ t)  = STR t
   toLISP VNil           = NIL
@@ -404,7 +416,7 @@ instance LISPY v => LISPY (Value' Atom v) where
     ("Env", [rho]) -> VEnv <$> fromLISP rho
     _ -> Nothing)
 
-instance LISPY v => LISPY (LocalEnv' Atom v) where
+instance LISPY v => LISPY (LocalEnv' Namespace Atom v) where
   toLISP rho = toLISP $ map (\ (k, v) -> CONS (ATOM k) (toLISP v))
                             (toAscList rho)
   fromLISP (CONS (ATOM x) v) = singleton x <$> fromLISP v
@@ -412,7 +424,7 @@ instance LISPY v => LISPY (LocalEnv' Atom v) where
   fromLISP NIL               = pure mempty
   fromLISP _                 = Nothing
 
-instance LISPY v => LISPY (Computation' Atom v) where
+instance LISPY v => LISPY (Computation' Namespace Atom v) where
   toLISP (Value v)           = toLISP v
   toLISP (Request (a, vs) k) =
     "Request" -: [CONS (toLISP a) (toLISP vs), toLISP k]
@@ -422,12 +434,12 @@ instance LISPY v => LISPY (Computation' Atom v) where
     _ -> Nothing
     )
 
-instance LISPY v => LISPY (Continuation' Atom v) where
+instance LISPY v => LISPY (Continuation' Namespace Atom v) where
   toLISP (Cn a h)     = CONS (toLISP a) (toLISP h)
   fromLISP (CONS a h) = Cn <$> fromLISP a <*> fromLISP h
   fromLISP _          = Nothing
 
-instance LISPY v => LISPY (Frame' Atom v) where
+instance LISPY v => LISPY (Frame' Namespace Atom v) where
   toLISP (CellL rho t) = "CellL" -: [toLISP rho, toLISP t]
   toLISP (CellR v rho) = "CellR" -: [toLISP v, toLISP rho]
   toLISP (AppL rho ts) = "AppL" -: (toLISP rho : map toLISP ts)
@@ -468,7 +480,7 @@ instance LISPY v => LISPY (Frame' Atom v) where
       <*> fromLISP as
     _ -> Nothing
 
-instance LISPY v => LISPY (Funy' Atom v) where
+instance LISPY v => LISPY (Funy' Namespace Atom v) where
   toLISP (FAtom a)     = toLISP a
   toLISP (FPrim p)     = "Prim" -: [ATOM p]
   toLISP (FFun rho cs) = "Fun" -: [toLISP rho, toLISP cs]

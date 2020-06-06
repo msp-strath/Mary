@@ -20,7 +20,7 @@ import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 
 import Shonkier.Syntax
 
-type Namespaces = Map Namespace (Set FilePath)
+type Namespaces = Map RawNamespace (Set FilePath)
 
 declareNamespaces :: [Import] -> Namespaces
 declareNamespaces = foldr cons Map.empty where
@@ -72,6 +72,11 @@ instance ScopeCheck RawProgram Program where
       (nm, Left decl) -> pure (nm, Left decl)
       (nm, Right cl)  -> (nm,) . Right <$> scopeCheck local cl
 
+instance ScopeCheck RawNamespace Namespace where
+  scopeCheck local n@(MkRawNamespace nm) = do
+    ns <- gets namespaces
+    pure $ MkNamespace nm $ fold (ns Map.!? n)
+
 instance ScopeCheck RawVariable ScopedVariable where
   scopeCheck local (mns :.: v) = case mns of
     Nothing | Set.member v local -> pure $ LocalVar :.: v
@@ -95,6 +100,7 @@ instance ScopeCheck RawTerm Term where
     Atom a -> pure (Atom a)
     Lit l  -> pure (Lit l)
     Var v  -> Var <$> scopeCheck local v
+    Namespace nm -> Namespace <$> scopeCheck local nm
     Blank  -> pure Blank
     Nil    -> pure Nil
     Cell a b  -> Cell <$> scopeCheck local a <*> scopeCheck local b

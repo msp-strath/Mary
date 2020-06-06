@@ -21,6 +21,7 @@ import Shonkier.Parser
 import Shonkier.Scope
 import Shonkier.Value
 import Shonkier.Primitives
+import Shonkier.Traversal
 
 import Utils.List
 
@@ -111,11 +112,15 @@ loadModule base fp (is, ls) = do
 loadToplevelModule :: FilePath -> RawModule -> IO (Module, GlobalEnv, String)
 loadToplevelModule fp rm = do
   base <- takeDirectory <$> makeAbsolute fp
-  (m, st) <- runImportT (loadModule (splitPath base) (takeFileName fp) rm) emptyImportState
+  let loader = loadModule (splitPath base) (takeFileName fp) rm
+  (m, st) <- runImportT loader emptyImportState
   -- strip common prefix from global env
   let (lcp, gl) = simplifyGlobalEnv $ globals st
   -- strip common prefix from all programs
-  let m' = second (fmap (fmap (fmap (simplifyTerm lcp)))) m
+  let m' = module' (simplifyNamespace lcp)
+                   id
+                   (simplifyScopedVariable lcp)
+                   m
   pure (m', gl, lcp)
 
 importToplevelModule :: FilePath -> IO (Module, GlobalEnv)
@@ -140,17 +145,22 @@ mkGlobalEnv fp ls = fold
 -- has been stripped everywhere
 simplifyGlobalEnv :: GlobalEnv -> (String, GlobalEnv)
 simplifyGlobalEnv gl = (lcp, gl') where
-  lcp = longestCommonPrefix $ filter (/= ".")
+  lcp = longestCommonPrefix
+          $ filter (/= ".")
           $ concatMap Map.keys $ Map.elems gl
-  gl' = Map.map (Map.map (simplifyTerm lcp))
+  gl' = globalEnv' (simplifyNamespace lcp)
+                   id
+                   (simplifyScopedVariable lcp)
           $ Map.map (Map.mapKeys $ stripPrefixButDot lcp) gl
 
-simplifyTerm :: Functor f => String -> f ScopedVariable -> f ScopedVariable
-simplifyTerm lcp = fmap simp
-  where
-    simp :: ScopedVariable -> ScopedVariable
-    simp (GlobalVar b fp :.: x) = GlobalVar b (stripPrefixButDot lcp fp) :.: x
-    simp y                      = y
+simplifyNamespace :: String -> Namespace -> Namespace
+simplifyNamespace lcp (MkNamespace n fps) =
+  MkNamespace n $ Set.map (stripPrefixButDot lcp) fps
+
+simplifyScopedVariable :: String -> ScopedVariable -> ScopedVariable
+simplifyScopedVariable lcp = \case
+  (GlobalVar b fp :.: x) -> GlobalVar b (stripPrefixButDot lcp fp) :.: x
+  y                      -> y
 
 stripPrefixButDot :: String -> String -> String
 stripPrefixButDot prf "." = "."

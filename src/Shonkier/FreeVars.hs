@@ -30,7 +30,7 @@ instance FreeVars ScopedVariable where
     InvalidNamespace{} -> Set.empty
     OutOfScope{}       -> Set.empty
 
-instance FreeVars v => FreeVars (Term' a v) where
+instance FreeVars v => FreeVars (Term' ns a v) where
   freeVars = \case
     Atom{}         -> Set.empty
     Lit{}          -> Set.empty
@@ -38,6 +38,7 @@ instance FreeVars v => FreeVars (Term' a v) where
     Blank          -> Set.empty
     String _ tes _ -> foldMap (freeVars . snd) tes
     Var v          -> freeVars v
+    Namespace{}    -> Set.empty
     Cell a b       -> freeVars [a, b]
     App f ts       -> freeVars (f:ts)
     -- To be exact we would need to subtract the variables bound in `f`
@@ -65,13 +66,13 @@ instance FreeVars (PComputation' a) where
     PRequest (_, ps) mk -> Set.union (freeVars ps) (maybe Set.empty Set.singleton mk)
     PThunk k            -> Set.singleton k
 
-instance FreeVars v => FreeVars (Clause' a v) where
+instance FreeVars v => FreeVars (Clause' ns a v) where
   freeVars (ps :-> t) = Set.difference (freeVars t) (freeVars ps)
 
-instance FreeVars v => FreeVars (Rhs' a v) where
+instance FreeVars v => FreeVars (Rhs' ns a v) where
   freeVars (gd :?> tm) = Set.union (freeVars gd) (freeVars tm)
 
-instance FreeVars v => FreeVars (Value' a v) where
+instance FreeVars v => FreeVars (Value' ns a v) where
   freeVars = \case
     VAtom{}          -> Set.empty
     VLit{}           -> Set.empty
@@ -83,7 +84,7 @@ instance FreeVars v => FreeVars (Value' a v) where
     VThunk c         -> freeVars c
     VEnv rho         -> freeVars rho
 
-instance FreeVars v => FreeVars (Computation' a v) where
+instance FreeVars v => FreeVars (Computation' ns a v) where
   freeVars = \case
     Value v           -> freeVars v
     Request (_, vs) _ -> freeVars vs

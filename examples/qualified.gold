@@ -1,0 +1,12 @@
+[[1 2]
+ [1 2]
+ [ append := {[] ys -> ys
+              [x|xs] ys -> [x|append(xs, ys)]
+             }
+, fold := {c n [] -> n
+           c n [x|xs] -> c(x, fold(c, n, xs))
+          }
+, main := {[]}
+, map := {f [] -> []
+          f [x|xs] -> [f(x)|map(f, xs)]
+         } ]]
