@@ -5,11 +5,13 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-16.04
     strategy:
       matrix:
-        ghc: ['8.8.1', '8.6.5', '8.4.4', '8.2.2', '8.0.2']
+        ghc: ['8.10.1', '8.8.1', '8.6.5', '8.4.4', '8.2.2', '8.0.2']
         include:
+          - ghc: '8.10.1'
+            cabal: '3.2'
           - ghc: '8.8.1'
             cabal: '3.0'
           - ghc: '8.6.5'
@@ -56,25 +58,25 @@ jobs:
       run: cabal update
 
     - name: Legacy install dependencies
-      if: matrix.cabal != '3.0'
+      if: matrix.cabal < '3.0'
       run: cabal install --only-dependencies --enable-tests
 
     - name: Configure mary
       run: cabal configure --enable-tests
 
     - name: New install dependencies
-      if: matrix.cabal == '3.0'
+      if: matrix.cabal >= '3.0'
       run: cabal install --only-dependencies
 
     - name: New build mary
-      if: matrix.cabal == '3.0'
+      if: matrix.cabal >= '3.0'
       run: |
         cabal install
         cabal build --enable-tests
         cp ~/.cabal/bin/mary .
 
     - name: Legacy build mary
-      if: matrix.cabal != '3.0'
+      if: matrix.cabal < '3.0'
       run: |
         cabal install --enable-tests
         cp ~/.cabal/bin/mary .
@@ -82,4 +84,4 @@ jobs:
     - name: Run tests
       run: |
         export PATH=$PATH:~/.cabal/bin/
-        cabal test
+        cabal new-run mary-tests -- --regex-exclude "dot"
