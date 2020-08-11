@@ -5,10 +5,11 @@ module Shonkier.ShonkierJS where
 import Data.Char
 import Data.Text (Text, pack)
 import qualified Data.Text as T
-import Data.List
-import Data.Ratio
+--import Data.List
+--import Data.Ratio
 import Data.Map (Map, foldMapWithKey)
 
+import Data.Lisp
 import Shonkier.Syntax
 import Shonkier.Value
 
@@ -21,6 +22,7 @@ instance JSAtom String where
 instance JSAtom Atom where
   jsAtom = jsAtom . getAtom
 
+{-
 class JS t where
   js :: t -> [Text]
 
@@ -88,16 +90,19 @@ instance JSAtom a => JS (PValue' a) where
   js PNil             = ["Nil()"]
   js (PCell s t)      = ["Cell("] ++ js s ++ [","] ++ js t ++ [")"]
   js PWild            = ["PWild"]
+-}
 
 jsText :: Text -> [Text]
 jsText t
   | T.any (\ z -> z `elem` ['"', '\\'] || isControl z) t = [T.pack (show t)]
   | otherwise = ["\"", t, "\""]
 
+{-
 jsStringy :: JS x => [(Text, x)] -> Text -> [Text]
 jsStringy []             u = jsText u
 jsStringy ((t, x) : txs) u =
   ["Strunk("] ++ jsText t ++ [","] ++ js x ++ [","] ++ jsStringy txs u ++ [")"]
+-}
 
 jsInputs :: Map Text Text -> [Text]
 jsInputs inp =
@@ -114,17 +119,10 @@ jsGlobalEnv gl =
   "var globalEnv = {};\n" :
   ((`foldMapWithKey` gl) $ \ x loc ->
     ((T.concat [ "globalEnv[", jsAtom x, "] = {};\n"]) :) $
-    flip foldMapWithKey loc $ \ fp -> \case
-    VFun CnNil _ hs cs -> pure $ T.concat $
-      ["globalEnv[", jsAtom x, "][", jsAtom fp ,"] = VFun(null,{},"]
-      ++ js (fmap (fmap jsAtom) hs) ++ [","]
-      ++ js cs
-      ++ [");\n"]
-    VPrim g hs ->  pure $ T.concat $
-      ["globalEnv[", jsAtom x, "][", jsAtom fp, "] = VPrim(", jsAtom g , ","]
-      ++ js (fmap (fmap jsAtom) hs)
-      ++ [");\n"]
-    _ -> [])
+    flip foldMapWithKey loc $ \ fp v -> pure $ T.concat
+      ["globalEnv[", jsAtom x, "][", jsAtom fp ,"] = "
+      , lispJS (toLISP v)
+      ,";\n"])
 
 jsRun :: Term -> [Text]
-jsRun t = [ "console.log(render(shonkier(globalEnv,inputs,"] ++ js t ++ [")));"]
+jsRun t = [ "console.log(render(shonkier(globalEnv,inputs,", lispJS (toLISP t), ")));"]

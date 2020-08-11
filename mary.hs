@@ -34,7 +34,7 @@ main = customExecParser pp opts >>= \ o -> E.handle h $ case o of
   Version             -> putStrLn version
   Shonkier filename   -> interpretShonkier filename
   Shonkierjs filename -> do
-    shonkierjs <- getDataFileName "src/data-dir/Shonkier.js"
+    shonkierjs <- getDataFileName "src/data-dir/Shonkier-lisp.js"
     compileShonkier shonkierjs filename >>= TIO.putStrLn
   Page filename postString getString siteRoot baseURL user -> do
     let postArray = parseRequests (pack postString)
