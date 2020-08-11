@@ -7,9 +7,7 @@ function shonkier(glob, inputs, state) {
 
     var x; // dogsbody
     var y; // dogsbody
-    
     // setting up the machine stack
-    
     var lox = Nil;  // list of local nonhandlers
     var hox = Nil;  // list of handlers with their local nonhandlers
 
@@ -23,7 +21,6 @@ function shonkier(glob, inputs, state) {
     function done() {
         return (nilly(lox) && nilly(hox))
     };
-    
     function push(f) {
         if (isHandler(f)) {
             hox = [[f, lox], hox];
@@ -42,7 +39,6 @@ function shonkier(glob, inputs, state) {
         };
         fr  = lox[0];
         lox = lox[1];
-        
     };
 
     /*
@@ -50,7 +46,6 @@ function shonkier(glob, inputs, state) {
     [lox, k'] where
     k' is either Nil or [[handlerframe, lox], k']
     */
-    
     function cont(k) {
         lox = cat(k[0], lox);
         k = k[1];   // k is now a k'
@@ -127,7 +122,7 @@ function shonkier(glob, inputs, state) {
                 continue;
             // "Clauses" dismounts when we use a value
             // "PrioL" dismounts when we use a value
-            // "Masking" dismounts when we use a value    
+            // "Masking" dismounts when we use a value
             };
             continue;
         case "eval":
@@ -256,7 +251,7 @@ function shonkier(glob, inputs, state) {
 function use(v) {
     return { halting: true,
              tag: "use",
-             val: v             
+             val: v
            };
 };
 
@@ -360,7 +355,6 @@ function Cell(a, d) {
 
 function idCont() { return [Nil, Nil] };
 var anIdCont = idCont();
-    
 
 /****************************************************************************/
 /** value to environment                                                   **/
@@ -417,7 +411,7 @@ function matches(ps, cs) {
     while (celly(ps)) {
         if (!celly(cs)) { return null; };
         sig = match(ps[0], cs[0]);
-        ps = ps[1]; cs = cs[1]; 
+        ps = ps[1]; cs = cs[1];
         if (sig === null) { return null; };
         if (celly(sig)) { rho = [sig, rho]; };
     };
@@ -469,7 +463,7 @@ function match(p, c) {
                    || p[1][0][0] !== c[1][0][0] // check cmds
                ) {
                 return null;
-            };                   
+            };
             // pattern need not bind the kont; if it does, let's have it
             if (celly(p[1][1])) {
                 rho = [[p[1][1][0], ["Fun", [c[1][1][0], idClause]]]
