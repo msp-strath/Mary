@@ -119,7 +119,7 @@ jsGlobalEnv gl =
   "var globalEnv = {};\n" :
   ((`foldMapWithKey` gl) $ \ x loc ->
     ((T.concat [ "globalEnv[", jsAtom x, "] = {};\n"]) :) $
-    flip foldMapWithKey loc $ \ fp v -> pure $ T.concat $
+    flip foldMapWithKey loc $ \ fp v -> pure $ T.concat
       ["globalEnv[", jsAtom x, "][", jsAtom fp ,"] = "
       , lispJS (toLISP v)
       ,";\n"])
