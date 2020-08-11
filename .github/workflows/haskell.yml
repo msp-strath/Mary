@@ -84,4 +84,4 @@ jobs:
     - name: Run tests
       run: |
         export PATH=$PATH:~/.cabal/bin/
-        cabal test -- --regex-exclude "dot"
+        cabal run mary-tests -- --regex-exclude "dot"
