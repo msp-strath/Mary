@@ -8,7 +8,20 @@ scores23 <- "`repo`/scores" ['csv "," ['username 'test2score 'test3score]]
 
 ## Today's test
 
-forms
+:::{mary-store=test4}
+Question 1: `q1`{.input type=text size=12}
+
+What number am I thinking of? `q2`{.input}
+
+TODO: radio boxes
+
+This is what I did during my summer holiday:
+```{.input}
+essay
+```
+
+`Submit answers and essay`{.input type=submit}
+:::
 
 ## Your scores, and the class averages, so far
 
@@ -21,7 +34,7 @@ Boolean is true.
 :::{mary-apply="first(scores1, {username == user})"}
 :::{mary-apply="first(scores23, {username == user})"}
 :::{code-default=".mary"}
-|         | *Test 1*            | *Test 2*            | *Test 3*            |
+|         | *Test 1*     | *Test 2*     | *Test 3*     |
 | You     | `test1score` | `test2score` | `test3score` |
 | Average | `average(map({env -> env(test1score)}, scores1))` | `average(map({env -> env(test2score)}, scores23))` | `average(map({env -> env(test3score)}, scores23))` |
 :::
