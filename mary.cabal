@@ -84,6 +84,7 @@ library
   exposed-modules:     Data.Bwd
                      , Data.Lisp
                      , Mary.Pandoc
+                     , Mary.Interpreter
                      , Mary.ServePage
                      , Mary.Find
                      , Mary.Version
@@ -119,6 +120,7 @@ library
                      , DeriveTraversable
                      , FlexibleContexts
                      , FlexibleInstances
+                     , FunctionalDependencies
                      , GeneralizedNewtypeDeriving
                      , LambdaCase
                      , MultiParamTypeClasses
@@ -127,6 +129,7 @@ library
                      , RecordWildCards
                      , TupleSections
                      , TypeSynonymInstances
+
 
   ghc-options:         -Wincomplete-patterns
                        -Wmissing-signatures
