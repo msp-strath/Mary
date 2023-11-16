@@ -49,12 +49,14 @@
   globalEnv["primUnpickle"] = {};
   globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Nil())))]);
+  globalEnv["test"]["."] =
+  VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Nil())))]);
   </script>
   <script>
   var inputs = {};
   inputs["GET_page"] = "examples/hello.mary";
-  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["baseURL"] =
+  "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
   inputs["sitesRoot"] = ".";
   inputs["user"] = "testymctestyface";
   </script>
@@ -62,7 +64,8 @@
 </head>
 <body>
 <form method="post">
-<h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as Fenced Code Blocks</h1>
+<h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as
+Fenced Code Blocks</h1>
 <p>Hello</p>
 </form>
 </body>

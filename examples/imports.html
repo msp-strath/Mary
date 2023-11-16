@@ -13,20 +13,30 @@
   <script>
   var globalEnv = {};
   globalEnv["append"] = {};
-  globalEnv["append"]["list.shonkier"] = VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
+  globalEnv["append"]["list.shonkier"] =
+  VFun(null,{},[],[Clause([Value(Nil()),Value("ys")],Var(LocalVar(),"ys")),Clause([Value(Cell("x","xs")),Value("ys")],Cell(Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"append"),[Var(LocalVar(),"xs"),Var(LocalVar(),"ys")])))]);
   globalEnv["cat"] = {};
-  globalEnv["cat"]["imports.mary"] = VFun(null,{},[],[Clause([Value(Cell("x",Cell("y",Nil())))],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk(" ",Var(LocalVar(),"y"),""))))]);
+  globalEnv["cat"]["imports.mary"] =
+  VFun(null,{},[],[Clause([Value(Cell("x",Cell("y",Nil())))],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("
+  ",Var(LocalVar(),"y"),""))))]);
   globalEnv["fold"] = {};
-  globalEnv["fold"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("c"),Value("n"),Value(Nil())],Var(LocalVar(),"n")),Clause([Value("c"),Value("n"),Value(Cell("x","xs"))],App(Var(LocalVar(),"c"),[Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Var(LocalVar(),"c"),Var(LocalVar(),"n"),Var(LocalVar(),"xs")])]))]);
+  globalEnv["fold"]["list.shonkier"] =
+  VFun(null,{},[],[Clause([Value("c"),Value("n"),Value(Nil())],Var(LocalVar(),"n")),Clause([Value("c"),Value("n"),Value(Cell("x","xs"))],App(Var(LocalVar(),"c"),[Var(LocalVar(),"x"),App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Var(LocalVar(),"c"),Var(LocalVar(),"n"),Var(LocalVar(),"xs")])]))]);
   globalEnv["greeting"] = {};
-  globalEnv["greeting"]["subdir/import-down.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Fun([],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]),Stringy(""),Cell(Stringy("H"),Cell(Stringy("e"),Cell(Stringy("l"),Cell(Stringy("l"),Cell(Stringy("o"),Nil())))))]))]);
+  globalEnv["greeting"]["subdir/import-down.shonkier"] =
+  VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"list.shonkier"),"fold"),[Fun([],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]),Stringy(""),Cell(Stringy("H"),Cell(Stringy("e"),Cell(Stringy("l"),Cell(Stringy("l"),Cell(Stringy("o"),Nil())))))]))]);
   globalEnv["hello"] = {};
-  globalEnv["hello"]["imports.mary"] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(App(Var(GlobalVar(false,"imports.mary"),"cat"),[App(Var(GlobalVar(false,"list.shonkier"),"map"),[Fun([],[Clause([Value("x")],Stringy(Strunk("",App(Var(GlobalVar(false,"subdir/import-down.shonkier"),"greeting"),[]),Strunk(" ",Var(LocalVar(),"x"),""))))]),Cell(Stringy("there"),Cell(Stringy("World"),Nil()))])]),Nil())))]);
+  globalEnv["hello"]["imports.mary"] =
+  VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(App(Var(GlobalVar(false,"imports.mary"),"cat"),[App(Var(GlobalVar(false,"list.shonkier"),"map"),[Fun([],[Clause([Value("x")],Stringy(Strunk("",App(Var(GlobalVar(false,"subdir/import-down.shonkier"),"greeting"),[]),Strunk("
+  ",Var(LocalVar(),"x"),""))))]),Cell(Stringy("there"),Cell(Stringy("World"),Nil()))])]),Nil())))]);
   globalEnv["main"] = {};
-  globalEnv["main"]["list.shonkier"] = VFun(null,{},[],[Clause([],Nil())]);
-  globalEnv["main"]["subdir/import-down.shonkier"] = VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"list.shonkier"),"map"),[Fun([],[Clause([Value("x")],App(Var(GlobalVar(false,"."),"primInfixPlus"),[Var(LocalVar(),"x"),Lit(LitNum(1,1))]))]),Cell(Lit(LitNum(1,1)),Cell(Lit(LitNum(2,1)),Cell(Lit(LitNum(3,1)),Nil())))]))]);
+  globalEnv["main"]["list.shonkier"] =
+  VFun(null,{},[],[Clause([],Nil())]);
+  globalEnv["main"]["subdir/import-down.shonkier"] =
+  VFun(null,{},[],[Clause([],App(Var(GlobalVar(false,"list.shonkier"),"map"),[Fun([],[Clause([Value("x")],App(Var(GlobalVar(false,"."),"primInfixPlus"),[Var(LocalVar(),"x"),Lit(LitNum(1,1))]))]),Cell(Lit(LitNum(1,1)),Cell(Lit(LitNum(2,1)),Cell(Lit(LitNum(3,1)),Nil())))]))]);
   globalEnv["map"] = {};
-  globalEnv["map"]["list.shonkier"] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"list.shonkier"),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
+  globalEnv["map"]["list.shonkier"] =
+  VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"list.shonkier"),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -67,7 +77,8 @@
   <script>
   var inputs = {};
   inputs["GET_page"] = "examples/imports.mary";
-  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["baseURL"] =
+  "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
   inputs["sitesRoot"] = ".";
   inputs["user"] = "testymctestyface";
   </script>
@@ -80,11 +91,24 @@
 <p>Hello there Hello World</p>
 <p>arising from</p>
 <div class="shonkier-pretty">
-<span class="shonkier-keyword">import</span> subdir/import-down.shonkier <span class="shonkier-keyword">as</span> foo<br />
-<span class="shonkier-keyword">import</span> list.shonkier <span class="shonkier-keyword"></span> <br />
-<span class="shonkier-function">cat</span>([x y]) <span class="shonkier-operator">-&gt;</span> <span class="shonkier-string">"<span class="shonkier-splice">`x`</span> <span class="shonkier-splice">`y`</span>"</span><br />
+<span class="shonkier-keyword">import</span> subdir/import-down.shonkier
+<span class="shonkier-keyword">as</span> foo<br />
+<span class="shonkier-keyword">import</span> list.shonkier <span
+class="shonkier-keyword"></span> <br />
+<span class="shonkier-function">cat</span>([x y]) <span
+class="shonkier-operator">-&gt;</span> <span
+class="shonkier-string">"<span class="shonkier-splice">`x`</span> <span
+class="shonkier-splice">`y`</span>"</span><br />
 <br />
-<span class="shonkier-function">hello</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Para</span> cat(map({x <span class="shonkier-operator">-&gt;</span> <span class="shonkier-string">"<span class="shonkier-splice">`greeting()`</span> <span class="shonkier-splice">`x`</span>"</span>}, [<span class="shonkier-string">"there"</span> <span class="shonkier-string">"World"</span>]))]
+<span class="shonkier-function">hello</span>() <span
+class="shonkier-operator">-&gt;</span> [<span
+class="shonkier-atom">'Para</span> cat(map({x <span
+class="shonkier-operator">-&gt;</span> <span
+class="shonkier-string">"<span
+class="shonkier-splice">`greeting()`</span> <span
+class="shonkier-splice">`x`</span>"</span>}, [<span
+class="shonkier-string">"there"</span> <span
+class="shonkier-string">"World"</span>]))]
 </div>
 </form>
 </body>

@@ -14,6 +14,9 @@ import Data.Text as T
 import Data.Text.IO as TIO
 import Data.Text.Encoding
 
+import Data.Aeson.Key
+import Data.Aeson.KeyMap as KM
+
 import Network.URI.Encode as URI
 
 import System.FilePath
@@ -24,13 +27,13 @@ postText :: Text -> PHPSessionValue -> Y.Value
 postText prefix (PHPSessionValueArray kvs) = object
   [ (key .= value)
   | (PHPSessionValueString k, PHPSessionValueString v) <- kvs
-  , let key = prefix <> "_" <> decodeUtf8 (B.toStrict k)
+  , let key = fromText $ prefix <> "_" <> decodeUtf8 (B.toStrict k)
   , let value = "`" <> (URI.encodeText $ decodeUtf8 $ B.toStrict v) <> "`{=html}"
   ]
 postText _ _ = Y.Null
 
 outputMeta :: Value -> IO ()
-outputMeta d@(Y.Object o) | not (H.null o) = TIO.putStr (decodeUtf8 (Y.encode d))
+outputMeta d@(Y.Object o) | not (KM.null o) = TIO.putStr (decodeUtf8 (Y.encode d))
 outputMeta _                               =  return ()
 
 maryFind :: FilePath   -- what is the site root?

@@ -2,7 +2,7 @@ module Shonkier.Pandoc where
 
 import Data.Text (Text)
 import Data.Attoparsec.Text
-import Text.Pandoc.Definition
+import Text.Pandoc.Definition (Inline(..), Block(..), ListNumberStyle(..), ListNumberDelim(..), Format(..))
 
 import Shonkier.Parser
 import Shonkier.Syntax
@@ -63,7 +63,7 @@ instance ToRawTerm ListNumberStyle where
 
 instance ToRawTerm Block where
   toRawTerm = \case
-    Null              -> Atom "Null"
+    -- Null              -> Atom "Null"
     Plain ps          -> toListy "Plain" ps
     Para ps           -> toListy "Para" ps
     LineBlock ps      -> toListy "LineBlock" ps
@@ -151,7 +151,7 @@ instance FromValue Block where
     _                -> const (Left v)
   fromValue v@(VAtom tag) = case tag of
     "HorizontalRule" -> pure HorizontalRule
-    "Null"           -> pure Null
+    -- "Null"           -> pure Null
     _                -> Left v
   fromValue v = Left v
 

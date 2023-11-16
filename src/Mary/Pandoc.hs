@@ -34,6 +34,10 @@ import Shonkier.Syntax
 import Shonkier.Value
 import Shonkier.Pandoc()
 
+-- TODO: is this the best way to do it?
+nullBlock :: Block
+nullBlock = Plain []
+
 process :: Pandoc -> IO Pandoc
 process doc0@(Pandoc meta docs) = do
   let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
@@ -110,14 +114,14 @@ maryDefinitionToModule = \case
 
 snarfMaryDef :: Block -> Writer [MaryDefinition] Block
 snarfMaryDef c@(CodeBlock (_, cs, _) p)
-  | "mary-def" `elem` cs
+  | "mary-def" `L.elem` cs
   = do let mod = getMeAModule p
-       let out = if "keep" `notElem` cs then Null else render (pretty mod)
+       let out = if "keep" `notElem` cs then nullBlock else render (pretty mod)
        out <$ tell [Module mod]
 snarfMaryDef c@(Div (a , b, kvs) p)
   | Just decl <- lookup "mary" kvs
   = let attr = (a, b, L.filter (("mary" /=) . fst) kvs) in
-    Null <$ tell [DivTemplate decl attr p]
+    nullBlock <$ tell [DivTemplate decl attr p]
 snarfMaryDef b = return b
 
 data EnvData = EnvData { imps        :: [Import]
@@ -170,16 +174,16 @@ evalMary e =
                        , toString v
                        ]
   go gamma (Request r@(a, vs) k)
-    | a `elem` ["POST", "GET", "meta"] = handleInputs (go gamma) gamma r k
-    | a `elem` ["dot"]                 = handleDot (go gamma) gamma r k
+    | a `L.elem` ["POST", "GET", "meta"] = handleInputs (go gamma) gamma r k
+    | a `L.elem` ["dot"]                 = handleDot (go gamma) gamma r k
   go _ r@Request{} = error (show r)
 
   stripVarPrefix :: String -> RawVariable -> RawVariable
   stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
 
 evalMaryBlock :: (MonadIO m, MonadReader EnvData m) => Block -> m Block
-evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `elem` cs = evalMary e
-evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
+evalMaryBlock (CodeBlock (_, cs, _) e) | "mary" `L.elem` cs = evalMary e
+evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `L.elem` cs
     -- we consider codeblocks (compared to inline code) to be
     -- textareas, unless they explicitly have a type set
   = let textarea = "type" `notElem` L.map fst as in
@@ -187,8 +191,8 @@ evalMaryBlock (CodeBlock a@(_, cs, as) t) | "input" `elem` cs
 evalMaryBlock b = pure b
 
 evalMaryInline :: (MonadIO m, MonadReader EnvData m) => Inline -> m Inline
-evalMaryInline (Code (_, cs, _) e) | "mary" `elem` cs = evalMary e
-evalMaryInline (Code a@(_, cs, _) t) | "input" `elem` cs =
+evalMaryInline (Code (_, cs, _) e) | "mary" `L.elem` cs = evalMary e
+evalMaryInline (Code a@(_, cs, _) t) | "input" `L.elem` cs =
   RawInline (Format "html") <$> makeInputForm False a t
 evalMaryInline (Link attrs is target)  = Link attrs is <$> makeAbsRef target
 evalMaryInline (Image attrs is target) = Image attrs is <$> makeAbsRef target
@@ -196,7 +200,7 @@ evalMaryInline b = pure b
 
 
 makeInputForm :: MonadReader EnvData m => Bool -> Attr -> Text -> m Text
-makeInputForm _ (_, _, as) p | ("type", "submit") `elem` as
+makeInputForm _ (_, _, as) p | ("type", "submit") `L.elem` as
   = pure $ (T.intercalate " " $
       ["<input"] ++
       [ T.concat [k, "=\"", v, "\""] | (k, v) <- ("value", p):as ]) <> ">"

@@ -13,11 +13,19 @@
   <script>
   var globalEnv = {};
   globalEnv["concat"] = {};
-  globalEnv["concat"]["."] = VFun(null,{},[],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]);
+  globalEnv["concat"]["."] =
+  VFun(null,{},[],[Clause([Value("x"),Value("y")],Stringy(Strunk("",Var(LocalVar(),"x"),Strunk("",Var(LocalVar(),"y"),""))))]);
   globalEnv["greet"] = {};
-  globalEnv["greet"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello "),Cell(App(Atom("POST"),[Stringy("name")]),Cell(Stringy("! You are on page "),Cell(App(Atom("GET"),[Stringy("page")]),Nil()))))))]);
+  globalEnv["greet"]["."] =
+  VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello
+  "),Cell(App(Atom("POST"),[Stringy("name")]),Cell(Stringy("! You are on
+  page "),Cell(App(Atom("GET"),[Stringy("page")]),Nil()))))))]);
   globalEnv["numberGame"] = {};
-  globalEnv["numberGame"]["."] = VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong, the right number was "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(GlobalVar(false,"."),"primInfixPlus"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(". Better luck next time!"),Nil())))))]);
+  globalEnv["numberGame"]["."] =
+  VFun(null,{},[],[Clause([Value("guess")],Cell(Atom("Para"),Cell(Stringy("Wrong,
+  the right number was
+  "),Cell(App(Var(GlobalVar(false,"."),"primNumToString"),[App(Var(GlobalVar(false,"."),"primInfixPlus"),[App(Var(GlobalVar(false,"."),"primStringToNum"),[Var(LocalVar(),"guess")]),Lit(LitNum(1,1))])]),Cell(Stringy(".
+  Better luck next time!"),Nil())))))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -58,10 +66,12 @@
   <script>
   var inputs = {};
   inputs["GET_page"] = "examples/forms.mary";
-  inputs["POST_essay"] = "Seven weeks of reading papers\nSeven weeks of feeling guilty\nSeven weeks of staying up all night";
+  inputs["POST_essay"] = "Seven weeks of reading papers\nSeven weeks of
+  feeling guilty\nSeven weeks of staying up all night";
   inputs["POST_name"] = "Eric";
   inputs["POST_number"] = "7";
-  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["baseURL"] =
+  "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
   inputs["sitesRoot"] = ".";
   inputs["user"] = "testymctestyface";
   </script>
@@ -70,14 +80,17 @@
 <body>
 <form method="post">
 <h1 id="displaying-forms">Displaying Forms</h1>
-<p>Name: <input name="name" id="name" type="text" size="12" value="Eric"></p>
-<p>What number am I thinking of? <input name="number" id="number" value="7"></p>
+<p>Name:
+<input name="name" id="name" type="text" size="12" value="Eric"></p>
+<p>What number am I thinking of?
+<input name="number" id="number" value="7"></p>
 <p>This is what I did during my summer holiday:</p>
 <textarea name="essay" id="essay">Seven weeks of reading papers
 Seven weeks of feeling guilty
 Seven weeks of staying up all night</textarea>
 <p><input value="Submit answers and essay" type="submit"></p>
-<p>Here is a form which is being submitted empty: <input name="empty" id="empty" type="text" size="1"></p>
+<p>Here is a form which is being submitted empty:
+<input name="empty" id="empty" type="text" size="1"></p>
 <h2 id="using-the-inputs">Using the inputs</h2>
 <p>Hello Eric! You are on page examples/forms.mary</p>
 <p>Wrong, the right number was 8. Better luck next time!</p>

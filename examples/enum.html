@@ -13,9 +13,11 @@
   <script>
   var globalEnv = {};
   globalEnv["enum"] = {};
-  globalEnv["enum"]["."] = VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"."),"primStringConcat"),[Var(LocalVar(),"xs")]),Nil())),Cell(Cell(Atom("BulletList"),App(Var(GlobalVar(false,"."),"map"),[Var(GlobalVar(false,"."),"enum"),Var(LocalVar(),"xs")])),Nil()))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell(Var(LocalVar(),"xs"),Nil())),Nil()))]);
+  globalEnv["enum"]["."] =
+  VFun(null,{},[],[Clause([Value(PAs("xs",Cell(PWild,PWild)))],Cell(Cell(Atom("Plain"),Cell(App(Var(GlobalVar(false,"."),"primStringConcat"),[Var(LocalVar(),"xs")]),Nil())),Cell(Cell(Atom("BulletList"),App(Var(GlobalVar(false,"."),"map"),[Var(GlobalVar(false,"."),"enum"),Var(LocalVar(),"xs")])),Nil()))),Clause([Value("xs")],Cell(Cell(Atom("Plain"),Cell(Var(LocalVar(),"xs"),Nil())),Nil()))]);
   globalEnv["map"] = {};
-  globalEnv["map"]["."] = VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"."),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
+  globalEnv["map"]["."] =
+  VFun(null,{},[],[Clause([Value("f"),Value(Nil())],Nil()),Clause([Value("f"),Value(Cell("x","xs"))],Cell(App(Var(LocalVar(),"f"),[Var(LocalVar(),"x")]),App(Var(GlobalVar(false,"."),"map"),[Var(LocalVar(),"f"),Var(LocalVar(),"xs")])))]);
   globalEnv["primInfixAnd"] = {};
   globalEnv["primInfixAnd"]["."] = VPrim("primInfixAnd",[]);
   globalEnv["primInfixEquals"] = {};
@@ -53,12 +55,14 @@
   globalEnv["primUnpickle"] = {};
   globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["test"] = {};
-  globalEnv["test"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Cell(Stringy("Enums"),Cell(Nil(),Nil())),App(Var(GlobalVar(false,"."),"enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Nil())),Cell(Stringy("d"),Nil())),Nil()))]))))]);
+  globalEnv["test"]["."] =
+  VFun(null,{},[],[Clause([],Cell(Atom("Div"),Cell(Cell(Stringy("Enums"),Cell(Nil(),Nil())),App(Var(GlobalVar(false,"."),"enum"),[Cell(Stringy("A"),Cell(Cell(Cell(Stringy("b"),Cell(Stringy("c"),Nil())),Cell(Stringy("d"),Nil())),Nil()))]))))]);
   </script>
   <script>
   var inputs = {};
   inputs["GET_page"] = "examples/enum.mary";
-  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["baseURL"] =
+  "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
   inputs["sitesRoot"] = ".";
   inputs["user"] = "testymctestyface";
   </script>
@@ -67,7 +71,8 @@
 <body>
 <form method="post">
 <h1 id="recursively-building-content">Recursively building content</h1>
-<p>This is a nested enumeration with concatenated sublists as intermediate items.</p>
+<p>This is a nested enumeration with concatenated sublists as
+intermediate items.</p>
 <div id="Enums">
 Abcd
 <ul>
@@ -85,13 +90,29 @@ Abcd
 </div>
 <p>It was generated using the following code:</p>
 <div class="shonkier-pretty">
-<span class="shonkier-function">map</span>(f, []) <span class="shonkier-operator">-&gt;</span> []<br />
-<span class="shonkier-function">map</span>(f, [x|xs]) <span class="shonkier-operator">-&gt;</span> [f(x)|map(f, xs)]<br />
+<span class="shonkier-function">map</span>(f, []) <span
+class="shonkier-operator">-&gt;</span> []<br />
+<span class="shonkier-function">map</span>(f, [x|xs]) <span
+class="shonkier-operator">-&gt;</span> [f(x)|map(f, xs)]<br />
 <br />
-<span class="shonkier-function">enum</span>(xs<span class="shonkier-operator">@</span>[_|_]) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> <span class="shonkier-primitive">primStringConcat</span>(xs)] [<span class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
-<span class="shonkier-function">enum</span>(xs) <span class="shonkier-operator">-&gt;</span> [[<span class="shonkier-atom">'Plain</span> xs]]<br />
+<span class="shonkier-function">enum</span>(xs<span
+class="shonkier-operator">@</span>[_|_]) <span
+class="shonkier-operator">-&gt;</span> [[<span
+class="shonkier-atom">'Plain</span> <span
+class="shonkier-primitive">primStringConcat</span>(xs)] [<span
+class="shonkier-atom">'BulletList</span>|map(enum, xs)]]<br />
+<span class="shonkier-function">enum</span>(xs) <span
+class="shonkier-operator">-&gt;</span> [[<span
+class="shonkier-atom">'Plain</span> xs]]<br />
 <br />
-<span class="shonkier-function">test</span>() <span class="shonkier-operator">-&gt;</span> [<span class="shonkier-atom">'Div</span> [<span class="shonkier-string">"Enums"</span> []]|enum([<span class="shonkier-string">"A"</span> [[<span class="shonkier-string">"b"</span> <span class="shonkier-string">"c"</span>] <span class="shonkier-string">"d"</span>]])]
+<span class="shonkier-function">test</span>() <span
+class="shonkier-operator">-&gt;</span> [<span
+class="shonkier-atom">'Div</span> [<span
+class="shonkier-string">"Enums"</span> []]|enum([<span
+class="shonkier-string">"A"</span> [[<span
+class="shonkier-string">"b"</span> <span
+class="shonkier-string">"c"</span>] <span
+class="shonkier-string">"d"</span>]])]
 </div>
 </form>
 </body>

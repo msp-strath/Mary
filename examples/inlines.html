@@ -49,14 +49,17 @@
   globalEnv["primUnpickle"] = {};
   globalEnv["primUnpickle"]["."] = VPrim("primUnpickle",[]);
   globalEnv["testBlock"] = {};
-  globalEnv["testBlock"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Atom("Space"),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Nil())),Nil())))))]);
+  globalEnv["testBlock"]["."] =
+  VFun(null,{},[],[Clause([],Cell(Atom("Para"),Cell(Stringy("Hello"),Cell(Atom("Space"),Cell(Cell(Atom("Strong"),Cell(Stringy("World"),Nil())),Nil())))))]);
   globalEnv["testInline"] = {};
-  globalEnv["testInline"]["."] = VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Nil())))]);
+  globalEnv["testInline"]["."] =
+  VFun(null,{},[],[Clause([],Cell(Atom("Emph"),Cell(Stringy("blether"),Nil())))]);
   </script>
   <script>
   var inputs = {};
   inputs["GET_page"] = "examples/inlines.mary";
-  inputs["baseURL"] = "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
+  inputs["baseURL"] =
+  "https://personal.cis.strath.ac.uk/conor.mcbride/shib/Mary/";
   inputs["sitesRoot"] = ".";
   inputs["user"] = "testymctestyface";
   </script>
@@ -64,7 +67,8 @@
 </head>
 <body>
 <form method="post">
-<h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as Fenced Code Blocks</h1>
+<h1 id="embedding-programs-as-fenced-code-blocks">Embedding Programs as
+Fenced Code Blocks</h1>
 <p><input type=text name="foo"></p>
 <p>Hello <strong>World</strong></p>
 <p>Perhaps this will achieve some <em>blether</em>.</p>
