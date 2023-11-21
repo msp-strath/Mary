@@ -72,7 +72,7 @@ library
                      , mtl >=2 && <3
                      , newtype >=0.2 && <0.3
                      , pandoc-types >=1.23 && <1.24
-                     , prettyprinter >=1.6 && <1.7
+                     , prettyprinter >=1.7 && <1.8
                      , process >=1.6 && <1.7
                      , uri-encode >=1.5 && <1.6
                      , text >=1.2 && <2.2
@@ -147,7 +147,7 @@ executable mary
                      , mtl >=2 && <3
                      , optparse-applicative >= 0.13 && < 0.18
                      , pandoc-types >=1.23 && <1.24
-                     , prettyprinter >=1.6 && <1.7
+                     , prettyprinter >=1.7 && <1.8
                      , text >=1.2 && <2.2
 
   -- LANGUAGE extensions used by modules in this package.
