@@ -8,7 +8,6 @@ import Data.Foldable (fold)
 import Data.Function (on)
 import Data.List (nub, groupBy, sortBy, stripPrefix)
 import qualified Data.Map as Map
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text.IO as TIO

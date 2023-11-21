@@ -7,7 +7,6 @@ import Control.Applicative
 
 import Data.Maybe (fromMaybe)
 import Data.Map (singleton, (!?), keysSet)
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
 

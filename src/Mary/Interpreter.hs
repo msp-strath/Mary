@@ -2,20 +2,13 @@
 
 module Mary.Interpreter where
 
-import Control.Monad.Trans (MonadIO)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
-import Control.Monad.State  (StateT, evalStateT, modify, gets)
-import Control.Monad.Reader (ReaderT, runReaderT, asks, local)
-import Control.Monad.Writer (Writer, runWriter, tell)
-import Control.Newtype
+import Control.Monad.State  (StateT, evalStateT, modify)
+import Control.Monad.Reader (ReaderT, runReaderT, local)
 
-import Data.Attoparsec.Text
-import Data.Foldable
-import Data.List as L
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
-import Data.Monoid (First(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -27,10 +20,9 @@ import Shonkier.Pretty.Render.Pandoc (render)
 import Shonkier.Syntax (RawModule)
 
 import Text.Pandoc.Builder
-import Text.Pandoc.Walk
 
-import System.Directory
-import System.FilePath
+-- import System.Directory
+-- import System.FilePath
 
 newtype StoreName = StoreName { getStoreName :: Text } deriving Show
 newtype MaryExpr = MaryExpr { getMaryExpr :: Text } deriving Show
@@ -128,7 +120,7 @@ getPOST inputs x = M.lookup ("POST_" <> x) inputs
 
 metaToInputValues :: Meta -> Map Text Text
 metaToInputValues (Meta m) = M.map grab m where
-  grab (MetaInlines xs) = T.concat $ L.map inlineToString xs
+  grab (MetaInlines xs) = T.concat $ map inlineToString xs
   grab x = error $
     "IMPOSSIBLE non-string meta value " ++ show x
 
@@ -182,6 +174,7 @@ instance Interpretable Block Block where
           modify (Module mod :)
           -- TODO: distinguish raw keep vs. syntax highlighting?
           pure $ if "keep" `elem` cls then nullBlock else render (pretty mod)
+        MaryData -> _
       (Nothing, attr) -> pure (CodeBlock attr txt)
     Div attr bs -> undefined
     -- structural

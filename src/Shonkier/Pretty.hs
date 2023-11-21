@@ -11,12 +11,11 @@ import Data.Function
 import qualified Data.Map as Map
 import Data.List (isPrefixOf, intersperse, groupBy, stripPrefix)
 import Data.Ratio
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Text.Prettyprint.Doc hiding (Doc, Pretty, pretty, prettyList, semi)
-import qualified Data.Text.Prettyprint.Doc as P
-import Data.Text.Prettyprint.Doc.Render.String (renderString)
+import Prettyprinter hiding (Doc, Pretty, pretty, prettyList, semi)
+import qualified Prettyprinter as P
+import Prettyprinter.Render.String (renderString)
 
 import Shonkier.FreeVars
 import Shonkier.Syntax

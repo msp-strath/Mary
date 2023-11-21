@@ -1,8 +1,7 @@
 module Shonkier.Pretty.Render.Pandoc where
 
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
-import Data.Text.Prettyprint.Doc hiding (Doc)
-import Data.Text.Prettyprint.Doc.Render.Util.SimpleDocTree
+import Prettyprinter hiding (Doc)
+import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Pandoc.Builder
 import Data.Text (Text)
 import qualified Data.Text as T
