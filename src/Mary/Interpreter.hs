@@ -5,6 +5,7 @@ module Mary.Interpreter where
 import Control.Monad.Trans (MonadIO)
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Control.Monad.Reader (ReaderT, runReaderT, asks,local)
+import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Newtype
 
 import Data.Attoparsec.Text
@@ -25,8 +26,58 @@ import Text.Pandoc.Walk
 import System.Directory
 import System.FilePath
 
+newtype StoreName = StoreName { getStoreName :: Text } deriving Show
+newtype MaryExpr = MaryExpr { getMaryExpr :: Text } deriving Show
+newtype ClassName = ClassName { getClassName :: Text } deriving Show
 
-type MaryM = ReaderT MaryCtxt IO
+-- | Attached to code blocks and code spans
+data MaryCodeAttr
+  = MaryDefn
+  | MaryData
+
+isMaryCodeAttr :: Text -> Maybe MaryCodeAttr
+isMaryCodeAttr cl
+  | cl == "mary-def" = pure MaryDefn
+  | cl == "mary-data" = pure MaryData
+  | otherwise = Nothing
+
+-- | Attached to divs and spans to contextualise their content
+data MaryOutAttr
+  = MaryApply MaryExpr
+  | MaryStore StoreName -- read/write
+  | CodeDefault ClassName
+  deriving Show
+
+isMaryOutAttr :: (Text, Text) -> Maybe MaryOutAttr
+isMaryOutAttr (k, v)
+  | k == "mary-apply" = pure (MaryApply (MaryExpr v))
+  | k == "mary-store" = pure (MaryStore (StoreName v))
+  | k == "code-default" = pure (CodeDefault (ClassName v))
+  | otherwise = Nothing
+
+partitionMaybe :: (a -> Maybe b) -> [a] -> ([a], [b])
+partitionMaybe p = foldMap $ \ a -> case p a of
+  Nothing -> ([a], [])
+  Just b -> ([], [b])
+
+instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryOutAttr]), Attr) where
+  interpret (id, cls, kvs)
+     = let (cls', cattrs) = partitionMaybe isMaryCodeAttr cls in
+       let (kvs', oattrs) = partitionMaybe isMaryOutAttr kvs in
+       let attr = (id, cls', kvs') in
+       case cattrs of
+         [] -> pure ((Nothing, oattrs), attr)
+         [cattr] -> pure ((Just cattr, oattrs), attr)
+         _ : _ : _ -> throwError MoreThanOneCodeAttribute
+
+  extract = snd
+
+data MaryError
+  = MoreThanOneCodeAttribute
+  | OutAttributesInACodeBlock [MaryOutAttr]
+  deriving Show
+
+type MaryM = ReaderT MaryCtxt (ExceptT MaryError IO)
 
 data MaryCtxt = MaryCtxt
   { page :: Text
@@ -36,8 +87,10 @@ data MaryCtxt = MaryCtxt
   , inputs :: Map Text Text
   }
 
-runMaryM :: MaryM x -> IO x
-runMaryM = flip runReaderT undefined
+runMaryM :: MaryM x -> IO (Either MaryError x)
+runMaryM
+  = runExceptT
+  . flip runReaderT undefined
 
 class Interpretable a b where
   interpret :: a -> MaryM b
@@ -95,9 +148,16 @@ instance Interpretable TableBody TableBody where
 instance Interpretable TableFoot TableFoot where
   interpret = pure -- TODO
 
+isMaryCode :: Attr -> MaryM (Maybe MaryCodeAttr, Attr)
+isMaryCode attr = interpret attr >>= \case
+  ((mb, []), attr) -> pure (mb, attr)
+  ((_, oattrs), _) -> throwError (OutAttributesInACodeBlock oattrs)
+
 instance Interpretable Block Block where
   interpret = \case
-    CodeBlock attr txt -> _
+    CodeBlock attr txt -> isMaryCode attr >>= \case
+      (Just cb, attr) -> _happy
+      (Nothing, attr) -> pure (CodeBlock attr txt)
     Div attr bs -> _
     -- structural
     Plain is -> Plain <$> interpret is
@@ -120,7 +180,9 @@ instance Interpretable Block Block where
 
 instance Interpretable Inline Inline where
   interpret = \case
-    Code attr txt -> _
+    Code attr txt -> isMaryCode attr >>= \case
+      (Just cb, attr) -> _happy2
+      (Nothing, attr) -> pure (Code attr txt)
     Span attr is -> _
     -- structural
     Emph is -> Emph <$> interpret is
@@ -156,4 +218,8 @@ instance Interpretable a b => Interpretable [a] [b] where
   extract = map extract
 
 process :: Pandoc -> IO Pandoc
-process = runMaryM . interpret
+process pdoc = do
+  pdoc' <- runMaryM (interpret pdoc)
+  case pdoc' of
+    Left err -> error (show err)
+    Right pdoc -> pure pdoc
