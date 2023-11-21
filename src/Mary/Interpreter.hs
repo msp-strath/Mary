@@ -3,9 +3,10 @@
 module Mary.Interpreter where
 
 import Control.Monad.Trans (MonadIO)
-import Control.Monad.Writer (Writer, runWriter, tell)
-import Control.Monad.Reader (ReaderT, runReaderT, asks,local)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
+import Control.Monad.State  (StateT, evalStateT, modify, gets)
+import Control.Monad.Reader (ReaderT, runReaderT, asks, local)
+import Control.Monad.Writer (Writer, runWriter, tell)
 import Control.Newtype
 
 import Data.Attoparsec.Text
@@ -19,6 +20,11 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Network.URI.Encode as URI
+
+import Shonkier.Parser (getMeAModule)
+import Shonkier.Pretty (pretty)
+import Shonkier.Pretty.Render.Pandoc (render)
+import Shonkier.Syntax (RawModule)
 
 import Text.Pandoc.Builder
 import Text.Pandoc.Walk
@@ -77,7 +83,16 @@ data MaryError
   | OutAttributesInACodeBlock [MaryOutAttr]
   deriving Show
 
-type MaryM = ReaderT MaryCtxt (ExceptT MaryError IO)
+type MaryM
+  = ReaderT MaryCtxt
+  ( StateT  MaryState
+  ( (ExceptT MaryError IO)))
+
+data MaryDefinition
+  = Module RawModule
+  | DivTemplate Text Attr [Block]
+
+type MaryState = [MaryDefinition]
 
 data MaryCtxt = MaryCtxt
   { page :: Text
@@ -90,6 +105,7 @@ data MaryCtxt = MaryCtxt
 runMaryM :: MaryM x -> IO (Either MaryError x)
 runMaryM
   = runExceptT
+  . flip evalStateT []
   . flip runReaderT undefined
 
 class Interpretable a b where
@@ -153,12 +169,21 @@ isMaryCode attr = interpret attr >>= \case
   ((mb, []), attr) -> pure (mb, attr)
   ((_, oattrs), _) -> throwError (OutAttributesInACodeBlock oattrs)
 
+-- TODO: is this the best way to do it?
+nullBlock :: Block
+nullBlock = Plain []
+
 instance Interpretable Block Block where
   interpret = \case
     CodeBlock attr txt -> isMaryCode attr >>= \case
-      (Just cb, attr) -> _happy
+      (Just cb, attr@(_, cls, _)) -> case cb of
+        MaryDefn -> do
+          let mod = getMeAModule txt
+          modify (Module mod :)
+          -- TODO: distinguish raw keep vs. syntax highlighting?
+          pure $ if "keep" `elem` cls then nullBlock else render (pretty mod)
       (Nothing, attr) -> pure (CodeBlock attr txt)
-    Div attr bs -> _
+    Div attr bs -> undefined
     -- structural
     Plain is -> Plain <$> interpret is
     Para is -> Para <$> interpret is
@@ -181,9 +206,9 @@ instance Interpretable Block Block where
 instance Interpretable Inline Inline where
   interpret = \case
     Code attr txt -> isMaryCode attr >>= \case
-      (Just cb, attr) -> _happy2
+      (Just cb, attr) -> undefined
       (Nothing, attr) -> pure (Code attr txt)
-    Span attr is -> _
+    Span attr is -> undefined
     -- structural
     Emph is -> Emph <$> interpret is
     Underline is -> Underline <$> interpret is
