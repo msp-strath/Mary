@@ -6,10 +6,8 @@ module Mary.Find
 
 import Data.PHPSession
 import Data.ByteString.Lazy as B (getContents, toStrict)
-import Data.HashMap.Strict as H
 import Data.List as L
 import Data.Yaml as Y
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 import Data.Text.IO as TIO
 import Data.Text.Encoding

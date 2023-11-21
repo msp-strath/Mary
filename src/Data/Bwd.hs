@@ -1,7 +1,5 @@
 module Data.Bwd where
 
-import Data.Semigroup (Semigroup, (<>)) -- needed for ghc versions <= 8.2.2
-
 data Bwd a
   = B0
   | Bwd a :< a
