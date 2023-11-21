@@ -13,7 +13,6 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
 import Data.Monoid (First(..))
-import Data.Semigroup ((<>)) -- needed for ghc versions <= 8.2.2
 import Data.Text as T
 
 import Network.URI.Encode as URI

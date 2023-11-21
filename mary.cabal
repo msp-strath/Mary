@@ -121,6 +121,7 @@ library
                      , FlexibleContexts
                      , FlexibleInstances
                      , FunctionalDependencies
+                     , GADTs
                      , GeneralizedNewtypeDeriving
                      , LambdaCase
                      , MultiParamTypeClasses
