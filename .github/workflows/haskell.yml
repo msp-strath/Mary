@@ -44,14 +44,6 @@ jobs:
         path: ~/.ghc/
         key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-${{ hashFiles('**/mary.cabal') }}
 
-    - uses: r-lib/actions/setup-pandoc@v1
-      name: Install pandoc
-      with:
-        pandoc-version: '3.0'
-
-    - name: Install graphviz
-      run: sudo apt-get install graphviz
-
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
@@ -63,6 +55,14 @@ jobs:
 
     - name: New install dependencies
       run: cabal install --only-dependencies
+
+    - name: Install pandoc
+      uses: r-lib/actions/setup-pandoc@v1
+      with:
+        pandoc-version: '3.0'
+
+    - name: Install graphviz
+      run: sudo apt-get install graphviz
 
     - name: New build mary
       run: |
