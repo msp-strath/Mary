@@ -30,13 +30,15 @@ newtype ClassName = ClassName { getClassName :: Text } deriving Show
 
 -- | Attached to code blocks and code spans
 data MaryCodeAttr
-  = MaryDefn
-  | MaryData
+  = MaryData
+  | MaryDefn
+  | MaryEval
 
 isMaryCodeAttr :: Text -> Maybe MaryCodeAttr
 isMaryCodeAttr cl
-  | cl == "mary-def" = pure MaryDefn
   | cl == "mary-data" = pure MaryData
+  | cl == "mary-def" = pure MaryDefn
+  | cl `elem` ["mary", "mary-eval"] = pure MaryEval -- TODO: get rid of "mary"
   | otherwise = Nothing
 
 -- | Attached to divs and spans to contextualise their content
@@ -175,6 +177,7 @@ instance Interpretable Block Block where
           -- TODO: distinguish raw keep vs. syntax highlighting?
           pure $ if "keep" `elem` cls then nullBlock else render (pretty mod)
         MaryData -> _
+        MaryEval -> _
       (Nothing, attr) -> pure (CodeBlock attr txt)
     Div attr bs -> undefined
     -- structural
