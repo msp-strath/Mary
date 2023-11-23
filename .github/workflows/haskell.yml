@@ -67,6 +67,7 @@ jobs:
     - name: New build mary
       run: |
         cabal build --enable-tests
+        cabal install --enable-tests
         cp ~/.cabal/bin/mary .
 
     - name: Run tests
