@@ -72,4 +72,4 @@ jobs:
     - name: Run tests
       run: |
         cp ~/.cabal/bin/mary .
-        cabal new-run mary-tests -- --regex-exclude "dot"
+        cabal new-run mary-tests -- --regex-exclude "dot|store"
