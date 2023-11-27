@@ -67,8 +67,9 @@ jobs:
     - name: New build mary
       run: |
         cabal build --enable-tests
+        cabal install --overwrite-policy=always
 
     - name: Run tests
       run: |
-        export PATH=$PATH:~/.cabal/bin/
+        cp ~/.cabal/bin/mary .
         cabal new-run mary-tests -- --regex-exclude "dot"
