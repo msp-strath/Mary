@@ -176,8 +176,8 @@ instance Interpretable Block Block where
           modify (Module mod :)
           -- TODO: distinguish raw keep vs. syntax highlighting?
           pure $ if "keep" `elem` cls then nullBlock else render (pretty mod)
-        MaryData -> _
-        MaryEval -> _
+        MaryData -> undefined
+        MaryEval -> undefined
       (Nothing, attr) -> pure (CodeBlock attr txt)
     Div attr bs -> undefined
     -- structural

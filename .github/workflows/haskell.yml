@@ -5,28 +5,29 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: true
       matrix:
-        ghc: ['8.10.1', '8.8.1', '8.6.5', '8.4.4', '8.2.2', '8.0.2']
+        ghc: ['9.8', '9.6', '9.4', '9.2', '9.0', '8.10']
         include:
-          - ghc: '8.10.1'
-            cabal: '3.2'
-          - ghc: '8.8.1'
-            cabal: '3.0'
-          - ghc: '8.6.5'
-            cabal: '3.0'
-          - ghc: '8.4.4'
-            cabal: '2.2'
-          - ghc: '8.2.2'
-            cabal: '2.2'
-          - ghc: '8.0.2'
-            cabal: '2.2'
+          - ghc: '9.8'
+            cabal: '3.10'
+          - ghc: '9.6'
+            cabal: '3.10'
+          - ghc: '9.4'
+            cabal: '3.10'
+          - ghc: '9.2'
+            cabal: '3.10'
+          - ghc: '9.0'
+            cabal: '3.10'
+          - ghc: '8.10'
+            cabal: '3.10'
 
     steps:
     - uses: actions/checkout@v2
 
-    - uses: actions/setup-haskell@v1
+    - uses: haskell-actions/setup@v2
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
@@ -43,45 +44,32 @@ jobs:
         path: ~/.ghc/
         key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-${{ hashFiles('**/mary.cabal') }}
 
-    - uses: r-lib/actions/setup-pandoc@v1
-      name: Install pandoc
-      with:
-        pandoc-version: '2.9'
-
-    - name: Install graphviz
-      run: sudo apt-get install graphviz
-
     - name: Remove existing mary binary
       run: rm -f ~/.cabal/bin/mary
 
     - name: Cabal update
       run: cabal update
 
-    - name: Legacy install dependencies
-      if: matrix.cabal < '3.0'
-      run: cabal install --only-dependencies --enable-tests
-
     - name: Configure mary
       run: cabal configure --enable-tests
 
     - name: New install dependencies
-      if: matrix.cabal >= '3.0'
       run: cabal install --only-dependencies
 
-    - name: New build mary
-      if: matrix.cabal >= '3.0'
-      run: |
-        cabal install
-        cabal build --enable-tests
-        cp ~/.cabal/bin/mary .
+    - name: Install pandoc
+      uses: r-lib/actions/setup-pandoc@v1
+      with:
+        pandoc-version: '3.0'
 
-    - name: Legacy build mary
-      if: matrix.cabal < '3.0'
+    - name: Install graphviz
+      run: sudo apt-get install graphviz
+
+    - name: New build mary
       run: |
-        cabal install --enable-tests
-        cp ~/.cabal/bin/mary .
+        cabal build --enable-tests
+        cabal install --overwrite-policy=always
 
     - name: Run tests
       run: |
-        export PATH=$PATH:~/.cabal/bin/
-        cabal new-run mary-tests -- --regex-exclude "dot"
+        cp ~/.cabal/bin/mary .
+        cabal new-run mary-tests -- --regex-exclude "dot|store"

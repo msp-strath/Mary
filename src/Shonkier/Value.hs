@@ -1,5 +1,6 @@
 module Shonkier.Value where
 
+import Control.Monad (guard)
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Applicative
