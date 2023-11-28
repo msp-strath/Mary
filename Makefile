@@ -8,13 +8,13 @@ SOURCE = $(shell find src -name '*.lhs' -o -name '*.hs')
 # we set the timestamp on the build dir to a long time in the past
 # with 'touch --date "@0"' in case cabal fails.
 CABAL_INSTALL = \
-  cabal v1-install \
+  cabal install --overwrite-policy=always \
   || { touch --date "@0" dist ; \
        exit 42 ; }
 
 install: $(SOURCE)
 	$(CABAL_INSTALL)
-	cp ~/.cabal/bin/mary .
+	ln -sf `which mary` .
 ifeq ("$(wildcard ./config.php)","")
 	@echo "No config.php found, creating one from config.php.sample"
 	cp ./config.php.sample ./config.php
