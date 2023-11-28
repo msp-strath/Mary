@@ -33,19 +33,13 @@ jobs:
         cabal-version: ${{ matrix.cabal }}
 
     - uses: actions/cache@v1
+    - uses: actions/cache@v3
       name: Cache ~/.cabal/
-      with:
-        path: ~/.cabal/
-        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-cabal-${{ hashFiles('**/mary.cabal') }}
-
-    - uses: actions/cache@v1
-      name: Cache ~/.ghc/
-      with:
-        path: ~/.ghc/
-        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-${{ hashFiles('**/mary.cabal') }}
-
-    - name: Remove existing mary binary
-      run: rm -f ~/.cabal/bin/mary
+        with:
+          path: |
+            ~/.cabal/store
+          key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}
 
     - name: Cabal update
       run: cabal update
