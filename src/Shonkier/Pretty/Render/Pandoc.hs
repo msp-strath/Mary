@@ -8,9 +8,18 @@ import qualified Data.Text as T
 
 import Shonkier.Pretty
 
-render :: Doc -> Block
-render = Div ("", ["shonkier-pretty"], []) . pure . Plain
-       . renderTree . treeForm . layoutPretty defaultLayoutOptions
+
+class FromDoc a where
+  render :: Doc -> a
+
+instance FromDoc Inline where
+  render = Span ("", ["shonkier-pretty"], []) . render
+
+instance FromDoc Block where
+  render = Div ("", ["shonkier-pretty"], []) . pure . Plain . render
+
+instance FromDoc [Inline] where
+  render = renderTree . treeForm . layoutPretty defaultLayoutOptions
 
 renderTree :: SimpleDocTree Annotation -> [Inline]
 renderTree = \case

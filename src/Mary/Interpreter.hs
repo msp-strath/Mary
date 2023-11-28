@@ -2,10 +2,12 @@
 
 module Mary.Interpreter where
 
+import Control.Monad (guard)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
-import Control.Monad.State  (StateT, evalStateT, modify)
-import Control.Monad.Reader (ReaderT, runReaderT, local)
+import Control.Monad.State  (StateT, evalStateT, gets, modify)
+import Control.Monad.Reader (ReaderT, runReaderT, local, asks)
 
+import Data.Attoparsec.Text (parseOnly, endOfInput)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -14,10 +16,13 @@ import qualified Data.Text as T
 
 import Network.URI.Encode as URI
 
-import Shonkier.Parser (getMeAModule)
-import Shonkier.Pretty (pretty)
-import Shonkier.Pretty.Render.Pandoc (render)
-import Shonkier.Syntax (RawModule)
+import Shonkier.Pandoc ()
+import Shonkier.Parser (getMeAModule, topTerm)
+import Shonkier.Pretty (pretty, toString)
+import Shonkier.Pretty.Render.Pandoc (render, FromDoc())
+import Shonkier.Syntax (Import, RawModule)
+import Shonkier.Semantics (rawShonkier, handleInputs, handleDot)
+import Shonkier.Value (Computation, Computation'(..), Env, FromValue(..))
 
 import Text.Pandoc.Builder
 
@@ -86,21 +91,45 @@ data MaryDefinition
   = Module RawModule
   | DivTemplate Text Attr [Block]
 
-type MaryState = [MaryDefinition]
+data MaryState = MaryState
+  { definitions :: [MaryDefinition]
+  , imports :: [Import]
+  }
+
+initMaryState :: MaryState
+initMaryState = MaryState
+  { definitions = mempty
+  , imports = mempty
+  }
 
 data MaryCtxt = MaryCtxt
-  { page :: Text
+  { filename :: FilePath
+  , page :: Text
   , sitesRoot :: Text
   , baseURL :: Text
   , user :: Maybe Text
   , inputs :: Map Text Text
+  , environment :: Env
   }
 
-runMaryM :: MaryM x -> IO (Either MaryError x)
-runMaryM
+initMaryCtxt :: FilePath -> MaryCtxt
+initMaryCtxt fp = MaryCtxt
+  { filename = fp
+  , page  = def
+  , sitesRoot  = def
+  , baseURL = def
+  , user = def
+  , inputs = def
+  , environment = mempty
+  }
+  where
+    def = error "INTERNAL ERROR: This should have been overwritten by the interpret instance for Pandoc"
+
+runMaryM :: FilePath -> MaryM x -> IO (Either MaryError x)
+runMaryM fp
   = runExceptT
-  . flip evalStateT []
-  . flip runReaderT undefined
+  . flip evalStateT initMaryState
+  . flip runReaderT (initMaryCtxt fp)
 
 class Interpretable a b where
   interpret :: a -> MaryM b
@@ -142,6 +171,8 @@ instance Interpretable Meta (Meta, MaryCtxt) where
     let sitesRoot = errorOnFail (`M.lookup` inputs) "sitesRoot"
     let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
     let user = M.lookup "user" inputs
+    filename <- asks filename
+    environment <- asks environment
     pure (meta, MaryCtxt {..})
 
   extract = fst
@@ -163,21 +194,20 @@ isMaryCode attr = interpret attr >>= \case
   ((mb, []), attr) -> pure (mb, attr)
   ((_, oattrs), _) -> throwError (OutAttributesInACodeBlock oattrs)
 
--- TODO: is this the best way to do it?
+-- TODO: are these the best way to do it?
 nullBlock :: Block
 nullBlock = Plain []
+
+nullInline :: Inline
+nullInline = Str ""
 
 instance Interpretable Block Block where
   interpret = \case
     CodeBlock attr txt -> isMaryCode attr >>= \case
       (Just cb, attr@(_, cls, _)) -> case cb of
-        MaryDefn -> do
-          let mod = getMeAModule txt
-          modify (Module mod :)
-          -- TODO: distinguish raw keep vs. syntax highlighting?
-          pure $ if "keep" `elem` cls then nullBlock else render (pretty mod)
         MaryData -> undefined
-        MaryEval -> undefined
+        MaryDefn -> fromMaybe nullBlock <$> defnMary cls txt
+        MaryEval -> evalMary txt
       (Nothing, attr) -> pure (CodeBlock attr txt)
     Div attr bs -> undefined
     -- structural
@@ -199,10 +229,54 @@ instance Interpretable Block Block where
     RawBlock fmt txt -> pure (RawBlock fmt txt)
     HorizontalRule -> pure HorizontalRule
 
+defnMary :: FromDoc b => [Text] -> Text -> MaryM (Maybe b)
+defnMary cls txt = do
+  let mod = getMeAModule txt
+  modify (\ st -> st { definitions = Module mod : definitions st })
+  -- TODO: distinguish raw keep vs. syntax highlighting?
+  pure $ do
+    guard ("keep" `elem` cls)
+    pure (render (pretty mod))
+
+
+evalMary :: FromValue b => Text -> MaryM b
+evalMary e =
+  case parseOnly (topTerm <* endOfInput) e of
+    Left err -> error err
+    Right t -> do
+      is <- gets imports
+      fp <- asks filename
+      env@(gl,_) <- asks environment
+      -- TODO: we need to strip off the common var prefix from our term
+      -- lcp <- readPrefixToStrip
+      -- let t' = fmap (stripVarPrefix lcp) t
+      let t' = t
+      go env (rawShonkier is fp gl t')
+  where
+  go :: FromValue b => Env -> Computation -> MaryM b
+  go _ (Value v) = case fromValue v of
+                     Right p  -> pure p
+                     Left foc -> error $ unlines
+                       [ "Invalid value: " ++ show foc
+                       , "in result:"
+                       , toString v
+                       ]
+  go gamma (Request r@(a, vs) k)
+    | a `elem` ["POST", "GET", "meta"] = handleInputs (go gamma) gamma r k
+    | a `elem` ["dot"]                 = handleDot (go gamma) gamma r k
+  go _ r@Request{} = error (show r)
+
+  -- stripVarPrefix :: String -> RawVariable -> RawVariable
+  -- stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
+
+
 instance Interpretable Inline Inline where
   interpret = \case
     Code attr txt -> isMaryCode attr >>= \case
-      (Just cb, attr) -> undefined
+      (Just cb, attr@(_, cls, _)) -> case cb of
+        MaryData -> undefined
+        MaryDefn -> fromMaybe nullInline <$> defnMary cls txt
+        MaryEval -> evalMary txt
       (Nothing, attr) -> pure (Code attr txt)
     Span attr is -> undefined
     -- structural
@@ -238,9 +312,9 @@ instance Interpretable a b => Interpretable [a] [b] where
   interpret = traverse interpret
   extract = map extract
 
-process :: Pandoc -> IO Pandoc
-process pdoc = do
-  pdoc' <- runMaryM (interpret pdoc)
+process :: FilePath -> Pandoc -> IO Pandoc
+process fp pdoc = do
+  pdoc' <- runMaryM fp (interpret pdoc)
   case pdoc' of
     Left err -> error (show err)
     Right pdoc -> pure pdoc
