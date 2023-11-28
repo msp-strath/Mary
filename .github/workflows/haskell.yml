@@ -25,14 +25,14 @@ jobs:
             cabal: '3.10'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      name: Checkout Mary
 
     - uses: haskell-actions/setup@v2
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - uses: actions/cache@v1
     - uses: actions/cache@v3
       name: Cache ~/.cabal/
         with:
@@ -51,7 +51,7 @@ jobs:
       run: cabal install --only-dependencies
 
     - name: Install pandoc
-      uses: r-lib/actions/setup-pandoc@v1
+      uses: r-lib/actions/setup-pandoc@v2
       with:
         pandoc-version: '3.0'
 
