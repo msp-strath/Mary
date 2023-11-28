@@ -25,27 +25,21 @@ jobs:
             cabal: '3.10'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      name: Checkout Mary
 
     - uses: haskell-actions/setup@v2
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - uses: actions/cache@v1
+    - uses: actions/cache@v3
       name: Cache ~/.cabal/
       with:
-        path: ~/.cabal/
-        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-cabal-${{ hashFiles('**/mary.cabal') }}
-
-    - uses: actions/cache@v1
-      name: Cache ~/.ghc/
-      with:
-        path: ~/.ghc/
-        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-ghc-${{ hashFiles('**/mary.cabal') }}
-
-    - name: Remove existing mary binary
-      run: rm -f ~/.cabal/bin/mary
+        path: |
+          ~/.cabal/store
+        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}
 
     - name: Cabal update
       run: cabal update
@@ -57,7 +51,7 @@ jobs:
       run: cabal install --only-dependencies
 
     - name: Install pandoc
-      uses: r-lib/actions/setup-pandoc@v1
+      uses: r-lib/actions/setup-pandoc@v2
       with:
         pandoc-version: '3.0'
 
