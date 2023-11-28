@@ -35,11 +35,11 @@ jobs:
 
     - uses: actions/cache@v3
       name: Cache ~/.cabal/
-        with:
-          path: |
-            ~/.cabal/store
-          key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}
+      with:
+        path: |
+          ~/.cabal/store
+        key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-ghc-${{ matrix.ghc }}-cabal-${{ matrix.cabal }}-${{ hashFiles('**/mary.cabal') }}
 
     - name: Cabal update
       run: cabal update
