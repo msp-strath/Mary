@@ -1,13 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, NamedFieldPuns #-}
 
 module Mary.Interpreter where
 
 import Control.Monad (guard)
-import Control.Monad.Except (ExceptT, runExceptT, throwError)
-import Control.Monad.State  (StateT, evalStateT, gets, modify)
-import Control.Monad.Reader (ReaderT, runReaderT, local, asks)
+import Control.Monad.Except (ExceptT, MonadError(..), runExceptT)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State  (StateT, runStateT, gets, modify)
+import Control.Monad.Reader (ReaderT, runReaderT, local, ask, asks)
+import Control.Monad.Writer (WriterT, runWriterT, tell)
 
 import Data.Attoparsec.Text (parseOnly, endOfInput)
+import Data.Function (on)
+import Data.List (nub, nubBy)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -19,15 +23,15 @@ import Network.URI.Encode as URI
 import Shonkier.Pandoc ()
 import Shonkier.Parser (getMeAModule, topTerm)
 import Shonkier.Pretty (pretty, toString)
-import Shonkier.Pretty.Render.Pandoc (render, FromDoc())
+-- import Shonkier.Pretty.Render.Pandoc (render, FromDoc())
 import Shonkier.Syntax (Import, RawModule)
 import Shonkier.Semantics (rawShonkier, handleInputs, handleDot)
 import Shonkier.Value (Computation, Computation'(..), Env, FromValue(..))
 
 import Text.Pandoc.Builder
 
--- import System.Directory
--- import System.FilePath
+import System.Directory (makeAbsolute)
+import System.FilePath ((</>))
 
 newtype StoreName = StoreName { getStoreName :: Text } deriving Show
 newtype MaryExpr = MaryExpr { getMaryExpr :: Text } deriving Show
@@ -65,18 +69,6 @@ partitionMaybe p = foldMap $ \ a -> case p a of
   Nothing -> ([a], [])
   Just b -> ([], [b])
 
-instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryOutAttr]), Attr) where
-  interpret (id, cls, kvs)
-     = let (cls', cattrs) = partitionMaybe isMaryCodeAttr cls in
-       let (kvs', oattrs) = partitionMaybe isMaryOutAttr kvs in
-       let attr = (id, cls', kvs') in
-       case cattrs of
-         [] -> pure ((Nothing, oattrs), attr)
-         [cattr] -> pure ((Just cattr, oattrs), attr)
-         _ : _ : _ -> throwError MoreThanOneCodeAttribute
-
-  extract = snd
-
 data MaryError
   = MoreThanOneCodeAttribute
   | OutAttributesInACodeBlock [MaryOutAttr]
@@ -86,6 +78,12 @@ type MaryM
   = ReaderT MaryCtxt
   ( StateT  MaryState
   ( (ExceptT MaryError IO)))
+
+type MaryCollectM
+  = ReaderT MaryCtxt
+  ( WriterT  [MaryDefinition]
+  ( (ExceptT MaryError IO)))
+
 
 data MaryDefinition
   = Module RawModule
@@ -102,6 +100,13 @@ initMaryState = MaryState
   , imports = mempty
   }
 
+type ExtraAttr = ([Text], [(Text, Text)])
+
+--TODO: this is broken; we should only add the extra attrs if the current ones are empty
+extraAttr :: Attr -> ExtraAttr -> Attr
+extraAttr (i, cls, kvs) (ecls, ekvs)
+  = (i, nub (cls <> ecls), nubBy ((==) `on` fst) (kvs <> ekvs))
+
 data MaryCtxt = MaryCtxt
   { filename :: FilePath
   , page :: Text
@@ -110,38 +115,57 @@ data MaryCtxt = MaryCtxt
   , user :: Maybe Text
   , inputs :: Map Text Text
   , environment :: Env
+  , defaultCodeAttr :: ExtraAttr
   }
 
-initMaryCtxt :: FilePath -> MaryCtxt
-initMaryCtxt fp = MaryCtxt
-  { filename = fp
+initMaryCtxt :: MaryCtxt
+initMaryCtxt = MaryCtxt
+  { filename = def
   , page  = def
   , sitesRoot  = def
   , baseURL = def
   , user = def
   , inputs = def
   , environment = mempty
+  , defaultCodeAttr = mempty
   }
   where
     def = error "INTERNAL ERROR: This should have been overwritten by the interpret instance for Pandoc"
 
-runMaryM :: FilePath -> MaryM x -> IO (Either MaryError x)
-runMaryM fp
+runMaryM :: MaryM x -> IO (Either MaryError (x, MaryState))
+runMaryM
   = runExceptT
-  . flip evalStateT initMaryState
-  . flip runReaderT (initMaryCtxt fp)
+  . flip runStateT initMaryState
+  . flip runReaderT initMaryCtxt
+
+data Phase m where
+  CollPhase :: Phase MaryCollectM
+  EvalPhase :: Phase MaryM
 
 class Interpretable a b where
-  interpret :: a -> MaryM b
+  interpret :: (Monad m, MonadError MaryError m) => Phase m -> a -> m b
   extract :: b -> a
 
   default extract :: b ~ a => b -> a
   extract = id
 
+instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryOutAttr]), Attr) where
+  interpret ph (id, cls, kvs)
+     = let (cls', cattrs) = partitionMaybe isMaryCodeAttr cls in
+       let (kvs', oattrs) = partitionMaybe isMaryOutAttr kvs in
+       let attr = (id, cls', kvs') in
+       case cattrs of
+         [] -> pure ((Nothing, oattrs), attr)
+         [cattr] -> pure ((Just cattr, oattrs), attr)
+         _ : _ : _ -> throwError MoreThanOneCodeAttribute
+
+  extract = snd
+
+
 instance Interpretable Pandoc Pandoc where
-  interpret (Pandoc meta docs) = do
-    (meta, ctx) <- interpret meta
-    local (const ctx) $ Pandoc meta <$> interpret docs
+  interpret CollPhase (Pandoc meta docs) = do
+    (meta, ctx) <- interpret CollPhase meta
+    local (const ctx) $ Pandoc meta <$> interpret CollPhase docs
 
 getGET :: Map Text Text -> Text -> Maybe Text
 getGET inputs x = M.lookup ("GET_" <> x) inputs
@@ -161,7 +185,7 @@ metaToInputValues (Meta m) = M.map grab m where
     x -> error $ "IMPOSSIBLE non-string inline " ++ show x
 
 instance Interpretable Meta (Meta, MaryCtxt) where
-  interpret meta = do
+  interpret CollPhase meta = do
     let errorOnFail f x =
          let msg = "Meta data '" <> x <> "' missing!" in
          fromMaybe (error (T.unpack msg)) (f x)
@@ -170,29 +194,33 @@ instance Interpretable Meta (Meta, MaryCtxt) where
     let page = errorOnFail (getGET inputs) "page"
     let sitesRoot = errorOnFail (`M.lookup` inputs) "sitesRoot"
     let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
+    filename <- liftIO $ makeAbsolute (T.unpack sitesRoot </> T.unpack page)
     let user = M.lookup "user" inputs
-    filename <- asks filename
-    environment <- asks environment
-    pure (meta, MaryCtxt {..})
+    ctx <- ask
+    pure (meta, ctx { filename, inputs, page, sitesRoot, baseURL, user })
 
   extract = fst
 
 instance Interpretable Caption Caption where
-  interpret = pure -- TODO
+  interpret ph = pure -- TODO
 
 instance Interpretable TableHead TableHead where
-  interpret = pure -- TODO
+  interpret ph = pure -- TODO
 
 instance Interpretable TableBody TableBody where
-  interpret = pure -- TODO
+  interpret ph = pure -- TODO
 
 instance Interpretable TableFoot TableFoot where
-  interpret = pure -- TODO
+  interpret ph = pure -- TODO
 
-isMaryCode :: Attr -> MaryM (Maybe MaryCodeAttr, Attr)
-isMaryCode attr = interpret attr >>= \case
-  ((mb, []), attr) -> pure (mb, attr)
-  ((_, oattrs), _) -> throwError (OutAttributesInACodeBlock oattrs)
+isMaryCode :: (Monad m, MonadError MaryError m) => Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
+isMaryCode ph attr = do
+  defAttr <- case ph of
+    CollPhase -> asks defaultCodeAttr
+    EvalPhase -> asks defaultCodeAttr
+  interpret ph (extraAttr attr defAttr) >>= \case
+    ((mb, []), attr) -> pure (mb, attr)
+    ((_, oattrs), _) -> throwError (OutAttributesInACodeBlock oattrs)
 
 -- TODO: are these the best way to do it?
 nullBlock :: Block
@@ -202,42 +230,43 @@ nullInline :: Inline
 nullInline = Str ""
 
 instance Interpretable Block Block where
-  interpret = \case
-    CodeBlock attr txt -> isMaryCode attr >>= \case
+  interpret ph = \case
+    i@(CodeBlock attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, _)) -> case cb of
         MaryData -> undefined
-        MaryDefn -> fromMaybe nullBlock <$> defnMary cls txt
-        MaryEval -> evalMary txt
+        MaryDefn -> case ph of
+          CollPhase -> i <$ defnMary txt
+          -- TODO: bring back syntax highlighting? (render (pretty mod))
+          EvalPhase -> pure (if "keep" `elem` cls then i else nullBlock)
+        MaryEval -> case ph of
+          CollPhase -> pure i
+          EvalPhase -> evalMary txt
       (Nothing, attr) -> pure (CodeBlock attr txt)
-    Div attr bs -> undefined
+    -- TODO: handle MaryOutAttrs in divs
+    Div attr bs -> Div attr <$> interpret ph bs
     -- structural
-    Plain is -> Plain <$> interpret is
-    Para is -> Para <$> interpret is
-    LineBlock iss -> LineBlock <$> interpret iss
-    BlockQuote bs -> BlockQuote <$> interpret bs
-    OrderedList lattr bss -> OrderedList lattr <$> interpret bss
-    BulletList bss -> BulletList <$> interpret bss
-    DefinitionList ibsss -> DefinitionList <$> interpret ibsss
-    Header i attr is -> Header i attr <$> interpret is
+    Plain is -> Plain <$> interpret ph is
+    Para is -> Para <$> interpret ph is
+    LineBlock iss -> LineBlock <$> interpret ph iss
+    BlockQuote bs -> BlockQuote <$> interpret ph bs
+    OrderedList lattr bss -> OrderedList lattr <$> interpret ph bss
+    BulletList bss -> BulletList <$> interpret ph bss
+    DefinitionList ibsss -> DefinitionList <$> interpret ph ibsss
+    Header i attr is -> Header i attr <$> interpret ph is
     Table attr capt cols th tds tf ->
-      Table attr <$> interpret capt
+      Table attr <$> interpret ph capt
                  <*> pure cols
-                 <*> interpret th
-                 <*> interpret tds
-                 <*> interpret tf
+                 <*> interpret ph th
+                 <*> interpret ph tds
+                 <*> interpret ph tf
     -- pure
     RawBlock fmt txt -> pure (RawBlock fmt txt)
     HorizontalRule -> pure HorizontalRule
 
-defnMary :: FromDoc b => [Text] -> Text -> MaryM (Maybe b)
-defnMary cls txt = do
+defnMary :: Text -> MaryCollectM ()
+defnMary txt = do
   let mod = getMeAModule txt
-  modify (\ st -> st { definitions = Module mod : definitions st })
-  -- TODO: distinguish raw keep vs. syntax highlighting?
-  pure $ do
-    guard ("keep" `elem` cls)
-    pure (render (pretty mod))
-
+  tell [Module mod]
 
 evalMary :: FromValue b => Text -> MaryM b
 evalMary e =
@@ -271,27 +300,33 @@ evalMary e =
 
 
 instance Interpretable Inline Inline where
-  interpret = \case
-    Code attr txt -> isMaryCode attr >>= \case
+  interpret ph = \case
+    i@(Code attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, _)) -> case cb of
         MaryData -> undefined
-        MaryDefn -> fromMaybe nullInline <$> defnMary cls txt
-        MaryEval -> evalMary txt
+        MaryDefn -> case ph of
+          CollPhase -> i <$ defnMary txt
+          -- TODO: bring back syntax highlighting? (render (pretty mod))
+          EvalPhase -> pure (if "keep" `elem` cls then i else nullInline)
+        MaryEval -> case ph of
+          CollPhase -> pure i
+          EvalPhase -> evalMary txt
       (Nothing, attr) -> pure (Code attr txt)
-    Span attr is -> undefined
+    -- TODO: handle MaryOutAttrs in spans
+    Span attr is -> Span attr <$> interpret ph is
     -- structural
-    Emph is -> Emph <$> interpret is
-    Underline is -> Underline <$> interpret is
-    Strong is -> Strong <$> interpret is
-    Strikeout is -> Strikeout <$> interpret is
-    Superscript is -> Superscript <$> interpret is
-    Subscript is -> Subscript <$> interpret is
-    SmallCaps is -> SmallCaps <$> interpret is
-    Quoted qt is -> Quoted qt <$> interpret is
-    Cite ct is -> Cite ct <$> interpret is
-    Link attr is tgt -> Link attr <$> interpret is <*> pure tgt
-    Image attr is tgt -> Image attr <$> interpret is <*> pure tgt
-    Note bs -> Note <$> interpret bs
+    Emph is -> Emph <$> interpret ph is
+    Underline is -> Underline <$> interpret ph is
+    Strong is -> Strong <$> interpret ph is
+    Strikeout is -> Strikeout <$> interpret ph is
+    Superscript is -> Superscript <$> interpret ph is
+    Subscript is -> Subscript <$> interpret ph is
+    SmallCaps is -> SmallCaps <$> interpret ph is
+    Quoted qt is -> Quoted qt <$> interpret ph is
+    Cite ct is -> Cite ct <$> interpret ph is
+    Link attr is tgt -> Link attr <$> interpret ph is <*> pure tgt
+    Image attr is tgt -> Image attr <$> interpret ph is <*> pure tgt
+    Note bs -> Note <$> interpret ph bs
     -- pure
     Str txt -> pure (Str txt)
     Space -> pure Space
@@ -305,16 +340,49 @@ instance
   ( Interpretable a c
   , Interpretable b d
   ) => Interpretable (a, b) (c, d) where
-  interpret (a, b) = (,) <$> interpret a <*> interpret b
+  interpret ph (a, b) = (,) <$> interpret ph a <*> interpret ph b
   extract (c, d) = (extract c, extract d)
 
 instance Interpretable a b => Interpretable [a] [b] where
-  interpret = traverse interpret
+  interpret ph = traverse (interpret ph)
   extract = map extract
 
-process :: FilePath -> Pandoc -> IO Pandoc
-process fp pdoc = do
-  pdoc' <- runMaryM fp (interpret pdoc)
+process :: Pandoc -> IO Pandoc
+process rpdoc = do
+  pdoc' <- runMaryM (interpret EvalPhase rpdoc)
   case pdoc' of
     Left err -> error (show err)
-    Right pdoc -> pure pdoc
+    Right (pdoc, st) -> pure pdoc
+
+{-
+process :: Pandoc -> IO Pandoc
+process doc0@(Pandoc meta docs) = do
+  let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
+  let rm@(is, ps)  = fold [ (is, p)
+                          | ds <- defns
+                          , let (is, p) = maryDefinitionToModule ds
+                          ]
+
+  let inputs = metaToInputValues meta
+  -- we assume that certain metadata exists, put there by mary find
+  let page = errorOnFail (getGET inputs) "page"
+  let sitesRoot = errorOnFail (`M.lookup` inputs) "sitesRoot"
+  let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
+  let user = M.lookup "user" inputs
+
+  fp <- makeAbsolute (T.unpack sitesRoot </> T.unpack page)
+  (_, env, lcp) <- loadToplevelModule fp rm
+  let envdata = EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
+  doc2 <- runReaderT (walkM evalMaryBlock  doc1) envdata
+  doc3 <- runReaderT (walkM evalMaryInline doc2) envdata
+  pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
+       . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
+       . setMeta "jsInputs" (fromList $ Str <$> jsInputs inputs)
+       $ doc3
+
+  where
+  h1 :: Block -> Maybe Inlines
+  h1 (Header 1 _ is) = Just (fromList is)
+  h1 _ = Nothing
+  errorOnFail f x = fromMaybe (error "Meta data '" <> x <> "' missing!") (f x)
+-}
