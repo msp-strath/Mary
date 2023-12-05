@@ -2,11 +2,10 @@
 
 module Mary.Interpreter where
 
-import Control.Monad (guard)
 import Control.Monad.Except (ExceptT, MonadError(..), runExceptT)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State  (StateT, runStateT, gets, modify)
-import Control.Monad.Reader (ReaderT, runReaderT, local, ask, asks)
+import Control.Monad.State  (StateT, runStateT, gets)
+import Control.Monad.Reader (ReaderT, runReaderT, asks)
 import Control.Monad.Writer (WriterT, runWriterT, tell)
 import Control.Newtype (ala')
 
@@ -95,7 +94,7 @@ data MaryWriter = MaryWriter
   }
 
 type MaryCollectM
-  = ReaderT MaryCtxt
+  = ReaderT DefaultCodeAttr
   ( WriterT ([MaryDefinition] -> [MaryDefinition], First MaryWriter)
   ( ExceptT MaryError IO))
 
@@ -118,7 +117,7 @@ type DefaultCodeAttr = (Maybe MaryCodeAttr, ([Text], [(Text, Text)]))
 
 fromDefaultCodeAttr :: Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
 fromDefaultCodeAttr ph (id0, cls0, kvs0) = case ph of
-  CollPhase -> asks (cast . defaultCodeAttr)
+  CollPhase -> asks cast
   EvalPhase -> asks (cast . defaultCodeAttr)
 
   where
@@ -141,21 +140,6 @@ data MaryCtxt = MaryCtxt
   , defaultCodeAttr :: DefaultCodeAttr
   }
 
-initMaryCtxt :: MaryCtxt
-initMaryCtxt = MaryCtxt
-  { commonPrefix = def
-  , filename = def
-  , page  = def
-  , sitesRoot  = def
-  , baseURL = def
-  , user = def
-  , inputs = def
-  , environment = mempty
-  , defaultCodeAttr = (Nothing, mempty)
-  }
-  where
-    def = error "INTERNAL ERROR: This should have been overwritten by the interpret instance for Pandoc"
-
 runMaryM :: MaryCtxt -> MaryM x -> IO (Either MaryError (x, MaryState))
 runMaryM ctx
   = runExceptT
@@ -171,7 +155,7 @@ runMaryCollectM
              (defs, First Nothing)  -> error "The IMPOSSIBLE has happened"
              (defs, First (Just w)) -> (defs [], w))
   . runWriterT
-  . flip runReaderT initMaryCtxt -- TODO: only have defaultcodeattr
+  . flip runReaderT (Nothing, mempty)
 
 data Phase m where
   CollPhase :: Phase MaryCollectM
