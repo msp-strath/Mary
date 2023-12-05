@@ -10,6 +10,7 @@ import Control.Monad.Reader (ReaderT, runReaderT, local, ask, asks)
 import Control.Monad.Writer (WriterT, runWriterT, tell)
 
 import Data.Attoparsec.Text (parseOnly, endOfInput)
+import Data.Foldable (fold)
 import Data.Function (on)
 import Data.List (nub, nubBy)
 import Data.Map (Map)
@@ -21,10 +22,10 @@ import qualified Data.Text as T
 import Network.URI.Encode as URI
 
 import Shonkier.Pandoc ()
-import Shonkier.Parser (getMeAModule, topTerm)
+import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation)
 import Shonkier.Pretty (pretty, toString)
 -- import Shonkier.Pretty.Render.Pandoc (render, FromDoc())
-import Shonkier.Syntax (Import, RawModule)
+import Shonkier.Syntax (Import, RawModule, Clause'((:->)), Rhs'((:?>)), toRawTerm)
 import Shonkier.Semantics (rawShonkier, handleInputs, handleDot)
 import Shonkier.Value (Computation, Computation'(..), Env, FromValue(..))
 
@@ -100,12 +101,20 @@ initMaryState = MaryState
   , imports = mempty
   }
 
-type ExtraAttr = ([Text], [(Text, Text)])
+type DefaultCodeAttr = (Maybe MaryCodeAttr, ([Text], [(Text, Text)]))
 
---TODO: this is broken; we should only add the extra attrs if the current ones are empty
-extraAttr :: Attr -> ExtraAttr -> Attr
-extraAttr (i, cls, kvs) (ecls, ekvs)
-  = (i, nub (cls <> ecls), nubBy ((==) `on` fst) (kvs <> ekvs))
+fromDefaultCodeAttr :: Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
+fromDefaultCodeAttr ph (id0, cls0, kvs0) = case ph of
+  CollPhase -> asks (cast . defaultCodeAttr)
+  EvalPhase -> asks (cast . defaultCodeAttr)
+
+  where
+    cast :: DefaultCodeAttr -> (Maybe MaryCodeAttr, Attr)
+    cast (mb, (cls1, kvs1))
+      = ( mb
+        , ( id0
+          , nub (cls0 <> cls1)
+          , nubBy ((==) `on` fst) (kvs0 <> kvs1)))
 
 data MaryCtxt = MaryCtxt
   { filename :: FilePath
@@ -115,7 +124,7 @@ data MaryCtxt = MaryCtxt
   , user :: Maybe Text
   , inputs :: Map Text Text
   , environment :: Env
-  , defaultCodeAttr :: ExtraAttr
+  , defaultCodeAttr :: DefaultCodeAttr
   }
 
 initMaryCtxt :: MaryCtxt
@@ -127,7 +136,7 @@ initMaryCtxt = MaryCtxt
   , user = def
   , inputs = def
   , environment = mempty
-  , defaultCodeAttr = mempty
+  , defaultCodeAttr = (Nothing, mempty)
   }
   where
     def = error "INTERNAL ERROR: This should have been overwritten by the interpret instance for Pandoc"
@@ -138,12 +147,18 @@ runMaryM
   . flip runStateT initMaryState
   . flip runReaderT initMaryCtxt
 
+runMaryCollectM :: MaryCollectM x -> IO (Either MaryError (x, [MaryDefinition]))
+runMaryCollectM
+  = runExceptT
+  . runWriterT
+  . flip runReaderT initMaryCtxt
+
 data Phase m where
   CollPhase :: Phase MaryCollectM
   EvalPhase :: Phase MaryM
 
 class Interpretable a b where
-  interpret :: (Monad m, MonadError MaryError m) => Phase m -> a -> m b
+  interpret :: Monad m => Phase m -> a -> m b
   extract :: b -> a
 
   default extract :: b ~ a => b -> a
@@ -157,7 +172,7 @@ instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryOutAttr]), Attr) where
        case cattrs of
          [] -> pure ((Nothing, oattrs), attr)
          [cattr] -> pure ((Just cattr, oattrs), attr)
-         _ : _ : _ -> throwError MoreThanOneCodeAttribute
+         _ : _ : _ -> throwMaryError ph MoreThanOneCodeAttribute
 
   extract = snd
 
@@ -213,14 +228,18 @@ instance Interpretable TableBody TableBody where
 instance Interpretable TableFoot TableFoot where
   interpret ph = pure -- TODO
 
-isMaryCode :: (Monad m, MonadError MaryError m) => Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
+{-# INLINE throwMaryError #-}
+throwMaryError :: Phase m -> MaryError -> m a
+throwMaryError CollPhase = throwError
+throwMaryError EvalPhase = throwError
+
+isMaryCode :: Monad m => Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
 isMaryCode ph attr = do
-  defAttr <- case ph of
-    CollPhase -> asks defaultCodeAttr
-    EvalPhase -> asks defaultCodeAttr
-  interpret ph (extraAttr attr defAttr) >>= \case
+  -- /!\ This interpret better be pure (apart from raising errors)!
+  interpret ph attr >>= \case
+    ((Nothing, []), attr) -> fromDefaultCodeAttr ph attr
     ((mb, []), attr) -> pure (mb, attr)
-    ((_, oattrs), _) -> throwError (OutAttributesInACodeBlock oattrs)
+    ((_, oattrs), _) -> throwMaryError ph (OutAttributesInACodeBlock oattrs)
 
 -- TODO: are these the best way to do it?
 nullBlock :: Block
@@ -347,12 +366,27 @@ instance Interpretable a b => Interpretable [a] [b] where
   interpret ph = traverse (interpret ph)
   extract = map extract
 
+maryDefinitionToModule :: MaryDefinition -> RawModule
+maryDefinitionToModule = \case
+  Module mod                -> mod
+  DivTemplate decl attr div ->
+    let funDecl        = (,) <$> identifier <*> argTuple pcomputation
+        Right (nm, ps) = parseOnly funDecl decl
+    in ([], [(nm, Right (ps :-> [Nothing :?> toRawTerm (Div attr div)]))])
+
+successfully :: Either MaryError a -> IO a
+successfully (Left err) = error (show err)
+successfully (Right x) = pure x
+
 process :: Pandoc -> IO Pandoc
 process rpdoc = do
-  pdoc' <- runMaryM (interpret EvalPhase rpdoc)
-  case pdoc' of
-    Left err -> error (show err)
-    Right (pdoc, st) -> pure pdoc
+  (pdoc0, defns) <- successfully =<< runMaryCollectM (interpret CollPhase rpdoc)
+  let rm@(is, ps) = fold [ (is, p)
+                         | ds <- defns
+                         , let (is, p) = maryDefinitionToModule ds
+                         ]
+  (pdoc1, _) <- successfully =<< runMaryM (interpret EvalPhase (pdoc0 :: Pandoc))
+  pure pdoc1
 
 {-
 process :: Pandoc -> IO Pandoc
