@@ -37,7 +37,7 @@ import Text.Pandoc.Builder
 import Text.Pandoc.Walk (query)
 
 import System.Directory (makeAbsolute)
-import System.FilePath ((</>))
+import System.FilePath ((</>), joinPath)
 
 newtype StoreName = StoreName { getStoreName :: Text } deriving Show
 newtype MaryExpr = MaryExpr { getMaryExpr :: Text } deriving Show
@@ -269,7 +269,7 @@ instance Interpretable Block Block where
   interpret ph = \case
     i@(CodeBlock attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, _)) -> case cb of
-        MaryData -> undefined
+        MaryData -> pure i -- TODO
         MaryDefn -> case ph of
           CollPhase -> do (_ :: Maybe Block) <- defnMary ph cls txt
                           pure i
@@ -341,7 +341,7 @@ instance Interpretable Inline Inline where
   interpret ph = \case
     i@(Code attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, _)) -> case cb of
-        MaryData -> undefined
+        MaryData -> pure i -- TODO
         MaryDefn -> case ph of
           CollPhase -> do (_ :: Maybe Inline) <- defnMary ph cls txt
                           pure i
