@@ -363,8 +363,8 @@ instance Interpretable Inline Inline where
     SmallCaps is -> SmallCaps <$> interpret ph is
     Quoted qt is -> Quoted qt <$> interpret ph is
     Cite ct is -> Cite ct <$> interpret ph is
-    Link attr is tgt -> Link attr <$> interpret ph is <*> pure tgt
-    Image attr is tgt -> Image attr <$> interpret ph is <*> pure tgt
+    Link attr is tgt -> Link attr <$> interpret ph is <*> makeAbsRef ph tgt
+    Image attr is tgt -> Image attr <$> interpret ph is <*> makeAbsRef ph tgt
     Note bs -> Note <$> interpret ph bs
     -- pure
     Str txt -> pure (Str txt)
@@ -374,6 +374,38 @@ instance Interpretable Inline Inline where
     Math mty txt -> pure (Math mty txt)
     RawInline fmt txt -> pure (RawInline fmt txt)
 
+
+makeAbsRef :: Phase m -> Target -> m Target
+makeAbsRef CollPhase tgt = pure tgt
+makeAbsRef EvalPhase (url, title) = do
+  absUrl <- if isAbsolute url then pure url -- keep it as is
+    else do
+      baseURL <- asks baseURL
+      page <- asks page
+      let thing = if isPub url then "?pub" else "?page"
+      -- if current page is eg repo/lectures/bonus/two.md and requested
+      -- URL is eg ../../basic/notes.pdf, new URL is repo/basic/notes.pdf
+      let newUrl = joinPathT $ normalise (init (T.splitOn "/" page))
+                                 (filter (/= ".")  (T.splitOn "/" url))
+      pure $ T.concat [baseURL, thing, "=", newUrl]
+  pure (absUrl, title)
+  where
+    isAbsolute t = or (fmap (`T.isPrefixOf` t)
+                        ["https://", "http://", "ftp://", "//", "mailto:", "tel:"]) -- TODO: make more generic?
+    isPub t      = ("pub/" `T.isPrefixOf` t || "/pub/" `T.isInfixOf` t)
+                     && (not $ "pub/" `T.isSuffixOf` t)
+
+    normalise :: [Text] -> [Text] -> [Text]
+    normalise (site:_) ("~":us) = normalise [site] us -- '~' => "from site root"
+    normalise (site:ps) us = site:go (reverse ps) us -- keep site root always
+      where
+        go sp [] = reverse sp
+        go (_:sp) ("..":us) = go sp us
+        go []     ("..":us) = go [] us -- allowing overshooting
+        go sp     (p:us)    = go (p:sp) us
+    normalise [] _ = error "IMPOSSIBLE: empty page"
+
+    joinPathT = T.pack . joinPath . fmap T.unpack
 
 instance
   ( Interpretable a c
