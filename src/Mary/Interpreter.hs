@@ -8,6 +8,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State  (StateT, runStateT, gets, modify)
 import Control.Monad.Reader (ReaderT, runReaderT, local, ask, asks)
 import Control.Monad.Writer (WriterT, runWriterT, tell)
+import Control.Newtype (ala')
 
 import Data.Attoparsec.Text (parseOnly, endOfInput)
 import Data.Foldable (fold)
@@ -23,6 +24,7 @@ import qualified Data.Text as T
 import Network.URI.Encode as URI
 
 import Shonkier.Import (loadToplevelModule, stripPrefixButDot, stripVarPrefix)
+import Shonkier.ShonkierJS (jsGlobalEnv, jsInputs)
 import Shonkier.Pandoc ()
 import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation)
 import Shonkier.Pretty (pretty, toString)
@@ -32,6 +34,7 @@ import Shonkier.Semantics (rawShonkier, handleInputs, handleDot)
 import Shonkier.Value (Computation, Computation'(..), Env, FromValue(..))
 
 import Text.Pandoc.Builder
+import Text.Pandoc.Walk (query)
 
 import System.Directory (makeAbsolute)
 import System.FilePath ((</>))
@@ -416,37 +419,12 @@ process rpdoc = do
        }
  -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
   (pdoc1, _) <- successfully =<< runMaryM ctx (interpret EvalPhase (pdoc0 :: Pandoc))
-  pure pdoc1
-
-{-
-process :: Pandoc -> IO Pandoc
-process doc0@(Pandoc meta docs) = do
-  let (doc1, defns) = runWriter (walkM snarfMaryDef doc0)
-  let rm@(is, ps)  = fold [ (is, p)
-                          | ds <- defns
-                          , let (is, p) = maryDefinitionToModule ds
-                          ]
-
-  let inputs = metaToInputValues meta
-  -- we assume that certain metadata exists, put there by mary find
-  let page = errorOnFail (getGET inputs) "page"
-  let sitesRoot = errorOnFail (`M.lookup` inputs) "sitesRoot"
-  let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
-  let user = M.lookup "user" inputs
-
-  fp <- makeAbsolute (T.unpack sitesRoot </> T.unpack page)
-  (_, env, lcp) <- loadToplevelModule fp rm
-  let envdata = EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
-  doc2 <- runReaderT (walkM evalMaryBlock  doc1) envdata
-  doc3 <- runReaderT (walkM evalMaryInline doc2) envdata
-  pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 doc0))
+  pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 pdoc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
-       . setMeta "jsInputs" (fromList $ Str <$> jsInputs inputs)
-       $ doc3
+       . setMeta "jsInputs" (fromList $ Str <$> jsInputs collInputs)
+       $ pdoc1
 
   where
   h1 :: Block -> Maybe Inlines
   h1 (Header 1 _ is) = Just (fromList is)
   h1 _ = Nothing
-  errorOnFail f x = fromMaybe (error "Meta data '" <> x <> "' missing!") (f x)
--}
