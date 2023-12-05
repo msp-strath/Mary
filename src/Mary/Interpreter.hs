@@ -13,6 +13,7 @@ import Data.Attoparsec.Text (parseOnly, endOfInput)
 import Data.Foldable (fold)
 import Data.Function (on)
 import Data.List (nub, nubBy)
+import Data.Monoid (First(..))
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
@@ -21,6 +22,7 @@ import qualified Data.Text as T
 
 import Network.URI.Encode as URI
 
+import Shonkier.Import (loadToplevelModule, stripPrefixButDot, stripVarPrefix)
 import Shonkier.Pandoc ()
 import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation)
 import Shonkier.Pretty (pretty, toString)
@@ -80,11 +82,19 @@ type MaryM
   ( StateT  MaryState
   ( ExceptT MaryError IO))
 
+data MaryWriter = MaryWriter
+  { collFilename :: FilePath
+  , collPage :: Text
+  , collSitesRoot :: Text
+  , collBaseURL :: Text
+  , collUser :: Maybe Text
+  , collInputs :: Map Text Text
+  }
+
 type MaryCollectM
   = ReaderT MaryCtxt
-  ( WriterT  [MaryDefinition]
+  ( WriterT ([MaryDefinition] -> [MaryDefinition], First MaryWriter)
   ( ExceptT MaryError IO))
-
 
 data MaryDefinition
   = Module RawModule
@@ -117,7 +127,8 @@ fromDefaultCodeAttr ph (id0, cls0, kvs0) = case ph of
           , nubBy ((==) `on` fst) (kvs0 <> kvs1)))
 
 data MaryCtxt = MaryCtxt
-  { filename :: FilePath
+  { commonPrefix :: String
+  , filename :: FilePath
   , page :: Text
   , sitesRoot :: Text
   , baseURL :: Text
@@ -129,7 +140,8 @@ data MaryCtxt = MaryCtxt
 
 initMaryCtxt :: MaryCtxt
 initMaryCtxt = MaryCtxt
-  { filename = def
+  { commonPrefix = def
+  , filename = def
   , page  = def
   , sitesRoot  = def
   , baseURL = def
@@ -141,17 +153,22 @@ initMaryCtxt = MaryCtxt
   where
     def = error "INTERNAL ERROR: This should have been overwritten by the interpret instance for Pandoc"
 
-runMaryM :: MaryM x -> IO (Either MaryError (x, MaryState))
-runMaryM
+runMaryM :: MaryCtxt -> MaryM x -> IO (Either MaryError (x, MaryState))
+runMaryM ctx
   = runExceptT
   . flip runStateT initMaryState
-  . flip runReaderT initMaryCtxt
+  . flip runReaderT ctx
 
-runMaryCollectM :: MaryCollectM x -> IO (Either MaryError (x, [MaryDefinition]))
+runMaryCollectM ::
+  MaryCollectM x ->
+  IO (Either MaryError (x, ([MaryDefinition], MaryWriter)))
 runMaryCollectM
   = runExceptT
+  . fmap (fmap $ \case
+             (defs, First Nothing)  -> error "The IMPOSSIBLE has happened"
+             (defs, First (Just w)) -> (defs [], w))
   . runWriterT
-  . flip runReaderT initMaryCtxt
+  . flip runReaderT initMaryCtxt -- TODO: only have defaultcodeattr
 
 data Phase m where
   CollPhase :: Phase MaryCollectM
@@ -176,11 +193,10 @@ instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryOutAttr]), Attr) where
 
   extract = snd
 
-
 instance Interpretable Pandoc Pandoc where
-  interpret CollPhase (Pandoc meta docs) = do
-    (meta, ctx) <- interpret CollPhase meta
-    local (const ctx) $ Pandoc meta <$> interpret CollPhase docs
+  interpret ph (Pandoc meta docs) = do
+    meta <- interpret ph meta
+    Pandoc meta <$> interpret ph docs
 
 getGET :: Map Text Text -> Text -> Maybe Text
 getGET inputs x = M.lookup ("GET_" <> x) inputs
@@ -199,7 +215,8 @@ metaToInputValues (Meta m) = M.map grab m where
     Str s -> s
     x -> error $ "IMPOSSIBLE non-string inline " ++ show x
 
-instance Interpretable Meta (Meta, MaryCtxt) where
+instance Interpretable Meta Meta where
+  interpret EvalPhase meta = pure meta
   interpret CollPhase meta = do
     let errorOnFail f x =
          let msg = "Meta data '" <> x <> "' missing!" in
@@ -211,10 +228,14 @@ instance Interpretable Meta (Meta, MaryCtxt) where
     let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
     filename <- liftIO $ makeAbsolute (T.unpack sitesRoot </> T.unpack page)
     let user = M.lookup "user" inputs
-    ctx <- ask
-    pure (meta, ctx { filename, inputs, page, sitesRoot, baseURL, user })
-
-  extract = fst
+    tell (id, First $ Just $ MaryWriter
+      { collFilename = filename
+      , collInputs = inputs
+      , collPage = page
+      , collSitesRoot = sitesRoot
+      , collBaseURL = baseURL
+      , collUser = user })
+    pure meta
 
 instance Interpretable Caption Caption where
   interpret ph = pure -- TODO
@@ -285,7 +306,7 @@ instance Interpretable Block Block where
 defnMary :: Text -> MaryCollectM ()
 defnMary txt = do
   let mod = getMeAModule txt
-  tell [Module mod]
+  tell ((++ [Module mod]), mempty)
 
 evalMary :: FromValue b => Text -> MaryM b
 evalMary e =
@@ -295,9 +316,8 @@ evalMary e =
       is <- gets imports
       fp <- asks filename
       env@(gl,_) <- asks environment
-      -- TODO: we need to strip off the common var prefix from our term
-      -- lcp <- readPrefixToStrip
-      -- let t' = fmap (stripVarPrefix lcp) t
+      lcp <- asks commonPrefix
+      let t' = fmap (stripVarPrefix lcp) t
       let t' = t
       go env (rawShonkier is fp gl t')
   where
@@ -313,9 +333,6 @@ evalMary e =
     | a `elem` ["POST", "GET", "meta"] = handleInputs (go gamma) gamma r k
     | a `elem` ["dot"]                 = handleDot (go gamma) gamma r k
   go _ r@Request{} = error (show r)
-
-  -- stripVarPrefix :: String -> RawVariable -> RawVariable
-  -- stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
 
 
 instance Interpretable Inline Inline where
@@ -380,12 +397,25 @@ successfully (Right x) = pure x
 
 process :: Pandoc -> IO Pandoc
 process rpdoc = do
-  (pdoc0, defns) <- successfully =<< runMaryCollectM (interpret CollPhase rpdoc)
+  (pdoc0, (defns, MaryWriter{..})) <- successfully =<< runMaryCollectM (interpret CollPhase rpdoc)
   let rm@(is, ps) = fold [ (is, p)
                          | ds <- defns
                          , let (is, p) = maryDefinitionToModule ds
                          ]
-  (pdoc1, _) <- successfully =<< runMaryM (interpret EvalPhase (pdoc0 :: Pandoc))
+  (_, env, lcp) <- loadToplevelModule collFilename rm
+  let ctx = MaryCtxt
+       { commonPrefix = lcp
+       , filename = stripPrefixButDot lcp collFilename
+       , page = collPage
+       , sitesRoot = collSitesRoot
+       , baseURL = collBaseURL
+       , user = collUser
+       , inputs = collInputs
+       , environment = (env, collInputs)
+       , defaultCodeAttr = (Nothing, mempty)
+       }
+ -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
+  (pdoc1, _) <- successfully =<< runMaryM ctx (interpret EvalPhase (pdoc0 :: Pandoc))
   pure pdoc1
 
 {-
