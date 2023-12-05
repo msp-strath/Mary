@@ -2,6 +2,7 @@
 
 module Mary.Interpreter where
 
+import Control.Monad (guard)
 import Control.Monad.Except (ExceptT, MonadError(..), runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State  (StateT, runStateT, gets)
@@ -27,7 +28,7 @@ import Shonkier.ShonkierJS (jsGlobalEnv, jsInputs)
 import Shonkier.Pandoc ()
 import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation)
 import Shonkier.Pretty (pretty, toString)
--- import Shonkier.Pretty.Render.Pandoc (render, FromDoc())
+import Shonkier.Pretty.Render.Pandoc (render, FromDoc)
 import Shonkier.Syntax (Import, RawModule, Clause'((:->)), Rhs'((:?>)), toRawTerm)
 import Shonkier.Semantics (rawShonkier, handleInputs, handleDot)
 import Shonkier.Value (Computation, Computation'(..), Env, FromValue(..))
@@ -262,9 +263,9 @@ instance Interpretable Block Block where
       (Just cb, attr@(_, cls, _)) -> case cb of
         MaryData -> undefined
         MaryDefn -> case ph of
-          CollPhase -> i <$ defnMary txt
-          -- TODO: bring back syntax highlighting? (render (pretty mod))
-          EvalPhase -> pure (if "keep" `elem` cls then i else nullBlock)
+          CollPhase -> do (_ :: Maybe Block) <- defnMary ph cls txt
+                          pure i
+          EvalPhase -> fromMaybe nullBlock <$> defnMary ph cls txt
         MaryEval -> case ph of
           CollPhase -> pure i
           EvalPhase -> evalMary txt
@@ -289,11 +290,17 @@ instance Interpretable Block Block where
     -- pure
     RawBlock fmt txt -> pure (RawBlock fmt txt)
     HorizontalRule -> pure HorizontalRule
+    Figure _ _ _ -> undefined
 
-defnMary :: Text -> MaryCollectM ()
-defnMary txt = do
+defnMary :: (Monad m, FromDoc a) => Phase m -> [Text] -> Text -> m (Maybe a)
+defnMary ph cls txt = do
   let mod = getMeAModule txt
-  tell ((++ [Module mod]), mempty)
+  () <- case ph of
+    CollPhase -> tell ((++ [Module mod]), mempty)
+    EvalPhase -> pure ()
+  pure $ do
+    guard ("keep" `elem` cls)
+    pure $ render (pretty mod)
 
 evalMary :: FromValue b => Text -> MaryM b
 evalMary e =
@@ -328,9 +335,10 @@ instance Interpretable Inline Inline where
       (Just cb, attr@(_, cls, _)) -> case cb of
         MaryData -> undefined
         MaryDefn -> case ph of
-          CollPhase -> i <$ defnMary txt
+          CollPhase -> do (_ :: Maybe Inline) <- defnMary ph cls txt
+                          pure i
           -- TODO: bring back syntax highlighting? (render (pretty mod))
-          EvalPhase -> pure (if "keep" `elem` cls then i else nullInline)
+          EvalPhase -> fromMaybe nullInline <$> defnMary ph cls txt
         MaryEval -> case ph of
           CollPhase -> pure i
           EvalPhase -> evalMary txt

@@ -127,6 +127,7 @@ library
                      , OverloadedStrings
                      , PatternSynonyms
                      , RecordWildCards
+                     , ScopedTypeVariables
                      , TupleSections
                      , TypeOperators
                      , TypeSynonymInstances
