@@ -16,7 +16,7 @@ import Options.Applicative
 
 import Shonkier
 
-import Mary.Pandoc
+import Mary.Interpreter
 import Mary.ServePage
 import Mary.Find
 import Mary.Version
