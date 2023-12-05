@@ -228,14 +228,22 @@ instance Interpretable Meta Meta where
 instance Interpretable Caption Caption where
   interpret ph (Caption ms bs) = Caption <$> interpret ph ms <*> interpret ph bs
 
+instance Interpretable Cell Cell where
+  interpret ph (Cell attr alg rsp csp bs)
+    = Cell attr alg rsp csp <$> interpret ph bs
+
+instance Interpretable Row Row where
+  interpret ph (Row attr cs) = Row attr <$> interpret ph cs
+
 instance Interpretable TableHead TableHead where
-  interpret ph = pure -- TODO
+  interpret ph (TableHead attr rs) = TableHead attr <$> interpret ph rs
 
 instance Interpretable TableBody TableBody where
-  interpret ph = pure -- TODO
+  interpret ph (TableBody attr rhcl rs0 rs1)
+    = TableBody attr rhcl <$> interpret ph rs0 <*> interpret ph rs1
 
 instance Interpretable TableFoot TableFoot where
-  interpret ph = pure -- TODO
+  interpret ph (TableFoot attr rs) = TableFoot attr <$> interpret ph rs
 
 {-# INLINE throwMaryError #-}
 throwMaryError :: Phase m -> MaryError -> m a
