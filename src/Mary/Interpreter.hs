@@ -226,7 +226,7 @@ instance Interpretable Meta Meta where
     pure meta
 
 instance Interpretable Caption Caption where
-  interpret ph = pure -- TODO
+  interpret ph (Caption ms bs) = Caption <$> interpret ph ms <*> interpret ph bs
 
 instance Interpretable TableHead TableHead where
   interpret ph = pure -- TODO
@@ -287,10 +287,10 @@ instance Interpretable Block Block where
                  <*> interpret ph th
                  <*> interpret ph tds
                  <*> interpret ph tf
+    Figure attr cap bs -> Figure attr <$> interpret ph cap <*> interpret ph bs
     -- pure
     RawBlock fmt txt -> pure (RawBlock fmt txt)
     HorizontalRule -> pure HorizontalRule
-    Figure _ _ _ -> undefined
 
 defnMary :: (Monad m, FromDoc a) => Phase m -> [Text] -> Text -> m (Maybe a)
 defnMary ph cls txt = do
@@ -377,6 +377,10 @@ instance
 instance Interpretable a b => Interpretable [a] [b] where
   interpret ph = traverse (interpret ph)
   extract = map extract
+
+instance Interpretable a b => Interpretable (Maybe a) (Maybe b) where
+  interpret ph = traverse (interpret ph)
+  extract = fmap extract
 
 maryDefinitionToModule :: MaryDefinition -> RawModule
 maryDefinitionToModule = \case
