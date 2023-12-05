@@ -77,12 +77,12 @@ data MaryError
 type MaryM
   = ReaderT MaryCtxt
   ( StateT  MaryState
-  ( (ExceptT MaryError IO)))
+  ( ExceptT MaryError IO))
 
 type MaryCollectM
   = ReaderT MaryCtxt
   ( WriterT  [MaryDefinition]
-  ( (ExceptT MaryError IO)))
+  ( ExceptT MaryError IO))
 
 
 data MaryDefinition
