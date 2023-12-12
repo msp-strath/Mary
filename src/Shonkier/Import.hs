@@ -157,3 +157,6 @@ stripPrefixButDot prf x   = case stripPrefix prf x of
   Just "" -> "."
   Just x -> x
   Nothing -> error $ "IMPOSSIBLE claimed common prefix actually not a prefix. Prefix: " ++ show prf ++ " x: " ++ show x
+
+stripVarPrefix :: String -> RawVariable -> RawVariable
+stripVarPrefix lcp (p :.: x) = (stripPrefixButDot lcp <$> p) :.: x
