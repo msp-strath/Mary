@@ -316,7 +316,6 @@ makeInputForm textarea a@(i, cs, as) p = do
       [ T.concat [k, "=\"", v, "\""] | (k, v) <- ("name",name):("id", name):as ]
       mval
 
--- TODO: are these the best way to do it?
 nullBlock :: Block
 nullBlock = Plain []
 
