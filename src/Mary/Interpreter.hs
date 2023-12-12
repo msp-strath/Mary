@@ -26,7 +26,7 @@ import Network.URI.Encode as URI
 import Shonkier.Import (loadToplevelModule, stripPrefixButDot, stripVarPrefix)
 import Shonkier.ShonkierJS (jsGlobalEnv, jsInputs)
 import Shonkier.Pandoc ()
-import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation)
+import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation, skipSpace)
 import Shonkier.Pretty (pretty, toString)
 import Shonkier.Pretty.Render.Pandoc (render, FromDoc)
 import Shonkier.Syntax (Import, RawModule, Clause'((:->)), Rhs'((:?>)), toRawTerm)
@@ -48,12 +48,14 @@ data MaryCodeAttr
   = MaryData
   | MaryDefn
   | MaryEval
+  | FormInput
 
 isMaryCodeAttr :: Text -> Maybe MaryCodeAttr
 isMaryCodeAttr cl
   | cl == "mary-data" = pure MaryData
   | cl == "mary-def" = pure MaryDefn
   | cl `elem` ["mary", "mary-eval"] = pure MaryEval -- TODO: get rid of "mary"
+  | cl == "input" = pure FormInput
   | otherwise = Nothing
 
 -- | Attached to divs and spans to contextualise their content
@@ -258,6 +260,32 @@ isMaryCode ph attr = do
     ((mb, []), attr) -> pure (mb, attr)
     ((_, oattrs), _) -> throwMaryError ph (OutAttributesInACodeBlock oattrs)
 
+input_ :: [Text] -> Maybe Text -> Text
+input_ args mval
+  = T.intercalate " " ("<input" : args)
+  <> maybe "" (\ val -> T.concat [" value=\"", val, "\""]) mval
+  <> ">"
+
+textarea_ :: [Text] -> Maybe Text -> Text
+textarea_ args mval
+  = T.intercalate " " ("<textarea" : args) <> ">"
+  <> fromMaybe "" mval <> "</textarea>"
+
+-- Only make forms in the Eval phase
+makeInputForm :: Bool -> Attr -> Text -> MaryM Text
+makeInputForm _ (_, _, as) p | ("type", "submit") `elem` as
+  = pure $ input_ [ T.concat [k, "=\"", v, "\""] | (k, v) <- ("value", p):as ] Nothing
+makeInputForm textarea a@(i, cs, as) p = do
+  inputs <- asks inputs
+  let nameparser = skipSpace *> identifier <* skipSpace
+  pure $ case parseOnly nameparser p of
+    Left _ -> ""
+    Right n -> let name = T.pack n
+                   mval = getPOST inputs name in
+      (if textarea then textarea_ else input_)
+      [ T.concat [k, "=\"", v, "\""] | (k, v) <- ("name",name):("id", name):as ]
+      mval
+
 -- TODO: are these the best way to do it?
 nullBlock :: Block
 nullBlock = Plain []
@@ -268,7 +296,7 @@ nullInline = Str ""
 instance Interpretable Block Block where
   interpret ph = \case
     i@(CodeBlock attr txt) -> isMaryCode ph attr >>= \case
-      (Just cb, attr@(_, cls, _)) -> case cb of
+      (Just cb, attr@(_, cls, kvs)) -> case cb of
         MaryData -> pure i -- TODO
         MaryDefn -> case ph of
           CollPhase -> do (_ :: Maybe Block) <- defnMary ph cls txt
@@ -277,6 +305,11 @@ instance Interpretable Block Block where
         MaryEval -> case ph of
           CollPhase -> pure i
           EvalPhase -> evalMary txt
+        FormInput -> case ph of
+          CollPhase -> pure i
+          EvalPhase ->
+            let textarea = "type" `notElem` map fst kvs in
+            RawBlock (Format "html") <$> makeInputForm textarea attr txt
       (Nothing, attr) -> pure (CodeBlock attr txt)
     -- TODO: handle MaryOutAttrs in divs
     Div attr bs -> Div attr <$> interpret ph bs
@@ -345,11 +378,13 @@ instance Interpretable Inline Inline where
         MaryDefn -> case ph of
           CollPhase -> do (_ :: Maybe Inline) <- defnMary ph cls txt
                           pure i
-          -- TODO: bring back syntax highlighting? (render (pretty mod))
           EvalPhase -> fromMaybe nullInline <$> defnMary ph cls txt
         MaryEval -> case ph of
           CollPhase -> pure i
           EvalPhase -> evalMary txt
+        FormInput -> case ph of
+          CollPhase -> pure i
+          EvalPhase -> RawInline (Format "html") <$> makeInputForm False attr txt
       (Nothing, attr) -> pure (Code attr txt)
     -- TODO: handle MaryOutAttrs in spans
     Span attr is -> Span attr <$> interpret ph is
