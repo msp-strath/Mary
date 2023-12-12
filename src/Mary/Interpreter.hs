@@ -55,7 +55,7 @@ isMaryCodeAttr :: Text -> Maybe MaryCodeAttr
 isMaryCodeAttr cl
   | cl == "mary-data" = pure MaryData
   | cl == "mary-def" = pure MaryDefn
-  | cl `elem` ["mary", "mary-eval"] = pure MaryEval -- TODO: get rid of "mary"
+  | cl == "mary-eval" = pure MaryEval
   | cl == "input" = pure FormInput
   | otherwise = Nothing
 
@@ -79,7 +79,7 @@ isMaryDivAttr (k, v)
   | k == "mary-apply" = pure (MaryApply (MaryExpr v))
   | k == "mary-store" = pure (MaryStore (StoreName v))
   | k == "code-default" = pure (CodeDefault (ClassName v))
-  | k `elem` ["mary", "mary-template"] = pure (MaryTemplate (MaryExpr v)) -- TODO: get rid of "mary"
+  | k == "mary-template" = pure (MaryTemplate (MaryExpr v))
   | otherwise = Nothing
 
 unIsMaryDivAttr :: MaryDivAttr -> (Text, Text)

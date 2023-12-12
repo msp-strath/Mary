@@ -7,10 +7,10 @@ testInline() -> ['Emph "blether"]
 
 `<input type=text name="foo">`{=html}
 
-```mary
+```mary-eval
 testBlock()
 ```
 
-Perhaps this will achieve some `testInline()`{.mary}.
+Perhaps this will achieve some `testInline()`{.mary-eval}.
 
 `<input type=submit>`{=html}

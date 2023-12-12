@@ -33,7 +33,7 @@ Boolean is true.
 
 :::{mary-apply="first(scores1, {username == user})"}
 :::{mary-apply="first(scores23, {username == user})"}
-:::{code-default=".mary"}
+:::{code-default=".mary-eval"}
 |         | *Test 1*     | *Test 2*     | *Test 3*     |
 | You     | `test1score` | `test2score` | `test3score` |
 | Average | `average(map({env -> env(test1score)}, scores1))` | `average(map({env -> env(test2score)}, scores23))` | `average(map({env -> env(test3score)}, scores23))` |

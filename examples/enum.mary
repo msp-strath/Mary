@@ -3,7 +3,7 @@
 This is a nested enumeration with concatenated sublists as
 intermediate items.
 
-```mary
+```mary-eval
 test()
 ```
 

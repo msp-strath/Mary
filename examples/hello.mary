@@ -4,6 +4,6 @@
 test() -> ['Para "Hello"]
 ```
 
-```mary
+```mary-eval
 test()
 ```

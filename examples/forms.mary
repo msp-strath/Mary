@@ -16,11 +16,11 @@ Here is a form which is being submitted empty: `empty`{.input type=text size=1}
 
 ## Using the inputs
 
-```mary
+```mary-eval
 greet()
 ```
 
-```mary
+```mary-eval
 numberGame('POST(concat("num","ber")))
 ```
 

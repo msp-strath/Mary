@@ -2,7 +2,7 @@
 
 Let's run some code:
 
-```mary
+```mary-eval
 hello()
 ```
 arising from
