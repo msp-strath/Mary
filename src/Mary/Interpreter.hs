@@ -49,6 +49,7 @@ data MaryCodeAttr
   | MaryDefn
   | MaryEval
   | FormInput
+  deriving Show
 
 isMaryCodeAttr :: Text -> Maybe MaryCodeAttr
 isMaryCodeAttr cl
@@ -59,18 +60,34 @@ isMaryCodeAttr cl
   | otherwise = Nothing
 
 -- | Attached to divs and spans to contextualise their content
-data MaryOutAttr
+data MaryDivAttr
   = MaryApply MaryExpr
   | MaryStore StoreName -- read/write
   | CodeDefault ClassName
+  | MaryTemplate MaryExpr
   deriving Show
 
-isMaryOutAttr :: (Text, Text) -> Maybe MaryOutAttr
-isMaryOutAttr (k, v)
+
+-- Returns a list without the template
+hasMaryTemplate :: [MaryDivAttr] -> Maybe (MaryExpr, [MaryDivAttr])
+hasMaryTemplate [] = Nothing
+hasMaryTemplate (MaryTemplate v : ds) = pure (v, ds)
+hasMaryTemplate (d : ds) = fmap (d :) <$> hasMaryTemplate ds
+
+isMaryDivAttr :: (Text, Text) -> Maybe MaryDivAttr
+isMaryDivAttr (k, v)
   | k == "mary-apply" = pure (MaryApply (MaryExpr v))
   | k == "mary-store" = pure (MaryStore (StoreName v))
   | k == "code-default" = pure (CodeDefault (ClassName v))
+  | k `elem` ["mary", "mary-template"] = pure (MaryTemplate (MaryExpr v)) -- TODO: get rid of "mary"
   | otherwise = Nothing
+
+unIsMaryDivAttr :: MaryDivAttr -> (Text, Text)
+unIsMaryDivAttr = \case
+  MaryApply (MaryExpr v) -> ("mary-apply", v)
+  MaryStore (StoreName v) -> ("mary-store", v)
+  CodeDefault (ClassName v) -> ("code-default", v)
+  MaryTemplate (MaryExpr v) -> ("mary-template", v)
 
 partitionMaybe :: (a -> Maybe b) -> [a] -> ([a], [b])
 partitionMaybe p = foldMap $ \ a -> case p a of
@@ -79,7 +96,8 @@ partitionMaybe p = foldMap $ \ a -> case p a of
 
 data MaryError
   = MoreThanOneCodeAttribute
-  | OutAttributesInACodeBlock [MaryOutAttr]
+  | DivAttributesInACodeBlock [MaryDivAttr]
+  | CodeAttributeInADivBlock MaryCodeAttr
   deriving Show
 
 type MaryM
@@ -171,10 +189,10 @@ class Interpretable a b where
   default extract :: b ~ a => b -> a
   extract = id
 
-instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryOutAttr]), Attr) where
+instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryDivAttr]), Attr) where
   interpret ph (id, cls, kvs)
      = let (cls', cattrs) = partitionMaybe isMaryCodeAttr cls in
-       let (kvs', oattrs) = partitionMaybe isMaryOutAttr kvs in
+       let (kvs', oattrs) = partitionMaybe isMaryDivAttr kvs in
        let attr = (id, cls', kvs') in
        case cattrs of
          [] -> pure ((Nothing, oattrs), attr)
@@ -252,13 +270,25 @@ throwMaryError :: Phase m -> MaryError -> m a
 throwMaryError CollPhase = throwError
 throwMaryError EvalPhase = throwError
 
+-- NB: also used for spans
+isMaryDiv  :: Monad m => Phase m -> Attr -> m ([MaryDivAttr], Attr)
+isMaryDiv ph attr = do
+  -- /!\ This interpret better be pure (apart from raising errors)!
+  interpret ph attr >>= \case
+    ((Nothing, ds), attr) -> pure (ds, attr)
+    ((Just b, _), attr) -> throwMaryError ph (CodeAttributeInADivBlock b)
+
+unIsMaryDiv :: [MaryDivAttr] -> Attr -> Attr
+unIsMaryDiv ds (id, cls, kvs) = (id, cls, map unIsMaryDivAttr ds ++ kvs) where
+
+
 isMaryCode :: Monad m => Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
 isMaryCode ph attr = do
   -- /!\ This interpret better be pure (apart from raising errors)!
   interpret ph attr >>= \case
     ((Nothing, []), attr) -> fromDefaultCodeAttr ph attr
     ((mb, []), attr) -> pure (mb, attr)
-    ((_, oattrs), _) -> throwMaryError ph (OutAttributesInACodeBlock oattrs)
+    ((_, oattrs), _) -> throwMaryError ph (DivAttributesInACodeBlock oattrs)
 
 input_ :: [Text] -> Maybe Text -> Text
 input_ args mval
@@ -311,8 +341,15 @@ instance Interpretable Block Block where
             let textarea = "type" `notElem` map fst kvs in
             RawBlock (Format "html") <$> makeInputForm textarea attr txt
       (Nothing, attr) -> pure (CodeBlock attr txt)
-    -- TODO: handle MaryOutAttrs in divs
-    Div attr bs -> Div attr <$> interpret ph bs
+    i@(Div attr bs) -> isMaryDiv ph attr >>= \case
+      (ds, attr)
+        | Just (decl, ds) <- hasMaryTemplate ds ->
+          case ph of
+            CollPhase ->
+              i <$ tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds attr) bs :)
+                        , First Nothing)
+            EvalPhase -> pure nullBlock
+      _ -> Div attr <$> interpret ph bs
     -- structural
     Plain is -> Plain <$> interpret ph is
     Para is -> Para <$> interpret ph is
@@ -386,8 +423,7 @@ instance Interpretable Inline Inline where
           CollPhase -> pure i
           EvalPhase -> RawInline (Format "html") <$> makeInputForm False attr txt
       (Nothing, attr) -> pure (Code attr txt)
-    -- TODO: handle MaryOutAttrs in spans
-    Span attr is -> Span attr <$> interpret ph is
+    Span attr is -> Span attr <$> interpret ph is -- No mary-template here?
     -- structural
     Emph is -> Emph <$> interpret ph is
     Underline is -> Underline <$> interpret ph is
