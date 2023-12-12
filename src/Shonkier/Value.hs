@@ -1,8 +1,8 @@
 module Shonkier.Value where
 
 import Control.Monad (guard)
-import Control.Monad.State
-import Control.Monad.Reader
+import Control.Monad.State (MonadState, StateT, put, gets, modify)
+import Control.Monad.Reader (MonadReader, Reader)
 import Control.Applicative
 
 import Data.Map (Map, singleton, toAscList)
@@ -72,13 +72,28 @@ data Value' a v
 
 type Value = Value' Atom ScopedVariable
 
+pattern VNum :: Rational -> Value' a v
 pattern VNum n        = VLit (Num n)
+
+pattern CNum :: Rational -> Computation' a v
 pattern CNum n        = Value (VNum n)
+
+pattern VBoolean :: Bool -> Value' a v
 pattern VBoolean b    = VLit (Boolean b)
+
+pattern CBoolean :: Bool -> Computation' a v
 pattern CBoolean b    = Value (VBoolean b)
+
+pattern CString :: Keyword -> Text -> Computation' a v
 pattern CString k str = Value (VString k str)
+
+pattern CCell :: Value' a v -> Value' a v -> Computation' a v
 pattern CCell a b     = Value (VCell a b)
+
+pattern CAtom :: a -> Computation' a v
 pattern CAtom a       = Value (VAtom a)
+
+pattern CNil :: Computation' a v
 pattern CNil          = Value VNil
 
 ---------------------------------------------------------------------------
@@ -151,6 +166,7 @@ data Continuation' a v = Cn
 
 type Continuation = Continuation' Atom ScopedVariable
 
+pattern CnNil :: Continuation' a v
 pattern CnNil = Cn B0 []
 
 cnFlat :: Continuation' a v -> [Frame' a v]
@@ -207,6 +223,7 @@ data Context' a v = Cx
   }
 type Context = Context' Atom ScopedVariable
 
+pattern CxNil :: Context' a v
 pattern CxNil = Cx B0 B0
 
 cxNull :: Context' a v -> Bool

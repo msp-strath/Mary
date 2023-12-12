@@ -15,7 +15,8 @@ az <>< (a : as) = (az :< a) <>< as
 
 instance Monoid (Bwd a) where
   mempty = B0
-  mappend xz B0        = xz
-  mappend xz (yz :< y) = mappend xz yz :< y
+  mappend = (<>)
 
-instance Semigroup (Bwd a) where (<>) = mappend
+instance Semigroup (Bwd a) where
+  xz <> B0        = xz
+  xz <> (yz :< y) = (xz <> yz) :< y

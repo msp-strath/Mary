@@ -9,7 +9,6 @@ import Control.Monad
 import Data.Attoparsec.Text hiding (skipSpace)
 import qualified Data.Attoparsec.Text as Atto
 import Data.Char
-import Data.Functor (void)
 import Data.Ratio
 import Data.Text(Text)
 import qualified Data.Text as T
@@ -91,6 +90,8 @@ comments = do
     -- are below because we may only declare pattern synonyms at the top-level.
 
     -- if the stack has just been emptied, we're done!
+    delim :: [Comment] -> (String, String, String) -> Char ->
+             Maybe ([Comment], (String, String, String))
     delim []             _           c    = Nothing
     -- line comments: eat everything up until the end of line
     delim (Line : stk)   _           '\n' = Just (stk, init)
@@ -104,9 +105,12 @@ comments = do
     delim stk            st          c    = Just (stk, eats c st)
 
 -- ghc only wants invertible patterns...
-pattern NewLine   b c = ([], b, c)
-pattern NewNested a c = (a, [], c)
-pattern EndNested a b = (a, b, [])
+pattern NewLine :: String -> String -> (String, String, String)
+pattern NewLine   b c = ("", b, c)
+pattern NewNested :: String -> String -> (String, String, String)
+pattern NewNested a c = (a, "", c)
+pattern EndNested :: String -> String -> (String, String, String)
+pattern EndNested a b = (a, b, "")
 
 
 someSp :: Parser a -> Parser [a]

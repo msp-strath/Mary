@@ -91,6 +91,7 @@ instance ToRawTerm Inline where
     Superscript is -> toListy "Superscript" is
     Subscript is   -> toListy "Superscript" is
     SmallCaps is   -> toListy "SmallCaps" is
+    Underline is   -> toListy "Underline" is
     Code a@(b, cs, d) e
       | "mary" `elem` cs
       , Right t <- parseOnly topTerm e
@@ -146,7 +147,7 @@ instance FromValue Block where
     "BulletList"     -> fromListy BulletList
     "DefinitionList" -> fromListy DefinitionList
     "Header"         -> fromAfter2Listy Header
-    -- TODO: Table
+    -- TODO: Table, Figure
     "Div"            -> fromAfter1Listy Div
     _                -> const (Left v)
   fromValue v@(VAtom tag) = case tag of
@@ -164,6 +165,7 @@ instance FromValue Inline where
     "Superscript" -> fromListy Superscript
     "Subscript"   -> fromListy Subscript
     "SmallCaps"   -> fromListy SmallCaps
+    "Underline"   -> fromListy Underline
     -- TODO: Quoted
     -- TODO: Cite
     "Code"        -> fromTakes2 Code

@@ -62,6 +62,7 @@ data Term' a v
 type RawTerm = Term' Atom RawVariable
 type Term    = Term' Atom ScopedVariable
 
+pattern TNum :: Rational -> Term' a v
 pattern TNum n        = Lit (Num n)
 
 type Import = (FilePath, Maybe Namespace)
@@ -352,7 +353,6 @@ instance LISPY a => LISPY (PComputation' a) where
 instance LISPY ScopedVariable where
   toLISP (LocalVar :.: x) = ATOM x
   toLISP (s :.: x) = CONS (ATOM x) $ case s of
-    LocalVar -> error "doesn't happen"
     GlobalVar b n      -> CONS (STR (T.pack n)) (toLISP b)
     AmbiguousVar xs    -> "AmbiguousVar" -: map (STR . T.pack) xs
     InvalidNamespace n -> "InvalidNamespace" -: [STR (T.pack n)]
