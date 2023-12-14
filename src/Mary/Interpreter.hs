@@ -20,6 +20,7 @@ import qualified Data.Map as M
 import Data.Maybe
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Traversable (forM)
 
 import Network.URI.Encode as URI
 
@@ -195,6 +196,18 @@ class Interpretable a b where
   default extract :: b ~ a => b -> a
   extract = id
 
+interprets :: (Interpretable a c, c ~ Many b, Monad m, Monoid (Many b))
+           => Phase m -> [a] -> m [b]
+interprets ph as = toList . mconcat <$> interpret ph as
+
+interpretss :: (Interpretable a c, c ~ Many b, Monad m, Monoid (Many b))
+            => Phase m -> [[a]] -> m [[b]]
+interpretss ph ass = fmap (toList . mconcat) <$> interpret ph ass
+
+interpretsss :: (Interpretable a c, c ~ Many b, Monad m, Monoid (Many b))
+            => Phase m -> [[[a]]] -> m [[[b]]]
+interpretsss ph ass = fmap (fmap (toList . mconcat)) <$> interpret ph ass
+
 instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryDivAttr]), Attr) where
   interpret ph (id, cls, kvs)
      = let (cls', cattrs) = partitionMaybe isMaryCodeAttr cls in
@@ -210,7 +223,7 @@ instance Interpretable Attr ((Maybe MaryCodeAttr, [MaryDivAttr]), Attr) where
 instance Interpretable Pandoc Pandoc where
   interpret ph (Pandoc meta docs) = do
     meta <- interpret ph meta
-    Pandoc meta <$> interpret ph docs
+    Pandoc meta <$> interprets ph docs
 
 getGET :: Map Text Text -> Text -> Maybe Text
 getGET inputs x = M.lookup ("GET_" <> x) inputs
@@ -252,11 +265,13 @@ instance Interpretable Meta Meta where
     pure meta
 
 instance Interpretable Caption Caption where
-  interpret ph (Caption ms bs) = Caption <$> interpret ph ms <*> interpret ph bs
+  interpret ph (Caption ms bs) = do
+    (ms :: Maybe [Inline]) <- traverse (interprets ph) ms
+    Caption ms <$> interprets ph bs
 
 instance Interpretable Cell Cell where
   interpret ph (Cell attr alg rsp csp bs)
-    = Cell attr alg rsp csp <$> interpret ph bs
+    = Cell attr alg rsp csp <$> interprets ph bs
 
 instance Interpretable Row Row where
   interpret ph (Row attr cs) = Row attr <$> interpret ph cs
@@ -336,63 +351,79 @@ nullBlock = Plain []
 nullInline :: Inline
 nullInline = Str ""
 
-instance Interpretable Block Block where
+instance Interpretable Block Blocks where
   interpret ph = \case
     i@(CodeBlock attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, kvs)) -> case cb of
-        MaryData -> pure i -- TODO
+        MaryData -> pure (singleton i) -- TODO
         MaryDefn -> case ph of
-          CollPhase -> do (_ :: Maybe Block) <- defnMary ph cls txt
-                          pure i
-          EvalPhase -> fromMaybe nullBlock <$> defnMary ph cls txt
+          CollPhase -> do (_ :: Blocks) <- defnMary ph cls txt
+                          pure (singleton i)
+          EvalPhase -> defnMary ph cls txt
         MaryEval -> case ph of
-          CollPhase -> pure i
-          EvalPhase -> evalMary txt
+          CollPhase -> pure (singleton i)
+          EvalPhase -> singleton <$> evalMary txt
         FormInput -> case ph of
-          CollPhase -> pure i
+          CollPhase -> pure (singleton i)
           EvalPhase ->
             let textarea = "type" `notElem` map fst kvs in
-            RawBlock (Format "html") <$> makeInputForm textarea attr txt
-      (Nothing, attr) -> pure (CodeBlock attr txt)
+            singleton . RawBlock (Format "html") <$> makeInputForm textarea attr txt
+      (Nothing, attr) -> pure (singleton $ CodeBlock attr txt)
     i@(Div attr bs) -> isMaryDiv ph attr >>= \case
-      Left dca -> withDefaultCodeAttr ph dca $ Div attr <$> interpret ph bs
+      Left dca -> withDefaultCodeAttr ph dca $ do
+        (bs :: Blocks) <- mconcat <$> interpret ph bs
+        pure $ case ph of
+          CollPhase -> singleton (Div attr $ toList bs)
+          EvalPhase -> bs
       Right (ds, attr) ->
         if | Just (decl, ds) <- hasMaryTemplate ds ->
                case ph of
                  CollPhase ->
-                   i <$ tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds attr) bs :)
-                             , First Nothing)
-                 EvalPhase -> pure nullBlock
-           | otherwise -> Div attr <$> interpret ph bs
+                   do tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds attr) bs :)
+                           , First Nothing)
+                      pure (singleton i)
+                 EvalPhase -> pure mempty
+           | otherwise ->
+             do singleton . Div attr <$> interprets ph bs
     -- structural
-    Plain is -> Plain <$> interpret ph is
-    Para is -> Para <$> interpret ph is
-    LineBlock iss -> LineBlock <$> interpret ph iss
-    BlockQuote bs -> BlockQuote <$> interpret ph bs
-    OrderedList lattr bss -> OrderedList lattr <$> interpret ph bss
-    BulletList bss -> BulletList <$> interpret ph bss
-    DefinitionList ibsss -> DefinitionList <$> interpret ph ibsss
-    Header i attr is -> Header i attr <$> interpret ph is
-    Table attr capt cols th tds tf ->
+    Plain is -> singleton . Plain <$> interprets ph is
+    Para is -> singleton .  Para <$> interprets ph is
+    LineBlock iss -> singleton . LineBlock <$> interpretss ph iss
+    BlockQuote bs -> singleton . BlockQuote <$> interprets ph bs
+    OrderedList lattr bss -> singleton .  OrderedList lattr <$> interpretss ph bss
+    BulletList bss -> singleton .  BulletList <$> interpretss ph bss
+    DefinitionList ibsss -> do
+      ibsss <- forM ibsss $ \ (is, bss) ->
+        (,) <$> interprets ph is <*> interpretss ph bss
+      pure (singleton $ DefinitionList ibsss)
+    Header i attr is -> singleton .  Header i attr <$> interprets ph is
+    Table attr capt cols th tds tf -> fmap singleton $
       Table attr <$> interpret ph capt
                  <*> pure cols
                  <*> interpret ph th
                  <*> interpret ph tds
                  <*> interpret ph tf
-    Figure attr cap bs -> Figure attr <$> interpret ph cap <*> interpret ph bs
+    Figure attr cap bs -> fmap singleton $
+      Figure attr <$> interpret ph cap <*> interprets ph bs
     -- pure
-    RawBlock fmt txt -> pure (RawBlock fmt txt)
-    HorizontalRule -> pure HorizontalRule
+    RawBlock fmt txt -> pure (singleton $ RawBlock fmt txt)
+    HorizontalRule -> pure (singleton HorizontalRule)
 
-defnMary :: (Monad m, FromDoc a) => Phase m -> [Text] -> Text -> m (Maybe a)
+  extract bs = case toList bs of
+    [] -> nullBlock
+    [x] -> x
+    xs -> Div ("", [], []) xs
+
+defnMary :: (Monoid (Many a), Monad m, FromDoc a)
+         => Phase m -> [Text] -> Text -> m (Many a)
 defnMary ph cls txt = do
   let mod = getMeAModule txt
   () <- case ph of
     CollPhase -> tell ((++ [Module mod]), mempty)
     EvalPhase -> pure ()
-  pure $ do
-    guard ("keep" `elem` cls)
-    pure $ render (pretty mod)
+  pure $ if "keep" `elem` cls
+    then singleton $ render (pretty mod)
+    else mempty
 
 evalMary :: FromValue b => Text -> MaryM b
 evalMary e =
@@ -421,44 +452,50 @@ evalMary e =
   go _ r@Request{} = error (show r)
 
 
-instance Interpretable Inline Inline where
+instance Interpretable Inline Inlines where
   interpret ph = \case
     i@(Code attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, _)) -> case cb of
-        MaryData -> pure i -- TODO
+        MaryData -> pure (singleton i) -- TODO
         MaryDefn -> case ph of
-          CollPhase -> do (_ :: Maybe Inline) <- defnMary ph cls txt
-                          pure i
-          EvalPhase -> fromMaybe nullInline <$> defnMary ph cls txt
+          CollPhase -> do (_ :: Inlines) <- defnMary ph cls txt
+                          pure (singleton i)
+          EvalPhase -> defnMary ph cls txt
         MaryEval -> case ph of
-          CollPhase -> pure i
-          EvalPhase -> evalMary txt
+          CollPhase -> pure (singleton i)
+          EvalPhase -> singleton <$> evalMary txt
         FormInput -> case ph of
-          CollPhase -> pure i
-          EvalPhase -> RawInline (Format "html") <$> makeInputForm False attr txt
-      (Nothing, attr) -> pure (Code attr txt)
-    Span attr is -> Span attr <$> interpret ph is -- No mary-template here?
+          CollPhase -> pure (singleton i)
+          EvalPhase -> singleton . RawInline (Format "html") <$> makeInputForm False attr txt
+      (Nothing, attr) -> pure (singleton $ Code attr txt)
+    Span attr is -> singleton . Span attr <$> interprets ph is -- No mary-template here?
     -- structural
-    Emph is -> Emph <$> interpret ph is
-    Underline is -> Underline <$> interpret ph is
-    Strong is -> Strong <$> interpret ph is
-    Strikeout is -> Strikeout <$> interpret ph is
-    Superscript is -> Superscript <$> interpret ph is
-    Subscript is -> Subscript <$> interpret ph is
-    SmallCaps is -> SmallCaps <$> interpret ph is
-    Quoted qt is -> Quoted qt <$> interpret ph is
-    Cite ct is -> Cite ct <$> interpret ph is
-    Link attr is tgt -> Link attr <$> interpret ph is <*> makeAbsRef ph tgt
-    Image attr is tgt -> Image attr <$> interpret ph is <*> makeAbsRef ph tgt
-    Note bs -> Note <$> interpret ph bs
+    Emph is -> singleton . Emph <$> interprets ph is
+    Underline is -> singleton . Underline <$> interprets ph is
+    Strong is -> singleton . Strong <$> interprets ph is
+    Strikeout is -> singleton . Strikeout <$> interprets ph is
+    Superscript is -> singleton . Superscript <$> interprets ph is
+    Subscript is -> singleton . Subscript <$> interprets ph is
+    SmallCaps is -> singleton . SmallCaps <$> interprets ph is
+    Quoted qt is -> singleton . Quoted qt <$> interprets ph is
+    Cite ct is -> singleton . Cite ct <$> interprets ph is
+    Link attr is tgt -> fmap singleton $
+      Link attr <$> interprets ph is <*> makeAbsRef ph tgt
+    Image attr is tgt -> fmap singleton $
+      Image attr <$> interprets ph is <*> makeAbsRef ph tgt
+    Note bs -> singleton . Note <$> interprets ph bs
     -- pure
-    Str txt -> pure (Str txt)
-    Space -> pure Space
-    SoftBreak -> pure SoftBreak
-    LineBreak -> pure LineBreak
-    Math mty txt -> pure (Math mty txt)
-    RawInline fmt txt -> pure (RawInline fmt txt)
+    Str txt -> pure (singleton $ Str txt)
+    Space -> pure (singleton Space)
+    SoftBreak -> pure (singleton SoftBreak)
+    LineBreak -> pure (singleton LineBreak)
+    Math mty txt -> pure (singleton $ Math mty txt)
+    RawInline fmt txt -> pure (singleton $ RawInline fmt txt)
 
+  extract is = case toList is of
+    [] -> nullInline
+    [i] -> i
+    is -> Span ("", [], []) is
 
 makeAbsRef :: Phase m -> Target -> m Target
 makeAbsRef CollPhase tgt = pure tgt
