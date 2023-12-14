@@ -1,0 +1,9 @@
+```mary-def
+testBlock() -> ['Para "Hello" 'Space ['Strong "World"]]
+```
+
+::: {.code-default .mary-eval}
+```
+testBlock()
+```
+:::

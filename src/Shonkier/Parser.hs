@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiWayIf #-}
-
 module Shonkier.Parser where
 
 import Control.Applicative

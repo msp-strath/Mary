@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiWayIf           #-}
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE UndecidableInstances #-}

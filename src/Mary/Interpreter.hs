@@ -6,7 +6,7 @@ import Control.Monad (guard)
 import Control.Monad.Except (ExceptT, MonadError(..), runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State  (StateT, runStateT, gets)
-import Control.Monad.Reader (ReaderT, runReaderT, asks)
+import Control.Monad.Reader (ReaderT, runReaderT, local, asks)
 import Control.Monad.Writer (WriterT, runWriterT, tell)
 import Control.Newtype (ala')
 
@@ -63,22 +63,29 @@ isMaryCodeAttr cl
 data MaryDivAttr
   = MaryApply MaryExpr
   | MaryStore StoreName -- read/write
-  | CodeDefault ClassName
   | MaryTemplate MaryExpr
   deriving Show
 
 
+firstBy :: (a -> Maybe b) -> [a] -> Maybe (b, [a])
+firstBy p [] = Nothing
+firstBy p (a : as)
+  | Just b <- p a = pure (b, as)
+  | otherwise = fmap (a:) <$> firstBy p as
+
 -- Returns a list without the template
 hasMaryTemplate :: [MaryDivAttr] -> Maybe (MaryExpr, [MaryDivAttr])
-hasMaryTemplate [] = Nothing
-hasMaryTemplate (MaryTemplate v : ds) = pure (v, ds)
-hasMaryTemplate (d : ds) = fmap (d :) <$> hasMaryTemplate ds
+hasMaryTemplate = firstBy $ \case
+  MaryTemplate v -> pure v
+  _ -> Nothing
+
+hasCodeDefault :: [Text] -> Maybe [Text]
+hasCodeDefault = fmap snd . firstBy (guard . ("code-default" ==))
 
 isMaryDivAttr :: (Text, Text) -> Maybe MaryDivAttr
 isMaryDivAttr (k, v)
   | k == "mary-apply" = pure (MaryApply (MaryExpr v))
   | k == "mary-store" = pure (MaryStore (StoreName v))
-  | k == "code-default" = pure (CodeDefault (ClassName v))
   | k == "mary-template" = pure (MaryTemplate (MaryExpr v))
   | otherwise = Nothing
 
@@ -86,7 +93,6 @@ unIsMaryDivAttr :: MaryDivAttr -> (Text, Text)
 unIsMaryDivAttr = \case
   MaryApply (MaryExpr v) -> ("mary-apply", v)
   MaryStore (StoreName v) -> ("mary-store", v)
-  CodeDefault (ClassName v) -> ("code-default", v)
   MaryTemplate (MaryExpr v) -> ("mary-template", v)
 
 partitionMaybe :: (a -> Maybe b) -> [a] -> ([a], [b])
@@ -270,13 +276,21 @@ throwMaryError :: Phase m -> MaryError -> m a
 throwMaryError CollPhase = throwError
 throwMaryError EvalPhase = throwError
 
+withDefaultCodeAttr :: Phase m -> DefaultCodeAttr -> m a -> m a
+withDefaultCodeAttr CollPhase v = local (const v)
+withDefaultCodeAttr EvalPhase v = local (\ r -> r { defaultCodeAttr = v })
+
 -- NB: also used for spans
-isMaryDiv  :: Monad m => Phase m -> Attr -> m ([MaryDivAttr], Attr)
+isMaryDiv  :: Monad m => Phase m -> Attr
+           -> m (Either DefaultCodeAttr ([MaryDivAttr], Attr))
 isMaryDiv ph attr = do
   -- /!\ This interpret better be pure (apart from raising errors)!
-  interpret ph attr >>= \case
-    ((Nothing, ds), attr) -> pure (ds, attr)
-    ((Just b, _), attr) -> throwMaryError ph (CodeAttributeInADivBlock b)
+  ((mc, ds), attr@(i, cs, kvs)) <- interpret ph attr
+  case hasCodeDefault cs of
+    Just cs -> pure (Left (mc, (cs, kvs)))
+    Nothing -> case mc of
+      Nothing -> pure (Right (ds, attr))
+      Just b -> throwMaryError ph (CodeAttributeInADivBlock b)
 
 unIsMaryDiv :: [MaryDivAttr] -> Attr -> Attr
 unIsMaryDiv ds (id, cls, kvs) = (id, cls, map unIsMaryDivAttr ds ++ kvs) where
@@ -341,14 +355,15 @@ instance Interpretable Block Block where
             RawBlock (Format "html") <$> makeInputForm textarea attr txt
       (Nothing, attr) -> pure (CodeBlock attr txt)
     i@(Div attr bs) -> isMaryDiv ph attr >>= \case
-      (ds, attr)
-        | Just (decl, ds) <- hasMaryTemplate ds ->
-          case ph of
-            CollPhase ->
-              i <$ tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds attr) bs :)
-                        , First Nothing)
-            EvalPhase -> pure nullBlock
-      _ -> Div attr <$> interpret ph bs
+      Left dca -> withDefaultCodeAttr ph dca $ Div attr <$> interpret ph bs
+      Right (ds, attr) ->
+        if | Just (decl, ds) <- hasMaryTemplate ds ->
+               case ph of
+                 CollPhase ->
+                   i <$ tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds attr) bs :)
+                             , First Nothing)
+                 EvalPhase -> pure nullBlock
+           | otherwise -> Div attr <$> interpret ph bs
     -- structural
     Plain is -> Plain <$> interpret ph is
     Para is -> Para <$> interpret ph is
