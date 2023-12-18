@@ -1,0 +1,30 @@
+:::{.code-default .mary-eval}
+:::{style="color: white" mary-apply="{ txt -> ['Para txt] }"}
+:::{mary-apply="{ n -> primNumToString(n) }" style="background-color:blue"}
+:::{mary-apply="{ n -> 2 + n }"}
+```
+0-1
+```
+:::{style="background-color:red"}
+```
+0
+```
+```
+1
+```
+:::
+:::
+```
+4
+```
+:::
+:::{}
+```
+"5"
+```
+:::
+:::
+```
+['Para "6"]
+```
+:::

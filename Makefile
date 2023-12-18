@@ -32,11 +32,10 @@ test-all:
 	cabal new-run mary-tests -- -i
 
 test:
-	cabal new-run mary-tests -- -i --regex-exclude "dot"
-#	runhaskell -itest test/Test/Main.hs -i
+	cabal new-run mary-tests -- -i --regex-exclude "dot|store"
 
 test-mary:
-	cabal new-run mary-tests -- -i -p Mary --regex-exclude "dot"
+	cabal new-run mary-tests -- -i -p Mary --regex-exclude "dot|store"
 
 test-mary-all:
 	cabal new-run mary-tests -- -i -p Mary

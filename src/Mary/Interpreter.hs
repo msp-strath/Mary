@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings, NamedFieldPuns #-}
-
 module Mary.Interpreter where
 
 import Control.Monad (guard)
@@ -11,6 +9,7 @@ import Control.Monad.Writer (WriterT, runWriterT, tell)
 import Control.Newtype (ala')
 
 import Data.Attoparsec.Text (parseOnly, endOfInput)
+import Data.Bwd (Bwd(..), (<>>))
 import Data.Foldable (fold)
 import Data.Function (on)
 import Data.List (nub, nubBy)
@@ -30,7 +29,7 @@ import Shonkier.Pandoc ()
 import Shonkier.Parser (getMeAModule, topTerm, identifier, argTuple, pcomputation, skipSpace)
 import Shonkier.Pretty (pretty, toString)
 import Shonkier.Pretty.Render.Pandoc (render, FromDoc)
-import Shonkier.Syntax (Import, RawModule, Clause'((:->)), Rhs'((:?>)), toRawTerm)
+import Shonkier.Syntax (Import, RawModule, Clause'((:->)), Rhs'((:?>)), RawTerm, Term'(App), toRawTerm)
 import Shonkier.Semantics (rawShonkier, handleInputs, handleDot)
 import Shonkier.Value (Computation, Computation'(..), Env, FromValue(..))
 
@@ -121,8 +120,13 @@ data MaryWriter = MaryWriter
   , collInputs :: Map Text Text
   }
 
+data MaryCollCtxt = MaryCollCtxt
+  { collDefaultCodeAttr :: DefaultCodeAttr
+  , collApplyCtxt :: ApplyContext
+  }
+
 type MaryCollectM
-  = ReaderT DefaultCodeAttr
+  = ReaderT MaryCollCtxt
   ( WriterT ([MaryDefinition] -> [MaryDefinition], First MaryWriter)
   ( ExceptT MaryError IO))
 
@@ -145,7 +149,7 @@ type DefaultCodeAttr = (Maybe MaryCodeAttr, ([Text], [(Text, Text)]))
 
 fromDefaultCodeAttr :: Phase m -> Attr -> m (Maybe MaryCodeAttr, Attr)
 fromDefaultCodeAttr ph (id0, cls0, kvs0) = case ph of
-  CollPhase -> asks cast
+  CollPhase -> asks (cast . collDefaultCodeAttr)
   EvalPhase -> asks (cast . defaultCodeAttr)
 
   where
@@ -156,6 +160,19 @@ fromDefaultCodeAttr ph (id0, cls0, kvs0) = case ph of
           , nub (cls0 <> cls1)
           , nubBy ((==) `on` fst) (kvs0 <> kvs1)))
 
+type ApplyContext
+  = Bwd ( MaryExpr -- the raw expression
+        , RawTerm  -- its parsed version
+        )
+
+asksApplyContext :: Phase m -> (ApplyContext -> a) -> m a
+asksApplyContext CollPhase f = asks (f . collApplyCtxt)
+asksApplyContext EvalPhase f = asks (f . applyCtxt)
+
+localApplyContext :: Phase m -> (ApplyContext -> ApplyContext) -> m a -> m a
+localApplyContext CollPhase f = local (\ r -> r { collApplyCtxt = f (collApplyCtxt r) })
+localApplyContext EvalPhase f = local (\ r -> r { applyCtxt = f (applyCtxt r) })
+
 data MaryCtxt = MaryCtxt
   { commonPrefix :: String
   , filename :: FilePath
@@ -165,7 +182,9 @@ data MaryCtxt = MaryCtxt
   , user :: Maybe Text
   , inputs :: Map Text Text
   , environment :: Env
+  -- collected info
   , defaultCodeAttr :: DefaultCodeAttr
+  , applyCtxt :: ApplyContext
   }
 
 runMaryM :: MaryCtxt -> MaryM x -> IO (Either MaryError (x, MaryState))
@@ -183,7 +202,7 @@ runMaryCollectM
              (defs, First Nothing)  -> error "The IMPOSSIBLE has happened"
              (defs, First (Just w)) -> (defs [], w))
   . runWriterT
-  . flip runReaderT (Nothing, mempty)
+  . flip runReaderT (MaryCollCtxt (Nothing, mempty) B0)
 
 data Phase m where
   CollPhase :: Phase MaryCollectM
@@ -292,7 +311,7 @@ throwMaryError CollPhase = throwError
 throwMaryError EvalPhase = throwError
 
 withDefaultCodeAttr :: Phase m -> DefaultCodeAttr -> m a -> m a
-withDefaultCodeAttr CollPhase v = local (const v)
+withDefaultCodeAttr CollPhase v = local (\ r -> r { collDefaultCodeAttr =  v })
 withDefaultCodeAttr EvalPhase v = local (\ r -> r { defaultCodeAttr = v })
 
 -- NB: also used for spans
@@ -351,6 +370,35 @@ nullBlock = Plain []
 nullInline :: Inline
 nullInline = Str ""
 
+actOnMaryDivAttr :: Monad m => Block
+                 -> Phase m
+                 -> Bwd MaryDivAttr -> [MaryDivAttr]
+                 -> Attr -> [Block] -> m Blocks
+actOnMaryDivAttr i ph dz [] attr bs
+  = case ph of
+      CollPhase -> singleton . Div (unIsMaryDiv (dz <>> []) attr) <$> interprets ph bs
+      EvalPhase -> case attr of
+        -- only reinstate the div if there are interesting attributes
+        ("", [], []) -> mconcat <$> interpret ph bs
+        _ -> singleton . Div attr <$> interprets ph bs
+actOnMaryDivAttr i ph dz (d : ds) attr bs = case d of
+  MaryTemplate decl -> case ph of
+    CollPhase -> do
+      -- templates get shoved into the global env and so should grab
+      -- *all* the contextualising info
+      funs <- asksApplyContext ph (fmap (MaryApply . fst))
+      let ds' = funs <>> ds
+      tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds' attr) bs :)
+           , First Nothing)
+      pure (singleton i)
+    EvalPhase -> pure mempty
+  MaryApply me ->
+    case parseOnly (topTerm <* endOfInput) (getMaryExpr me) of
+      Left err -> error err
+      Right t -> localApplyContext ph (:< (me, t)) $
+        actOnMaryDivAttr i ph (dz :< MaryApply me) ds attr bs
+  MaryStore st -> undefined
+
 instance Interpretable Block Blocks where
   interpret ph = \case
     i@(CodeBlock attr txt) -> isMaryCode ph attr >>= \case
@@ -375,16 +423,7 @@ instance Interpretable Block Blocks where
         pure $ case ph of
           CollPhase -> singleton (Div attr $ toList bs)
           EvalPhase -> bs
-      Right (ds, attr) ->
-        if | Just (decl, ds) <- hasMaryTemplate ds ->
-               case ph of
-                 CollPhase ->
-                   do tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds attr) bs :)
-                           , First Nothing)
-                      pure (singleton i)
-                 EvalPhase -> pure mempty
-           | otherwise ->
-             do singleton . Div attr <$> interprets ph bs
+      Right (ds, attr) -> actOnMaryDivAttr i ph B0 ds attr bs
     -- structural
     Plain is -> singleton . Plain <$> interprets ph is
     Para is -> singleton .  Para <$> interprets ph is
@@ -429,15 +468,23 @@ evalMary :: FromValue b => Text -> MaryM b
 evalMary e =
   case parseOnly (topTerm <* endOfInput) e of
     Left err -> error err
-    Right t -> do
+    Right t0 -> do
+      -- contextualise the term
+      funs <- asksApplyContext EvalPhase id
+      let t1 = applyFuns funs t0
+      -- get the environment
       is <- gets imports
       fp <- asks filename
       env@(gl,_) <- asks environment
       lcp <- asks commonPrefix
-      let t' = fmap (stripVarPrefix lcp) t
-      let t' = t
-      go env (rawShonkier is fp gl t')
+      -- eval the term
+      let t2 = fmap (stripVarPrefix lcp) t1
+      go env (rawShonkier is fp gl t2)
   where
+  applyFuns :: ApplyContext -> RawTerm -> RawTerm
+  applyFuns B0 t = t
+  applyFuns (funs :< (_, f)) t = applyFuns funs (App f [t])
+
   go :: FromValue b => Env -> Computation -> MaryM b
   go _ (Value v) = case fromValue v of
                      Right p  -> pure p
@@ -574,6 +621,7 @@ process rpdoc = do
        , inputs = collInputs
        , environment = (env, collInputs)
        , defaultCodeAttr = (Nothing, mempty)
+       , applyCtxt = B0
        }
  -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
   (pdoc1, _) <- successfully =<< runMaryM ctx (interpret EvalPhase (pdoc0 :: Pandoc))
