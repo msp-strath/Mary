@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings, NamedFieldPuns #-}
-
 module Mary.Interpreter where
 
 import Control.Monad (guard)
@@ -40,9 +38,6 @@ import Text.Pandoc.Walk (query)
 
 import System.Directory (makeAbsolute)
 import System.FilePath ((</>), joinPath)
-
-
-import Debug.Trace
 
 newtype StoreName = StoreName { getStoreName :: Text } deriving Show
 newtype MaryExpr = MaryExpr { getMaryExpr :: Text } deriving Show
@@ -397,11 +392,10 @@ actOnMaryDivAttr i ph dz (d : ds) attr bs = case d of
            , First Nothing)
       pure (singleton i)
     EvalPhase -> pure mempty
-  MaryApply me -> traceShow me $ do
+  MaryApply me ->
     case parseOnly (topTerm <* endOfInput) (getMaryExpr me) of
       Left err -> error err
       Right t -> localApplyContext ph (:< (me, t)) $
-        traceShow (me, t) $
         actOnMaryDivAttr i ph (dz :< MaryApply me) ds attr bs
   MaryStore st -> undefined
 
