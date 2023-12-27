@@ -15,29 +15,6 @@ import Utils.List
 
 
 ---------------------------------------------------------------------------
--- ABORT
----------------------------------------------------------------------------
-
--- how to signal a failure
-
-abortA :: Atomy a => a
-abortA = atomOf "abort"
-
-
----------------------------------------------------------------------------
--- RHS TRANSLATION
----------------------------------------------------------------------------
-
-rhs2Term :: Atomy a => [Rhs' a v] -> Term' a v
-rhs2Term [] = App (Atom abortA) []
-rhs2Term [Nothing :?> t] = t
-rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
-  where
-  guardBy Nothing  t = t
-  guardBy (Just g) t = App g [t]
-
-
----------------------------------------------------------------------------
 -- ENVIRONMENTS
 ---------------------------------------------------------------------------
 

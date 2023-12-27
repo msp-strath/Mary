@@ -229,6 +229,10 @@ class Atomy a where
 instance Atomy Atom where
   atomOf = MkAtom
 
+abortA :: Atomy a => a
+abortA = atomOf "abort"
+
+
 ---------------------------------------------------------------------------
 -- VARY
 ---------------------------------------------------------------------------
@@ -263,6 +267,19 @@ braceFun cs = cs' where
   tangle (Prio s t) = Prio <$> tangle s <*> tangle t
   tangle (Match p t) = Match p <$> tangle t
   tangle t = pure t
+
+
+---------------------------------------------------------------------------
+-- RHS TRANSLATION
+---------------------------------------------------------------------------
+
+rhs2Term :: Atomy a => [Rhs' a v] -> Term' a v
+rhs2Term [] = App (Atom abortA) []
+rhs2Term [Nothing :?> t] = t
+rhs2Term ((mg :?> t) : rs) = Prio (guardBy mg (Mask abortA t)) (rhs2Term rs)
+  where
+  guardBy Nothing  t = t
+  guardBy (Just g) t = App g [t]
 
 
 ---------------------------------------------------------------------------
