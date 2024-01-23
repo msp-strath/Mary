@@ -2,8 +2,8 @@
 
 ```mary-data
 test4 <-> "`session`/`user`/`page`"
-scores1 <- "`repo`/scores" ['csv "," ['username 'test1score]]
-scores23 <- "`repo`/scores" ['csv "," ['username 'test2score 'test3score]]
+scores1 <- "`repo`/scores"  @ ['csv "," ['username 'test1score]]
+scores23 <- "`repo`/scores" @ ['csv "," ['username 'test2score 'test3score]]
 ```
 
 ## Today's test

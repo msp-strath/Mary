@@ -32,10 +32,10 @@ test-all:
 	cabal new-run mary-tests -- -i
 
 test:
-	cabal new-run mary-tests -- -i --regex-exclude "dot|store"
+	cabal new-run mary-tests -- -i --regex-exclude "dot"
 
 test-mary:
-	cabal new-run mary-tests -- -i -p Mary --regex-exclude "dot|store"
+	cabal new-run mary-tests -- -i -p Mary --regex-exclude "dot"
 
 test-mary-all:
 	cabal new-run mary-tests -- -i -p Mary
