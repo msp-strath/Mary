@@ -424,7 +424,7 @@ instance Interpretable Block Blocks where
               Right dds -> do
                 tell (MaryWriter mempty (Seq.fromList dds), mempty)
                 pure (singleton i)
-          EvalPhase -> pure mempty -- TODO
+          EvalPhase -> pure mempty
         MaryDefn -> case ph of
           CollPhase -> do (_ :: Blocks) <- defnMary ph cls txt
                           pure (singleton i)
@@ -644,8 +644,11 @@ process rpdoc = do
        , defaultCodeAttr = (Nothing, mempty)
        , applyCtxt = B0
        }
- -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
+  -- TODO: before the eval phase: load the data in the directives dds
+  -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
   (pdoc1, _) <- successfully =<< runMaryM ctx (interpret EvalPhase (pdoc0 :: Pandoc))
+  -- TODO: after the eval phase: store the data in the directives dds
+  --    be it POST or computed data (e.g. scores)
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 pdoc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
        . setMeta "jsInputs" (fromList $ Str <$> jsInputs collInputs)
