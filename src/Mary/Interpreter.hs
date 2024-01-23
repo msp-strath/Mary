@@ -11,17 +11,23 @@ import Control.Newtype (ala')
 import Data.Attoparsec.Text (parseOnly, endOfInput)
 import Data.Bwd (Bwd(..), (<>>))
 import Data.Foldable (fold)
+import qualified Data.Foldable as Fold
 import Data.Function (on)
 import Data.List (nub, nubBy)
 import Data.Monoid (First(..))
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Traversable (forM)
 
 import Network.URI.Encode as URI
+
+import Mary.Syntax
+import Mary.Parser
 
 import Shonkier.Import (loadToplevelModule, stripPrefixButDot, stripVarPrefix)
 import Shonkier.ShonkierJS (jsGlobalEnv, jsInputs)
@@ -38,10 +44,6 @@ import Text.Pandoc.Walk (query)
 
 import System.Directory (makeAbsolute)
 import System.FilePath ((</>), joinPath)
-
-newtype StoreName = StoreName { getStoreName :: Text } deriving Show
-newtype MaryExpr = MaryExpr { getMaryExpr :: Text } deriving Show
-newtype ClassName = ClassName { getClassName :: Text } deriving Show
 
 -- | Attached to code blocks and code spans
 data MaryCodeAttr
@@ -111,7 +113,7 @@ type MaryM
   ( StateT  MaryState
   ( ExceptT MaryError IO))
 
-data MaryWriter = MaryWriter
+data MaryMetaData = MaryMetaData
   { collFilename :: FilePath
   , collPage :: Text
   , collSitesRoot :: Text
@@ -120,6 +122,18 @@ data MaryWriter = MaryWriter
   , collInputs :: Map Text Text
   }
 
+data MaryWriter = MaryWriter
+  { maryDefns :: Seq MaryDefinition
+  , maryDatas :: Seq DataDirective
+  }
+
+instance Semigroup MaryWriter where
+  MaryWriter defns1 dds1 <> MaryWriter defns2 dds2
+    = MaryWriter (defns1 <> defns2) (dds1 <> dds2)
+
+instance Monoid MaryWriter where
+  mempty = MaryWriter mempty mempty
+
 data MaryCollCtxt = MaryCollCtxt
   { collDefaultCodeAttr :: DefaultCodeAttr
   , collApplyCtxt :: ApplyContext
@@ -127,7 +141,7 @@ data MaryCollCtxt = MaryCollCtxt
 
 type MaryCollectM
   = ReaderT MaryCollCtxt
-  ( WriterT ([MaryDefinition] -> [MaryDefinition], First MaryWriter)
+  ( WriterT (MaryWriter, First MaryMetaData)
   ( ExceptT MaryError IO))
 
 data MaryDefinition
@@ -195,12 +209,12 @@ runMaryM ctx
 
 runMaryCollectM ::
   MaryCollectM x ->
-  IO (Either MaryError (x, ([MaryDefinition], MaryWriter)))
+  IO (Either MaryError (x, ([MaryDefinition], [DataDirective], MaryMetaData)))
 runMaryCollectM
   = runExceptT
   . fmap (fmap $ \case
-             (defs, First Nothing)  -> error "The IMPOSSIBLE has happened"
-             (defs, First (Just w)) -> (defs [], w))
+             (MaryWriter defs dds, First Nothing)  -> error "The IMPOSSIBLE has happened"
+             (MaryWriter defs dds, First (Just w)) -> (Fold.toList defs, Fold.toList dds, w))
   . runWriterT
   . flip runReaderT (MaryCollCtxt (Nothing, mempty) B0)
 
@@ -274,7 +288,7 @@ instance Interpretable Meta Meta where
     let baseURL = errorOnFail (`M.lookup` inputs) "baseURL"
     filename <- liftIO $ makeAbsolute (T.unpack sitesRoot </> T.unpack page)
     let user = M.lookup "user" inputs
-    tell (id, First $ Just $ MaryWriter
+    tell (mempty, First $ Just $ MaryMetaData
       { collFilename = filename
       , collInputs = inputs
       , collPage = page
@@ -388,12 +402,12 @@ actOnMaryDivAttr i ph dz (d : ds) attr bs = case d of
       -- *all* the contextualising info
       funs <- asksApplyContext ph (fmap (MaryApply . fst))
       let ds' = funs <>> ds
-      tell ( (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds' attr) bs :)
+      tell ( MaryWriter (Seq.singleton (DivTemplate (getMaryExpr decl) (unIsMaryDiv ds' attr) bs)) mempty
            , First Nothing)
       pure (singleton i)
     EvalPhase -> pure mempty
   MaryApply me ->
-    case parseOnly (topTerm <* endOfInput) (getMaryExpr me) of
+    case parseOnly (topTerm <* skipSpace <* endOfInput) (getMaryExpr me) of
       Left err -> error err
       Right t -> localApplyContext ph (:< (me, t)) $
         actOnMaryDivAttr i ph (dz :< MaryApply me) ds attr bs
@@ -403,7 +417,14 @@ instance Interpretable Block Blocks where
   interpret ph = \case
     i@(CodeBlock attr txt) -> isMaryCode ph attr >>= \case
       (Just cb, attr@(_, cls, kvs)) -> case cb of
-        MaryData -> pure (singleton i) -- TODO
+        MaryData -> case ph of
+          CollPhase -> do
+            case parseOnly (maryData <* endOfInput) txt of
+              Left err -> error err
+              Right dds -> do
+                tell (MaryWriter mempty (Seq.fromList dds), mempty)
+                pure (singleton i)
+          EvalPhase -> pure mempty
         MaryDefn -> case ph of
           CollPhase -> do (_ :: Blocks) <- defnMary ph cls txt
                           pure (singleton i)
@@ -458,7 +479,7 @@ defnMary :: (Monoid (Many a), Monad m, FromDoc a)
 defnMary ph cls txt = do
   let mod = getMeAModule txt
   () <- case ph of
-    CollPhase -> tell ((++ [Module mod]), mempty)
+    CollPhase -> tell (MaryWriter (Seq.singleton (Module mod)) mempty, mempty)
     EvalPhase -> pure ()
   pure $ if "keep" `elem` cls
     then singleton $ render (pretty mod)
@@ -605,7 +626,7 @@ successfully (Right x) = pure x
 
 process :: Pandoc -> IO Pandoc
 process rpdoc = do
-  (pdoc0, (defns, MaryWriter{..})) <- successfully =<< runMaryCollectM (interpret CollPhase rpdoc)
+  (pdoc0, (defns, dds, MaryMetaData{..})) <- successfully =<< runMaryCollectM (interpret CollPhase rpdoc)
   let rm@(is, ps) = fold [ (is, p)
                          | ds <- defns
                          , let (is, p) = maryDefinitionToModule ds
@@ -623,8 +644,11 @@ process rpdoc = do
        , defaultCodeAttr = (Nothing, mempty)
        , applyCtxt = B0
        }
- -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
+  -- TODO: before the eval phase: load the data in the directives dds
+  -- EnvData is (stripPrefixButDot lcp fp) lcp (env, inputs) baseURL page user
   (pdoc1, _) <- successfully =<< runMaryM ctx (interpret EvalPhase (pdoc0 :: Pandoc))
+  -- TODO: after the eval phase: store the data in the directives dds
+  --    be it POST or computed data (e.g. scores)
   pure $ setTitle (fromMaybe "Title TBA" (ala' First query h1 pdoc0))
        . setMeta "jsGlobalEnv" (fromList $ Str <$> jsGlobalEnv env)
        . setMeta "jsInputs" (fromList $ Str <$> jsInputs collInputs)

@@ -83,8 +83,10 @@ library
   exposed-modules:     Data.Bwd
                      , Data.Lisp
                      , Mary.Pandoc
+                     , Mary.Parser
                      , Mary.Interpreter
                      , Mary.ServePage
+                     , Mary.Syntax
                      , Mary.Find
                      , Mary.Version
                      , Shonkier

@@ -181,7 +181,7 @@ needParens x (d :^: y) = case compare (tight x) (tight y) of
   GT -> False
 
 opChars :: String
-opChars = "-=!\\/<>+*/"
+opChars = "-=!\\/<>+*"
 
 prioFax, semiFax, pamaFax, maskFax, overFax, applFax :: OpFax
 prioFax = OpFax {tight = PriT, assoc = RAsso, spell = "Prio"}
